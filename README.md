@@ -39,4 +39,4 @@ Each modelet documentation has 3 or 4 files:
 ### `scripts` folder
 This folder contains code to build knowledge graphs.
 
-⚠️ To get more information about their content, please read their readme : [addresses](scripts/README.md).
+⚠️ To get more information about their content, please read their [readme](scripts/README.md).
