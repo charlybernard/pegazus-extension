@@ -6,7 +6,6 @@ import geomprocessing as gp
 import timeprocessing as tp
 import graphdb as gd
 import graphrdf as gr
-import curl as curl
 
 np = NameSpaces()
 

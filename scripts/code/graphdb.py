@@ -1,13 +1,16 @@
 import os
 import filemanagement as fm
-import curl as curl
 import urllib.parse as up
 from rdflib import Graph, Namespace, Literal, BNode, URIRef
 from rdflib.namespace import RDF
 import json
+import requests
 
 def get_repository_uri_from_name(graphdb_url, repository_name):
     return URIRef(f"{graphdb_url}/repositories/{repository_name}")
+
+def get_repository_namespaces_uri_from_name(graphdb_url, repository_name):
+    return URIRef(f"{graphdb_url}/repositories/{repository_name}/namespaces")
 
 def get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name):
     return URIRef(f"{graphdb_url}/repositories/{repository_name}/rdf-graphs/{named_graph_name}")
@@ -16,12 +19,13 @@ def get_repository_uri_statements_from_name(graphdb_url, repository_name):
     return URIRef(f"{graphdb_url}/repositories/{repository_name}/statements")
 
 def remove_named_graph(graphdb_url, repository_name, named_graph_name):
-    cmd = curl.get_curl_command("DELETE", get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name).strip())
-    os.system(cmd)
+    url = get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name).strip()
+    r = requests.delete(url)
+    return r
 
 def remove_named_graph_from_uri(named_graph_uri:URIRef):
-    cmd = curl.get_curl_command("DELETE", named_graph_uri.strip())
-    os.system(cmd)
+    r = requests.delete(named_graph_uri)
+    return r
 
 def remove_named_graphs(graphdb_url,repository_name,named_graph_name_list):
     for g in named_graph_name_list:
@@ -180,75 +184,73 @@ def change_ruleset(graphdb_url, repository_name, ruleset_name):
 
 def create_repository_from_config_file(graphdb_url:str, local_config_file:str):
     url = f"{graphdb_url}/rest/repositories"
-    curl_cmd_local = curl.get_curl_command("POST", url, content_type="multipart/form-data", form=f"config=@{local_config_file}")
-    os.system(curl_cmd_local)
+    files = {"config":open(local_config_file,'rb')}
+    r = requests.post(url, files=files)
+    return r
 
 def export_data_from_repository(graphdb_url, repository_name, out_ttl_file, named_graph_name:str=None, named_graph_uri:URIRef=None):
+    url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip()
+    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="text/turtle")
+    params = {}
+
     if named_graph_uri is not None:
-        pass
+        params["context"] = named_graph_uri.n3()
     elif named_graph_name is not None:
         named_graph_uri = get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name)
-    
-    query_param = ""
-    if named_graph_uri is not None:
-        encoded_named_graph_uri = up.quote(named_graph_uri.n3())
-        query_param += f"?context={encoded_named_graph_uri}"
+        params["context"] = named_graph_uri.n3()
 
-    url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip() + query_param
-    cmd = curl.get_curl_command("GET", url, content_type="application/x-www-form-urlencoded", accept="text/turtle")
-
-    out_content = os.popen(cmd)
-    fm.write_file(out_content.read(), out_ttl_file)
+    r = requests.get(url, params=params, headers=headers)
+    fm.write_file(r.text, out_ttl_file)
 
 def select_query_to_txt_file(query, graphdb_url, repository_name, res_query_file):
-    query_encoded = up.quote(query)
-    post_data = f"query={query_encoded}"
-    str_uri = get_repository_uri_from_name(graphdb_url, repository_name).strip()
-    cmd = curl.get_curl_command("POST", str_uri, content_type="application/x-www-form-urlencoded", post_data=post_data)
-    out_content = os.popen(cmd)
-    fm.write_file(out_content.read(), res_query_file)
+    url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
+    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded")
+    data = {"query":query}
+    r = requests.post(url, data=data, headers=headers)
+    fm.write_file(r.text, res_query_file)
 
 def select_query_to_json(query, graphdb_url, repository_name):
-    query_encoded = up.quote(query)
-    post_data = f"query={query_encoded}"
-    str_uri = get_repository_uri_from_name(graphdb_url, repository_name).strip()
-    cmd = curl.get_curl_command("POST", str_uri, content_type="application/x-www-form-urlencoded", accept="application/json", post_data=post_data)
-    out_content = os.popen(cmd)
-    return json.loads(out_content.read())
-
-def construct_query_to_ttl(query, graphdb_url, repository_name, res_query_file):
-    query_encoded = up.quote(query)
-    post_data = f"query={query_encoded}"
-    str_uri = get_repository_uri_from_name(graphdb_url, repository_name).strip()
-    cmd = curl.get_curl_command("POST", str_uri, content_type="application/x-www-form-urlencoded", accept="text/turtle", post_data=post_data)
-    out_content = os.popen(cmd)
-    fm.write_file(out_content.read(), res_query_file)
+    url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
+    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="application/json")
+    data = {"query":query}
+    r = requests.post(url, data=data, headers=headers)
+    return r.json()
     
 def update_query(query, graphdb_url, repository_name):
-    url = get_repository_uri_statements_from_name(graphdb_url, repository_name)
-    query_encoded = up.quote(query)
-    cmd = curl.get_curl_command("POST", url, content_type="application/x-www-form-urlencoded", post_data=f"update={query_encoded}")
-    os.system(cmd)
+    url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip()
+    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded")
+    data = {"update":query}
+    r = requests.post(url, data=data, headers=headers)
+    return r
+
+def get_http_headers_dictionary(content_type=None, accept=None):
+    headers = {}
+    if content_type is not None:
+        headers["Content-Type"] = content_type
+    if accept is not None:
+        headers["Accept"] = accept
+
+    return headers
 
 def get_repository_namespaces(graphdb_url, repository_name):
-    namespaces_uri = get_repository_uri_from_name(graphdb_url, repository_name).strip() + "/namespaces"
-    cmd = curl.get_curl_command("GET", namespaces_uri.n3())
-    namespaces_list = os.popen(cmd).read().split("\n")[1:]
-    namespaces = {}
+    url = get_repository_namespaces_uri_from_name(graphdb_url, repository_name).strip()
+    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="application/json")
+    r = requests.get(url, headers=headers)
 
-    for namespace in namespaces_list:
-        try:
-            prefix, uri = namespace.split(",")
-            namespaces[prefix] = uri
-        except ValueError:
-            pass
+    namespaces = {}
+    for res in r.json()["results"]["bindings"]:
+        prefix = res["prefix"]["value"]
+        uri = res["namespace"]["value"]
+        namespaces[prefix] = uri
 
     return namespaces
 
 def add_prefix_to_repository(graphdb_url, repository_name, namespace:Namespace, prefix:str):
-    url = get_repository_uri_from_name(graphdb_url, repository_name).strip() + "/namespaces/" + prefix
-    cmd = curl.get_curl_command("PUT", url, content_type="text/plain", post_data=namespace.strip())
-    os.system(cmd)
+    url = get_repository_namespaces_uri_from_name(graphdb_url, repository_name).strip() + "/" + prefix
+    headers = get_http_headers_dictionary(content_type="text/plain")
+    data = namespace.strip()
+    r = requests.put(url, headers=headers, data=data)
+    return r
 
 def add_prefixes_to_repository(graphdb_url, repository_name, namespace_prefixes:dict):
     for prefix, namespace in namespace_prefixes.items():
@@ -287,37 +289,41 @@ def get_query_prefixes_from_namespaces(namespaces:dict):
     return prefixes
 
 ### Import created ttl file in GraphDB
-def import_ttl_file_in_graphdb(graphdb_url, repository_id, ttl_file, named_graph_name=None, named_graph_uri=None):
-    # cmd = f"curl -X POST -H \"Content-Type:application/x-turtle\" -T \"{ttl_file}\" {graphdb_url}/repositories/{repository_id}/statements"
+def import_ttl_file_in_graphdb(graphdb_url, repository_name, ttl_file, named_graph_name:str=None, named_graph_uri:URIRef=None):
     if named_graph_uri is not None:
-        url = named_graph_uri
+        urlref = named_graph_uri
     elif named_graph_name is not None:
-        url = get_named_graph_uri_from_name(graphdb_url, repository_id, named_graph_name)
+        urlref = get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name)
     else:
-        url = get_repository_uri_statements_from_name(graphdb_url, repository_id)
+        urlref = get_repository_uri_statements_from_name(graphdb_url, repository_name)
     
-    cmd = curl.get_curl_command("POST", url.strip(), content_type="application/x-turtle", local_file=ttl_file)
-    msg = os.popen(cmd)
-    return msg.read()
-
-def clear_named_graph_of_repository(graphdb_url, repository_name, named_graph_uri:URIRef):
-    """
-    Remove all contents from repository
-    The repository still exists
-    """
-    encoded_named_graph_uri = up.quote(named_graph_uri.n3())
-    url = f"{graphdb_url}/repositories/{repository_name}/statements?context={encoded_named_graph_uri}"
-    cmd = curl.get_curl_command("DELETE", url)
-    os.system(cmd)
+    url = urlref.strip()
+    headers = get_http_headers_dictionary(content_type="application/x-turtle")
+        
+    with open(ttl_file, 'rb') as f:
+        data = f.read()
+    
+    r = requests.post(url, data=data, headers=headers)
+    return r
 
 def clear_repository(graphdb_url, repository_name):
     """
     Remove all contents from repository
     The repository still exists
     """
-    url = f"{graphdb_url}/repositories/{repository_name}/statements"
-    cmd = curl.get_curl_command("DELETE", url, content_type="application/x-turtle")
-    os.system(cmd)
+
+    url = get_repository_uri_statements_from_name(graphdb_url, repository_name)
+    r = requests.delete(url)
+    return r
+
+def remove_repository(graphdb_url, repository_name):
+    """
+    Remove a repository defined by its name
+    """
+
+    url = get_repository_uri_from_name(graphdb_url, repository_name)
+    r = requests.delete(url)
+    return r
 
 def get_repository_existence(graphdb_url, repository_name):
     """
@@ -325,21 +331,14 @@ def get_repository_existence(graphdb_url, repository_name):
     """
 
     url = f"{graphdb_url}/rest/repositories/{repository_name}"
-    cmd = curl.get_curl_command("GET", url, content_type="application/x-turtle")
-    out_content = os.popen(cmd).read()
+    headers = get_http_headers_dictionary(content_type="application/x-turtle")
+    r = requests.get(url, headers=headers)
 
-    if out_content == "":
+    if r.text == "":
         return False
     else:
         return True
-
-def remove_repository(graphdb_url, repository_name):
-    """
-    Remove a repository defined by its name
-    """
-    url = f"{graphdb_url}/repositories/{repository_name}"
-    cmd = curl.get_curl_command("DELETE", url, content_type="application/x-turtle")
-    os.system(cmd)
+    
 
 def reinitialize_repository(graphdb_url, repository_name, repository_config_file, ruleset_file:str=None, ruleset_name:str=None, disable_same_as:bool=False, check_for_inconsistencies:bool=False, allow_removal:bool=True):
     """
