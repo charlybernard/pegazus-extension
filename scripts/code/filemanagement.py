@@ -3,7 +3,7 @@ import json
 import csv
 from uuid import uuid4
 
-def read_file(filename, split_lines=False):
+def read_file(filename:str, split_lines=False):
     file = open(filename, "r")
     file_content = file.read()
     if split_lines:
@@ -11,26 +11,26 @@ def read_file(filename, split_lines=False):
     file.close()
     return file_content
 
-def read_json_file(filename):
+def read_json_file(filename:str):
     file = open(filename)
     data = json.load(file)
     file.close()
     return data
 
-def write_file(content,filename):
+def write_file(content:str,filename:str):
     file = open(filename, "w")
     file.write(content)
     file.close()
 
-def create_folder_if_not_exists(folder):
+def create_folder_if_not_exists(folder:str):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-def remove_folder_if_exists(folder):
+def remove_folder_if_exists(folder:str):
     if os.path.exists(folder):
         remove_folder(folder)
 
-def remove_folder(folder):
+def remove_folder(folder:str):
     for e in os.listdir(folder):
         abspath_e = os.path.join(folder, e)
         print(abspath_e)
@@ -43,16 +43,16 @@ def remove_folder(folder):
 
     os.rmdir(folder)
         
-def remove_file_if_exists(filename):
+def remove_file_if_exists(filename:str):
     if os.path.exists(filename):
         os.remove(filename)
 
-def write_csv_file_from_rows(rows:list[list], filename):
+def write_csv_file_from_rows(rows:list[list], filename:str):
     with open(filename, 'w') as f:     
         file = csv.writer(f)
         file.writerows(rows)
 
-def read_csv_file(csv_file, has_header=False, delimiter=",", quotechar='"', encoding='utf-8'):
+def read_csv_file(csv_file:str, has_header:bool=False, delimiter:str=",", quotechar:str='"', encoding:str='utf-8'):
     file =  open(csv_file, 'r', encoding=encoding)
     csvreader = csv.reader(file, delimiter=delimiter, quotechar=quotechar)
     if has_header:
@@ -67,7 +67,7 @@ def read_csv_file(csv_file, has_header=False, delimiter=",", quotechar='"', enco
 
     return header, rows
 
-def read_csv_file_as_dict(csv_file, id_col:str=None, selected_columns:list[str]=None, delimiter=",", quotechar='"', encoding='utf-8'):
+def read_csv_file_as_dict(csv_file:str, id_col:str=None, selected_columns:list[str]=None, delimiter:str=",", quotechar:str='"', encoding:str='utf-8'):
     file =  open(csv_file, 'r', encoding=encoding)
     csvreader = csv.DictReader(file, delimiter=delimiter, quotechar=quotechar)
 

@@ -198,7 +198,7 @@ def get_query_to_compare_time_intervals(time_named_graph_uri:URIRef, time_interv
 
     return query
 
-def compare_time_instants_of_events_from_traces(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def compare_time_instants_of_events_from_traces(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
     Sort all time instants related to events which are a trace of one event.
     """
@@ -213,7 +213,7 @@ def compare_time_instants_of_events_from_traces(graphdb_url, repository_name, ti
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def compare_time_instants_of_events(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def compare_time_instants_of_events(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
     Sort all time instants related to one event.
     """
@@ -228,7 +228,7 @@ def compare_time_instants_of_events(graphdb_url, repository_name, time_named_gra
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def compare_time_instants_of_attributes(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def compare_time_instants_of_attributes(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
     Sort all time instants related to one attribute.
     """
@@ -245,7 +245,7 @@ def compare_time_instants_of_attributes(graphdb_url, repository_name, time_named
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def compare_time_intervals_of_attribute_versions(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def compare_time_intervals_of_attribute_versions(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
     Sort all time intervals of versions related to one attribute.
     """
@@ -261,7 +261,7 @@ def compare_time_intervals_of_attribute_versions(graphdb_url, repository_name, t
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def get_earliest_and_latest_time_instants_for_events(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def get_earliest_and_latest_time_instants_for_events(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
     An event can get related to multiple instants through addr:hasTimeBefore and addr:hasTimeAfter. This function gets the latest and the earliest time instant for each event.
     If a previous latest or earliest time instant is no longer the correct one, it is removed.
@@ -321,7 +321,7 @@ def get_earliest_and_latest_time_instants_for_events(graphdb_url, repository_nam
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
-def remove_earliest_and_latest_time_instants(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def remove_earliest_and_latest_time_instants(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
     DELETE {{
         GRAPH ?g {{
@@ -337,7 +337,7 @@ def remove_earliest_and_latest_time_instants(graphdb_url, repository_name, time_
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def get_validity_interval_for_attribute_versions(graphdb_url, repository_name, time_named_graph_uri:URIRef):
+def get_validity_interval_for_attribute_versions(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     # Creation of a time interval of attribute version without any time interval
     query1 = np.query_prefixes + f"""
         INSERT {{
@@ -404,7 +404,7 @@ def get_validity_interval_for_attribute_versions(graphdb_url, repository_name, t
     for query in queries :
         gd.update_query(query, graphdb_url, repository_name)
 
-def add_time_relations(graphdb_url:str, repository_name:str, time_named_graph_name:str):
+def add_time_relations(graphdb_url:URIRef, repository_name:str, time_named_graph_name:str):
     """
     Add temporal relationships:
     * comparison of instants belonging to the same event (i1 before/after i2)
@@ -424,14 +424,14 @@ def add_time_relations(graphdb_url:str, repository_name:str, time_named_graph_na
     compare_time_intervals_of_attribute_versions(graphdb_url, repository_name, time_named_graph_uri)
 
 
-def compare_events(graphdb_url:str, repository_name:str, time_named_graph_name:str=None):
+def compare_events(graphdb_url:URIRef, repository_name:str, time_named_graph_name:str=None):
 
     time_named_graph_uri = URIRef(gd.get_named_graph_uri_from_name(graphdb_url, repository_name, time_named_graph_name))
 
     get_similar_events(graphdb_url, repository_name, time_named_graph_uri)
     get_events_before(graphdb_url, repository_name, time_named_graph_uri)
 
-def get_similar_events(graphdb_url:str, repository_name:str, time_named_graph_uri:URIRef):
+def get_similar_events(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?g {{ ?ev1 owl:sameAs ?ev2 . }}
@@ -447,7 +447,7 @@ def get_similar_events(graphdb_url:str, repository_name:str, time_named_graph_ur
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def get_events_before(graphdb_url:str, repository_name:str, time_named_graph_uri:URIRef):
+def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
 
     # An event A whose time value is before a time value dependent on an event B, then A is before B.
     query1 = np.query_prefixes + f"""
@@ -576,7 +576,7 @@ def get_literal_time_stamp(time_stamp:str):
 def get_current_datetimestamp():
     return datetime.datetime.now().isoformat() + "Z"
 
-def get_valid_time_description(time_description):
+def get_valid_time_description(time_description:dict):
     stamp_key, calendar_key, precision_key = "stamp", "calendar", "precision"
     start_time_key, end_time_key = "start_time", "end_time"
     start_time = get_time_instant_elements(time_description.get(start_time_key))
@@ -590,7 +590,7 @@ def get_valid_time_description(time_description):
 
     return time_description
 
-def get_gregorian_date_from_timestamp(time_stamp):
+def get_gregorian_date_from_timestamp(time_stamp:str):
     time_match_pattern = "^(-|\+|)\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01])$"
     if re.match(time_match_pattern, time_stamp) is not None:
         time_stamp += "T00:00:00Z"

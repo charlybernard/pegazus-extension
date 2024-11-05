@@ -16,10 +16,10 @@ np = NameSpaces()
 
 ## BAN data
 
-def create_factoids_repository_ban(graphdb_url, ban_repository_name, tmp_folder,
-                                   ont_file, ontology_named_graph_name,
-                                   factoids_named_graph_name, permanent_named_graph_name,
-                                   ban_csv_file, ban_kg_file, ban_time_description={}, lang=None):
+def create_factoids_repository_ban(graphdb_url:URIRef, ban_repository_name:str, tmp_folder:str,
+                                   ont_file:str, ontology_named_graph_name:str,
+                                   factoids_named_graph_name:str, permanent_named_graph_name:str,
+                                   ban_csv_file:str, ban_kg_file:str, ban_time_description:dict={}, lang:str=None):
 
     # Creation of a basic graph with rdflib and export to the `ban_kg_file` file
     g = create_graph_from_ban(ban_csv_file, ban_time_description, lang)
@@ -30,7 +30,7 @@ def create_factoids_repository_ban(graphdb_url, ban_repository_name, tmp_folder,
     # Adapting data with the ontology, merging duplicates, etc.
     clean_repository_ban(graphdb_url, ban_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
 
-def create_graph_from_ban(ban_file, source_time_description:dict, lang:str):
+def create_graph_from_ban(ban_file:str, source_time_description:dict, lang:str):
     ban_pref, ban_ns = "ban", Namespace("https://adresse.data.gouv.fr/base-adresse-nationale/")
     source_time_description = tp.get_valid_time_description(source_time_description)
 
@@ -59,7 +59,7 @@ def create_graph_from_ban(ban_file, source_time_description:dict, lang:str):
 
     return g
 
-def clean_repository_ban(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name, lang):
+def clean_repository_ban(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str):
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 
@@ -82,7 +82,9 @@ def clean_repository_ban(graphdb_url, repository_name, factoids_named_graph_name
     msp.create_source_resource(graphdb_url, repository_name, vdp_source_uri, source_label, publisher_label, lang, np.FACTS, permanent_named_graph_uri)
     msp.link_provenances_with_source(graphdb_url, repository_name, vdp_source_uri, permanent_named_graph_uri)
 
-def create_data_value_from_ban(g, ban_ns, hn_id, hn_label, hn_geom, th_id, th_label, cp_label, arrdt_id, arrdt_label, source_time_description, lang):
+def create_data_value_from_ban(g:Graph, ban_ns:Namespace, hn_id:str, hn_label:str, hn_geom:str,
+                               th_id:str, th_label:str, cp_label:str,
+                               arrdt_id:str, arrdt_label:str, source_time_description:dict, lang:str):
     # URIs of BAN geographical entities
     hn_uri, hn_type_uri = gr.generate_uri(np.FACTOIDS, "HN"), np.LTYPE["HouseNumber"]
     th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
@@ -142,10 +144,10 @@ def create_data_value_from_ban(g, ban_ns, hn_id, hn_label, hn_geom, th_id, th_la
         gr.add_provenance_to_resource(g, uri, prov_hn_uri)
 
 ## OSM data
-def create_factoids_repository_osm(graphdb_url, osm_repository_name, tmp_folder,
-                          ont_file, ontology_named_graph_name,
-                          factoids_named_graph_name, permanent_named_graph_name,
-                          osm_csv_file, osm_hn_csv_file, osm_kg_file, osm_time_description={}, lang=None):
+def create_factoids_repository_osm(graphdb_url:URIRef, osm_repository_name:str, tmp_folder:str,
+                          ont_file:str, ontology_named_graph_name:str,
+                          factoids_named_graph_name:str, permanent_named_graph_name:str,
+                          osm_csv_file:str, osm_hn_csv_file:str, osm_kg_file:str, osm_time_description:dict={}, lang:str=None):
 
     # Creation of a basic graph with rdflib and export to the `osm_kg_file` file
     g = create_graph_from_osm(osm_csv_file, osm_hn_csv_file, osm_time_description, lang)
@@ -156,7 +158,7 @@ def create_factoids_repository_osm(graphdb_url, osm_repository_name, tmp_folder,
     # Adapting data with the ontology, merging duplicates, etc.
     clean_repository_osm(graphdb_url, osm_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
 
-def create_graph_from_osm(osm_file, osm_hn_file, osm_time_description:dict, lang:str):
+def create_graph_from_osm(osm_file:str, osm_hn_file:str, osm_time_description:dict, lang:str):
     osm_pref, osm_ns = "osm", Namespace("http://www.openstreetmap.org/")
     osm_rel_pref, osm_rel_ns = "osmRel", Namespace("http://www.openstreetmap.org/relation/")
 
@@ -198,7 +200,8 @@ def create_graph_from_osm(osm_file, osm_hn_file, osm_time_description:dict, lang
 
     return g
 
-def create_data_value_from_osm(g, hn_id, hn_label, hn_geom, th_id, th_label, arrdt_id, arrdt_label, arrdt_insee, source_time_description, lang):
+def create_data_value_from_osm(g:Graph, hn_id:str, hn_label:str, hn_geom:str, th_id:str, th_label:str,
+                               arrdt_id:str, arrdt_label:str, arrdt_insee:str, source_time_description:dict, lang:str):
 
     # URIs for OSM geographical entities
     hn_uri, hn_type_uri = gr.generate_uri(np.FACTOIDS, "HN"), np.LTYPE["HouseNumber"]
@@ -244,7 +247,7 @@ def create_data_value_from_osm(g, hn_id, hn_label, hn_geom, th_id, th_label, arr
     gr.add_provenance_to_resource(g, lm_2_uri, prov_arrdt_uri)
 
 
-def clean_repository_osm(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name, lang):
+def clean_repository_osm(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str):
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 
@@ -274,10 +277,10 @@ def clean_repository_osm(graphdb_url, repository_name, factoids_named_graph_name
 
 ## Ville de Paris data
 
-def create_factoids_repository_ville_paris(graphdb_url, vdp_repository_name, tmp_folder,
-                                  ont_file, ontology_named_graph_name,
-                                  factoids_named_graph_name, permanent_named_graph_name,
-                                  vdpa_csv_file, vdpc_csv_file, vdp_kg_file, vdp_time_description={}, lang=None):
+def create_factoids_repository_ville_paris(graphdb_url:URIRef, vdp_repository_name:str, tmp_folder:str,
+                                  ont_file:str, ontology_named_graph_name:str,
+                                  factoids_named_graph_name:str, permanent_named_graph_name:str,
+                                  vdpa_csv_file:str, vdpc_csv_file:str, vdp_kg_file:str, vdp_time_description:dict={}, lang:str=None):
 
     # Creation of a basic graph with rdflib and export to the `vpt_kg_file` file
     g = create_graph_from_ville_paris_actuelles(vdpa_csv_file, vdp_time_description, lang)
@@ -290,7 +293,7 @@ def create_factoids_repository_ville_paris(graphdb_url, vdp_repository_name, tmp
     clean_repository_ville_paris(graphdb_url, vdp_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
 
 
-def create_graph_from_ville_paris_caduques(vpc_file, source_time_description, lang:str):
+def create_graph_from_ville_paris_caduques(vpc_file:str, source_time_description:dict, lang:str):
     vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
     # File columns
@@ -318,7 +321,7 @@ def create_graph_from_ville_paris_caduques(vpc_file, source_time_description, la
 
     return g
 
-def create_landmark_change_and_event(g, lm_label, lm_type:URIRef, lm_prov_uri:URIRef, appeareance:bool, time_list:list, lang):
+def create_landmark_change_and_event(g:Graph, lm_label:str, lm_type:URIRef, lm_prov_uri:URIRef, appeareance:bool, time_list:list, lang:str):
         # Creating URIs
         lm_label_lit, lm_uri = Literal(lm_label, lang=lang), gr.generate_uri(np.FACTOIDS, "LM")
         name_attr_uri, name_attr_type_uri, name_attr_version_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
@@ -348,7 +351,8 @@ def create_landmark_change_and_event(g, lm_label, lm_type:URIRef, lm_prov_uri:UR
         for uri in uris:
             gr.add_provenance_to_resource(g, uri, lm_prov_uri)
 
-def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str, start_time_stamp:str, end_time_stamp:str, arrdt_labels:list[str], district_labels:list[str], source_time_description, vpa_ns:Namespace, lang:str):
+def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str, start_time_stamp:str, end_time_stamp:str,
+                                                arrdt_labels:list[str], district_labels:list[str], source_time_description, vpa_ns:Namespace, lang:str):
     """
     `source_time_description` : dictionary describing the source's validity start and end dates
     `source_time_description = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
@@ -388,7 +392,7 @@ def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str
         area_label, area_type = area
         create_area_location_of_landmark(g, area_label, area_type, th_uri, th_prov_uri, source_time_description, lang)
 
-def create_graph_from_ville_paris_actuelles(vpa_file, source_time_description, lang:str):
+def create_graph_from_ville_paris_actuelles(vpa_file:str, source_time_description:dict, lang:str):
     vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
 
     # File columns
@@ -426,7 +430,8 @@ def get_attr_uri_and_attr_version_uri(g:Graph, lm_uri:URIRef, attr_type_uri:URIR
             return [attr_uri, attr_version_uri]
     return [None, None]
 
-def create_data_value_from_ville_paris_actuelles(g:Graph, th_id:str, th_label:str, th_geom:str, start_time_stamp:str, arrdt_labels:list[str], district_labels:list[str], source_time_description, vpa_ns:Namespace, lang:str):
+def create_data_value_from_ville_paris_actuelles(g:Graph, th_id:str, th_label:str, th_geom:str, start_time_stamp:str,
+                                                 arrdt_labels:list[str], district_labels:list[str], source_time_description:dict, vpa_ns:Namespace, lang:str):
     """
     `source_time_description` : dictionary describing the source's validity start and end dates
     `source_time_description = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
@@ -851,10 +856,10 @@ def clean_repository_wikidata_paris(graphdb_url:str, repository_name:str, source
 
 # Data from Geojson files
 
-def create_factoids_repository_geojson_states(graphdb_url, repository_name, tmp_folder,
-                                              ont_file, ontology_named_graph_name,
-                                              factoids_named_graph_name, permanent_named_graph_name,
-                                              geojson_content, geojson_join_property, kg_file, tmp_kg_file, landmark_type, lang:str=None):
+def create_factoids_repository_geojson_states(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
+                                              ont_file:str, ontology_named_graph_name:str,
+                                              factoids_named_graph_name:str, permanent_named_graph_name:str,
+                                              geojson_content, geojson_join_property, kg_file:str, tmp_kg_file:str, landmark_type, lang:str=None):
 
     """
     Function to carry out all the processes relating to the creation of factoids for data from a Geojson file describing the states of a territory.
@@ -919,7 +924,7 @@ def create_graph_from_geojson_states(feature_collection:dict, landmark_type:str,
 
     return g
 
-def get_srs_iri_from_geojson_feature_collection(geojson_crs, crs_dict):
+def get_srs_iri_from_geojson_feature_collection(geojson_crs:dict, crs_dict:dict):
     try:
         crs_name = geojson_crs.get("properties").get("name")
         srs_iri = crs_dict.get(crs_name)
@@ -927,7 +932,7 @@ def get_srs_iri_from_geojson_feature_collection(geojson_crs, crs_dict):
     except:
         return None
 
-def create_source_geojson_states(graphdb_url, repository_name, source_uri:URIRef, named_graph_uri:URIRef, geojson_source:dict, facts_namespace:Namespace):
+def create_source_geojson_states(graphdb_url:URIRef, repository_name:str, source_uri:URIRef, named_graph_uri:URIRef, geojson_source:dict, facts_namespace:Namespace):
     """
     Creating the data source for the Geojson file
     """
@@ -937,7 +942,7 @@ def create_source_geojson_states(graphdb_url, repository_name, source_uri:URIRef
     publisher_label = geojson_source.get("publisher").get("label")
     msp.create_source_resource(graphdb_url, repository_name, source_uri, source_label, publisher_label, lang, facts_namespace, named_graph_uri)
 
-def create_source_provenances_geojson(graphdb_url, repository_name, source_uri:URIRef, source_prov_uri:URIRef, factoids_named_graph_uri:URIRef, permanent_named_graph_uri:URIRef):
+def create_source_provenances_geojson(graphdb_url:URIRef, repository_name:str, source_uri:URIRef, source_prov_uri:URIRef, factoids_named_graph_uri:URIRef, permanent_named_graph_uri:URIRef):
     """
     Creating provenance links between the source and the data in a Geojson file
     """
@@ -959,7 +964,7 @@ def create_source_provenances_geojson(graphdb_url, repository_name, source_uri:U
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def clean_repository_geojson_states(graphdb_url, repository_name, geojson_source, factoids_named_graph_name, permanent_named_graph_name, lang, geom_kg_file):
+def clean_repository_geojson_states(graphdb_url:URIRef, repository_name:str, geojson_source:dict, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str, geom_kg_file:str):
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 

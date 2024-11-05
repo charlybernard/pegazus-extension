@@ -17,7 +17,7 @@ def from_geojson_to_wkt(geojson_obj:dict):
 
     return geom.wkt
 
-def merge_geojson_features_from_one_property(feature_collection, property_name:str):
+def merge_geojson_features_from_one_property(feature_collection:dict, property_name:str):
     """
     Merge all features of a geojson object which have the same property (name for instance)
     """

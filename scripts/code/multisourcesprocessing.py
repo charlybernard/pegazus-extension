@@ -142,7 +142,7 @@ def merge_landmark_multiple_geometries(graphdb_url, repository_name, factoids_na
 
 def transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri):
     """
-    All created triples via Ontotext-Refine are initially imported in factoids named graph.
+    All created triples are initially imported in factoids named graph.
     Some of them must be transfered in a permanent named graph, as they must not be modified while importing them in facts repository.
     """
 
@@ -534,7 +534,7 @@ def create_roots_and_traces_for_landmark_relations(graphdb_url, repository_name,
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
-def create_roots_and_traces_for_landmark_attributes(graphdb_url, repository_name, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def create_roots_and_traces_for_landmark_attributes(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of changes in the fact graph (except for attribute changes, which are not unique)
     query = np.query_prefixes + f"""
     INSERT {{
@@ -547,59 +547,145 @@ def create_roots_and_traces_for_landmark_attributes(graphdb_url, repository_name
             ?rootAttr addr:hasTrace ?attr .
             }}
     }} WHERE {{
-        BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
         BIND({factoids_named_graph_uri.n3()} AS ?gs)
         {{
-            SELECT DISTINCT ?attrType ?rootLandmark WHERE {{
-                ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute [a addr:Attribute ; addr:isAttributeType ?attrType] .
+            SELECT DISTINCT ?gf ?attrType ?rootLandmark ?rootAttr WHERE {{
+                {{
+                    SELECT DISTINCT ?gf ?attrType ?rootLandmark ?existingRootAttr WHERE {{
+                        BIND({facts_named_graph_uri.n3()} AS ?gf)
+                        ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute [a addr:Attribute ; addr:isAttributeType ?attrType] . 
+                        OPTIONAL {{
+                            GRAPH ?gf {{ ?existingRootAttr a addr:Attribute . }}
+                            ?existingRootAttr addr:isAttributeType ?attrType .
+                            ?rootLandmark addr:hasAttribute ?existingRootAttr .
+                        }}
+                    }}
+                }}
+                BIND(IF(BOUND(?existingRootAttr), ?existingRootAttr, URI(CONCAT(STR(URI(facts:)), "ATTR_", STRUUID()))) AS ?rootAttr)
             }}
         }}
 
         GRAPH ?gs {{ ?attr a addr:Attribute . }}
         ?attr addr:isAttributeType ?attrType .
         ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute ?attr .
-        MINUS {{ ?attr addr:hasRoot ?x . }}
-        OPTIONAL {{
-            GRAPH ?gf {{ ?existingRootAttr a addr:Attribute . }}
-            ?existingRootAttr addr:isAttributeType ?attrType .
-            ?rootLandmark addr:hasAttribute ?existingRootAttr .
-            }}
-        BIND(IF(BOUND(?existingRootAttr), ?existingRootAttr, URI(CONCAT(STR(URI(facts:)), "ATTR_", STRUUID())) ) AS ?rootAttr)
+        FILTER NOT EXISTS {{ ?attr addr:hasRoot ?x . }}
     }}
     """
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri):
+def sort_events_and_states_on_attributes(graphdb_url, facts_repository_name, order_named_graph_uri, tmp_named_graph_uri):
+    # Detection of overlapping versions of attribute states
+    query1 = np.query_prefixes + f"""
+        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
+
+        INSERT {{
+            GRAPH ?go {{
+                ?attr addr:hasOverlappingVersion ?overlappedAttr.
+            }}
+        }}
+        WHERE {{
+            BIND({order_named_graph_uri.n3()} AS ?go)
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr, ?overlappedAttr .
+            ?landmark a addr:Landmark ; addr:hasAttribute ?attr ; addr:hasTime [addr:hasBeginning ?startTime1 ; addr:hasEnd ?endTime1 ] .
+            ?overlappedLandmark a addr:Landmark ; addr:hasAttribute ?overlappedAttr ; addr:hasTime [addr:hasBeginning ?startTime2 ; addr:hasEnd ?endTime2 ] .
+            ?startTime1 a addr:CrispTimeInstant ; addr:timeStamp ?startTimeStamp1 ; addr:timeCalendar ?timeCalendar.
+            ?endTime1 a addr:CrispTimeInstant ; addr:timeStamp ?endTimeStamp1 ; addr:timeCalendar ?timeCalendar.
+            ?startTime2 a addr:CrispTimeInstant ; addr:timeStamp ?startTimeStamp2 ; addr:timeCalendar ?timeCalendar.
+            ?endTime2 a addr:CrispTimeInstant ; addr:timeStamp ?endTimeStamp2 ; addr:timeCalendar ?timeCalendar.
+            BIND(ofn:asDays(?startTimeStamp1 - ?startTimeStamp2) AS ?diffStart)
+            BIND(ofn:asDays(?endTimeStamp1 - ?endTimeStamp2) AS ?diffEnd)
+            BIND(ofn:asDays(?endTimeStamp1 - ?startTimeStamp2) AS ?diffEnd1Start2)
+            FILTER (((?diffEnd1Start2 > 0 && ((?diffStart < 0) || (?diffStart = 0 && ?diffEnd < 0))) ||
+                    (?diffStart = 0 && ?diffEnd = 0)) &&
+                !sameTerm(?landmark, ?overlappedLandmark))
+        }}
+        """
+    
+    # For each root attribute, compare their trace attributes (those who describe states and events)
+    # For each trace, compute time gaps with all the following traces (states and events)
+    # For comparaison, there are two elements : base and compared.
+    # If base is related to a state, we get the end of valid time to compute gap, else we get the given time.
+    # If compared is related to a state, we get the beginning of valid time to compute gap, else we get the given time
+    query2 = np.query_prefixes + f"""
+        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
+
+        INSERT {{
+            GRAPH ?g {{
+                ?rootAttr addr:hasTimeGap [ addr:hasValue ?timeGap ; addr:hasBaseElem ?baseAttr ; addr:hasToCompareElem ?toCompareAttr ;
+                  addr:hasBaseElemType ?baseElemType ; addr:hasToCompareElemType ?toCompareElemType ] .
+            }}
+        }}
+        WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?baseAttr, ?toCompareAttr .
+            {{
+                ?baseLm a addr:Landmark ; addr:hasAttribute ?baseAttr ; addr:hasTime [addr:hasEnd ?baseTime] .
+                BIND(addr:StateElem AS ?baseElemType)
+            }} UNION {{
+                ?baseCg addr:appliedTo ?baseAttr ; addr:dependsOn ?baseEv .
+                ?baseEv addr:hasTime ?baseTime .
+                BIND(addr:EventElem AS ?baseElemType)
+            }}
+            {{
+                ?toCompareLm a addr:Landmark ; addr:hasAttribute ?toCompareAttr ; addr:hasTime [addr:hasBeginning ?toCompareTime] .
+                BIND(addr:StateElem AS ?toCompareElemType)
+            }} UNION {{
+                ?toCompareCg addr:appliedTo ?toCompareAttr ; addr:dependsOn ?toCompareEv .
+                ?toCompareEv addr:hasTime ?toCompareTime .
+                BIND(addr:EventElem AS ?toCompareElemType)
+            }}
+            ?baseTime a addr:CrispTimeInstant ; addr:timeStamp ?baseTimeStamp ; addr:timeCalendar ?timeCalendar. 
+            ?toCompareTime a addr:CrispTimeInstant ; addr:timeStamp ?toCompareTimeStamp ; addr:timeCalendar ?timeCalendar.
+            BIND(ofn:asDays(?toCompareTimeStamp - ?baseTimeStamp) as ?timeGap)
+            FILTER (?timeGap > 0 && !sameTerm(?baseAttr, ?toCompareAttr))
+        }}
+        """
+    
+    query3 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?go {{
+                ?attr1 ?compareProp ?attr2.
+            }}
+        }}
+        WHERE {{
+            BIND({order_named_graph_uri.n3()} AS ?go)
+            # Sous-Requête pour récupérer les écarts minimums pour chaque landmark
+            {{
+                SELECT ?gt ?attr (MIN(?gapValue) AS ?minGapValue) WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?gt)
+                    GRAPH ?gt {{
+                        ?rootAttr addr:hasTimeGap [addr:hasValue ?gapValue ; addr:hasBaseElem ?attr ].
+                    }}
+                }}
+                GROUP BY ?gt ?attr
+            }}
+            GRAPH ?gt {{
+                ?rootAttr addr:hasTimeGap [ addr:hasValue ?minGapValue ; addr:hasBaseElem ?attr ; addr:hasToCompareElem ?toCompareAttr ;
+                                            addr:hasBaseElemType ?baseElemType ; addr:hasToCompareElemType ?toCompareElemType ] .
+                BIND(
+                    IF(?baseElemType = addr:StateElem && ?toCompareElemType = addr:StateElem, addr:hasNextVersion, 
+                        IF(?baseElemType = addr:StateElem && ?toCompareElemType = addr:EventElem, addr:mayOutdate,
+                            IF(?baseElemType = addr:EventElem && ?toCompareElemType = addr:StateElem, addr:mayMakeEffective,
+                                IF(?baseElemType = addr:EventElem && ?toCompareElemType = addr:EventElem, addr:hasNextChange, addr:NoValue)))) AS ?compareProp)
+                BIND(IF(?baseElemType = addr:StateElem && ?toCompareElemType = addr:EventElem, ?toCompareAttr, ?attr) AS ?attr1)
+                BIND(IF(?baseElemType = addr:StateElem && ?toCompareElemType = addr:EventElem, ?attr, ?toCompareAttr) AS ?attr2)
+                #FILTER NOT EXISTS {{ ?attr addr:hasOverlappingVersion ?overlappedAttr }}
+            }}
+        }}
     """
-    Steps :
-    1. After having sorted landmark versions and attribute version values, similar versions can be detected.
-    These are linked together via <v1 addr:toBeMergedWith v2>. We need to remember to ensure that <v1 addr:toBeMergedWith v1>.
-    This is done with `query1` and `query2`.
 
-    2. It may be that more than two versions are similar to each other. To detect all the similar versions, we will associate them with a mergedVal constructed from the URIs of the similar versions.
-    So if v1 is similar to v2, v3 and v4, the mergedVal will be ‘uriV1;uriV2;uriV3;uriV4’ where uriVi is the URI of version i. v2, v3 and v4 will have the same mergedVal.
-    The triplet created will then be <v1 addr:hasMergedVal ‘uriV1;uriV2;uriV3;uriV4’>.
-    This step is done with `query3`.
+    queries = [query1, query2, query3]
+    for query in queries:
+        gd.update_query(query, graphdb_url, facts_repository_name)
 
-    3. We create a root attribute version for each group of similar versions, i.e. in the previous example, we will have vRoot which will be the root of v1, v2, v3 and v4.
-    This is done with `query4`.
-
-    4. Once the different versions have been created, you need to sort those that depend on the same attribute.
-    For example, if we have v5 and v6 which have been grouped together via a vRootBis root and v4 precedes v5, we need to be able to say that vRoot precedes (`addr:precedes`) vRootBis.
-    This is done with `query5`.
-
-    5. Creating changes and events between successive attribute versions. In step 4, we deduced that vRoot preceded vRootBis.
-    This means that there has been a change to the attribute linked to these versions.
-    This change indicates a version change: vRoot is outdated (`addr:outdates`) while vRootBis is made effective (`addr:makesEffective`).
-    This is done with `query6`.
-
-    6. The triplets created in steps 1, 2 and 4 are deleted as they were just used for construction purposes.
-    This is done with `query7`.
-    """
+def get_attribute_versions_to_be_merged_together(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+    # Aggregation of successive versions with similar values (in several queries)
+    # Add triples indicating similarity (addr:toBeMergedWith) with successive versions that have similar values (addr:hasNextVersion or addr:hasOverlappingVersion)
 
     # Simple request to say that a version is similar to itself (must be merged with it)
+    # `addr:AttributeVersion(vA) -> addr:toBeMergedWith(vA, vA)`
     query1 = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?g {{
@@ -611,38 +697,329 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url, facts_r
         }}
     """
 
-    # Aggregation of successive versions with similar values (in several queries)
-    # Add triples indicating similarity (addr:toBeMergedWith) with successive versions that have similar values (addr:hasNextVersion or addr:hasOverlappingVersion)
-    query2 = np.query_prefixes + f"""
+    # Two successive (or overlapping) versions which are similar (have same version value) have to be merged
+    # `addr:hasNextVersion(vA, vB) ∧ addr:sameVersionValueAs(vA, vB) -> addr:toBeMergedWith(vA, vB)`
+    query2a = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?g {{
-                ?vers1 addr:toBeMergedWith ?vers2 .
-                ?vers2 addr:toBeMergedWith ?vers1 .
+                ?attrVers1 addr:toBeMergedWith ?attrVers2 .
+                ?attrVers2 addr:toBeMergedWith ?attrVers1 .
             }}
         }} WHERE {{
             BIND({tmp_named_graph_uri.n3()} AS ?g)
             ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
-            ?attr1 addr:hasAttributeVersion ?vers1 .
-            ?attr2 addr:hasAttributeVersion ?vers2 .
             ?attr1 (addr:hasNextVersion|addr:hasOverlappingVersion) ?attr2 .
-            ?vers1 addr:sameVersionValueAs ?vers2 .
+            ?attr1 addr:hasAttributeVersion ?attrVers1 .
+            ?attr2 addr:hasAttributeVersion ?attrVers2 .
+            ?attrVers1 addr:sameVersionValueAs ?attrVers2 .
+            FILTER(!sameTerm(?attr1, ?attr2))
+        }}
+    """
+
+    # One version outdated (respectively made effective) by a change which may outdate (respectively may make effective) a other version which are similar (have same version value) have to be merged
+    # `addr:mayOutdate(c1, vA) ∧ addr:outdates(c1, vB) ∧ addr:sameVersionValueAs(vA, vA) -> addr:toBeMergedWith(vA, vB)` and
+    # `addr:mayMakeEffective(c1, vA) ∧ addr:makesEffective(c1, vB) ∧ addr:differentVersionValueFrom(vA, vB) -> addr:toBeMergedWith(vA, vB)`
+    query2b = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?attrVers1 addr:toBeMergedWith ?attrVers2 .
+                ?attrVers2 addr:toBeMergedWith ?attrVers1 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            VALUES (?changeProp ?mayChangeProp) {{ (addr:outdates addr:mayOutdate) (addr:makesEffective addr:mayMakeEffective) }}
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+            ?attr2 ?mayChangeProp ?attr1 .
+            ?attr1 addr:hasAttributeVersion ?attrVers1 .
+            ?cg2 addr:appliedTo ?attr2; ?changeProp ?attrVers2 .
+            ?attrVers1 addr:sameVersionValueAs ?attrVers2 .
+            FILTER(!sameTerm(?attr1, ?attr2))
+        }}
+    """
+
+    # For two successive changes c1 and c2 which respectively make effective a version v1 and outdates a version v2 such as v1 is similar to v2, then v1 and v2 have to be merged
+    # `addr:hasNextChange(c1, c2) ∧ addr:makesEffective(c1, vA) ∧ addr:outdates(c2, vB) ∧ addr:sameVersionValueAs(v1, v2) -> addr:toBeMergedWith(v1, v2)`
+    query2c = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?attrVers1 addr:toBeMergedWith ?attrVers2 .
+                ?attrVers2 addr:toBeMergedWith ?attrVers1 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+            ?attr1 addr:hasNextChange ?attr2 .
+            ?cg1 addr:appliedTo ?attr1 ; addr:makesEffective ?attrVers1 .
+            ?cg2 addr:appliedTo ?attr2 ; addr:makesEffective ?attrVers2 .
+            ?attrVers1 addr:sameVersionValueAs ?attrVers2 .
             FILTER(!sameTerm(?attr1, ?attr2))
         }}
     """
 
     # Aggregation of successive versions with similar values (in several queries)
     # Add triples indicating similarity (addr:toBeMergedWith) with successive versions that have similar values (addr:hasNextVersion or addr:hasOverlappingVersion)
+    # If v1 addr:toBeMergedWith v2 and v2 addr:toBeMergedWith v3 then v1 addr:toBeMergedWith v3.
     query3 = np.query_prefixes + f"""
         INSERT {{
-            GRAPH ?g {{ ?vers1 addr:toBeMergedWith ?vers2 . }}
+            GRAPH ?g {{ ?attrVers1 addr:toBeMergedWith ?attrVers2 . }}
         }} WHERE {{
             BIND({tmp_named_graph_uri.n3()} AS ?g)
-            ?vers1 addr:toBeMergedWith+ ?vers2 .
+            ?attrVers1 addr:toBeMergedWith+ ?attrVers2 .
         }}
     """
 
-    # For each version, we create a value (versMergeVal) which is the fusion of the URIs of versions that are similar.
+    queries = [query1, query2a, query2b, query2c, query3]
+    for query in queries:
+        gd.update_query(query, graphdb_url, facts_repository_name)
+
+def get_updated_attribute_changes(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+    # If a change which does not outdate any version but which may outdate a version, then this change outdate the version (works for makes effective / may make effective) 
+    # `addr:mayOutdate(c1, vA) ∧ ∄ addr:outdates(c1, vB) -> addr:outdates(c1, vA)` and
+    # `addr:mayMakeEffective(c1, vA) ∧ ∄ addr:makesEffective(c1, vB) -> addr:makesEffective(c1, vA)`
+    query1 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?cg2 ?prop ?attrVers1 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            VALUES (?changeProp ?mayChangeProp) {{ (addr:outdates addr:mayOutdate) (addr:makesEffective addr:mayMakeEffective) }}
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+            ?attr2 ?mayChangeProp ?attr1 .
+            ?attr1 addr:hasAttributeVersion ?attrVers1 .
+            ?cg2 addr:appliedTo ?attr2 .
+            FILTER NOT EXISTS {{ ?cg2 ?changeProp ?attrVers2 . }}
+            FILTER(!sameTerm(?attr1, ?attr2))
+        }}
+    """
+
+    # `addr:hasNextChange(c1, c2) ∧ addr:makesEffective(c1, vA) ∧ ∄ addr:outdates(c2, vB) -> addr:outdates(c2, vA)`
+    query2a = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?cg2 addr:outdates ?attrVers1 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+            ?attr1 addr:hasNextChange ?attr2 .
+            ?cg1 addr:appliedTo ?attr1 ; addr:makesEffective ?attrVers1 .
+            ?cg2 addr:appliedTo ?attr2 .
+            FILTER NOT EXISTS {{ ?cg2 addr:outdates ?attrVers2 . }}
+            FILTER(!sameTerm(?attr1, ?attr2))
+        }}
+    """
+
+    # `addr:hasNextChange(c1, c2) ∧ ∄ addr:makesEffective(c1, vB) ∧ addr:outdates(c2, vA) -> addr:makesEffective(c1, vA)`
+    query2b = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?cg1 addr:makesEffective ?attrVers1 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+            ?attr1 addr:hasNextChange ?attr2 .
+            ?cg1 addr:appliedTo ?attr1 .
+            ?cg2 addr:appliedTo ?attr2 ; addr:outdates ?attrVers1 .
+            FILTER NOT EXISTS {{ ?cg1 addr:makesEffective ?attrVers2 . }}
+            FILTER(!sameTerm(?attr1, ?attr2))
+        }}
+    """
+
+    queries = [query1, query2a, query2b]
+    for query in queries:
+        gd.update_query(query, graphdb_url, facts_repository_name)
+
+def get_attribute_changes_and_versions_to_be_created(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+    """
+    """
+
+    # Two successive versions which are different (have different version value) are separated by a change (here we create a temporary change)
+    # `addr:hasNextVersion(vA, vB) ∧ addr:differentVersionValueFrom(vA, vB) -> ∃ c, addr:AttributeChange(c) ∧ addr:outdates(c, vA) ∧ addr:makesEffective(c, vB)`
+    query1 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr1, ?attr2 ; addr:outdates ?attrVers1 ; addr:makesEffective ?attrVers2 .
+            }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr1 ?attr2 ?attrVers1 ?attrVers2 WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+                    ?attr1 addr:hasNextVersion ?attr2 .
+                    ?attr1 addr:hasAttributeVersion ?attrVers1 .
+                    ?attr2 addr:hasAttributeVersion ?attrVers2 .
+                    ?attrVers1 addr:differentVersionValueFrom ?attrVers2 .
+                    FILTER(!sameTerm(?attr1, ?attr2))
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # If a version outdated (respectively made effective) by a change which may outdate (respectively may make effective) a other version which are similar (have same version value),
+    # Then it exists a change between these versions
+    # `addr:mayOutdate(c1, vA) ∧ addr:outdates(c1, vB) ∧ addr:differentVersionValueFrom(vA, vB) -> ∃ c, addr:AttributeChange(c) ∧ addr:outdates(c, vA) ∧ addr:makesEffective(c, vB)` and
+    # `addr:mayMakeEffective(c1, vA) ∧ addr:makesEffective(c1, vB) ∧ addr:differentVersionValueFrom(vA, vB) -> ∃ c, addr:AttributeChange(c) ∧ addr:makesEffective(c, vA) ∧ addr:outdates(c, vB)`
+    query2 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr1, ?attr2 ; ?changeProp ?attrVers1 ; ?antiChangeProp ?attrVers2 .
+            }}
+        }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?g)
+            {{
+                SELECT DISTINCT ?changeProp ?antiChangeProp ?attr1 ?attr2 ?attrVers1 ?attrVers2 {{
+                    VALUES (?changeProp ?mayChangeProp ?antiChangeProp) {{ (addr:outdates addr:mayOutdate addr:makesEffective) (addr:makesEffective addr:mayMakeEffective addr:outdates) }}
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+                    ?attr2 ?mayChangeProp ?attr1 .
+                    ?attr1 addr:hasAttributeVersion ?attrVers1 .
+                    ?cg2 addr:appliedTo ?attr2; ?changeProp ?attrVers2 .
+                    ?attrVers1 addr:differentVersionValueFrom ?attrVers2 .
+                    FILTER(!sameTerm(?attr1, ?attr2))
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # `addr:hasNextChange(c1, c2) ∧ addr:makesEffective(c1, vA) ∧ addr:outdates(c2, vB) ∧ addr:differentVersionValueFrom(v1, v2) -> ∃ c, addr:AttributeChange(c) ∧ addr:outdates(c, vA) ∧ addr:makesEffective(c, vB)`
+    query3 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr1, ?attr2 ; addr:outdates ?attrVers2 ; addr:makesEffective ?attrVers1 .
+            }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr1 ?attr2 ?attrVers1 ?attrVers2 WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+                    ?attr1 addr:hasNextChange ?attr2 .
+                    ?cg1 addr:appliedTo ?attr1 ; addr:outdates ?attrVers1 .
+                    ?cg2 addr:appliedTo ?attr2 ; addr:makesEffective ?attrVers2 .
+                    ?attrVers1 addr:differentVersionValueFrom ?attrVers2 .
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # `addr:hasNextChange(c1, c2) ∧ ∄ addr:makesEffective(c1, vA) ∧ ∄ addr:outdates(c2, vA) -> ∃ v, addr:AttributeVersion(v) ∧ addr:makesEffective(c1, v) ∧ addr:outdates(c2, v)`
     query4 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{
+                ?tmpVersion a addr:AttributeVersion ; addr:appliedTo ?attr1, ?attr2 .
+                ?cg1 addr:makesEffective ?tmpVersion .
+                ?cg2 addr:outdates ?tmpVersion . 
+            }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr1 ?attr2 ?attrVers1 ?attrVers2 WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr1, ?attr2 .
+                    ?attr1 addr:hasNextChange ?attr2 .
+                    ?cg1 addr:appliedTo ?attr1 .
+                    ?cg2 addr:appliedTo ?attr2 .
+                    FILTER NOT EXISTS {{ ?cg1 addr:makesEffective ?attrVers1 . }}
+                    FILTER NOT EXISTS {{ ?cg2 addr:outdates ?attrVers2 . }}
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "AV_", STRUUID())) AS ?tmpVersion)
+        }}
+    """
+
+    # Create a change if a version is not preceded by anything
+    # `addr:AttributeVersion(vA) ∧ ∄ c, addr:mayMakeEffective(c, vA) ∧ ∄ v, addr:hasNextVersion(v, vA) -> ∃ c, addr:AttributeChange(c) ∧ addr:makesEffective(c, vA)`
+    query5a = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{ ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr ; addr:makesEffective ?attrVers . }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr ?attrVers WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr .
+                    FILTER NOT EXISTS {{ ?comparingAttr addr:mayMakeEffective ?attr . }}
+                    FILTER NOT EXISTS {{ ?comparingAttr addr:hasNextVersion ?attr . }}
+                    ?attr addr:hasAttributeVersion ?attrVers .
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # Create a change is preceded by nothing and outdates a version
+    # `addr:AttributeChange(c1) ∧ addr:outdates(c1, vA) ∧ ∄ c, addr:hasNextChange(c, c1) ∧ ∄ v, addr:mayOutdate(c1, vA) -> ∃ c, addr:AttributeChange(c) ∧ addr:makesEffective(c, vA)`
+    query5b = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{ ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr ; addr:makesEffective ?attrVers . }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr ?attrVers WHERE {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr .
+                    ?cg addr:appliedTo ?attr ; addr:outdates ?attrVers .
+                    FILTER NOT EXISTS {{ ?comparingAttr addr:hasNextChange ?attr . }}
+                    FILTER NOT EXISTS {{ ?comparingAttr addr:mayOutdate ?attr . }}
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # Create a change if a version is not followed by anything
+    # `addr:AttributeVersion(vA) ∧ ∄ c, addr:mayOutdate(c, vA) ∧ ∄ v, addr:hasNextVersion(vA, v) -> ∃ c, addr:AttributeChange(c) ∧ addr:outdates(c, vA)`
+    query5c = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{ ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr ; addr:outdates ?attrVers . }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr ?attrVers {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr .
+                    FILTER NOT EXISTS {{ ?attr addr:mayOutdate ?comparedAttr . }}
+                    FILTER NOT EXISTS {{ ?attr addr:hasNextVersion ?comparedAttr . }}
+                    ?attr addr:hasAttributeVersion ?attrVers .
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+
+    # Create a change is followed by nothing and outdates a version
+    # `addr:AttributeChange(c1) ∧ addr:makesEffective(c1, vA) ∧ ∄ c, addr:hasNextChange(c1, c) ∧ ∄ v, addr:mayMakeEffective(c1, vA) -> ∃ c, addr:AttributeChange(c) ∧ addr:outdates(c, vA)`
+    query5d = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{ ?tmpChange a addr:AttributeChange ; addr:appliedTo ?attr ; addr:outdates ?attrVers . }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?attr ?attrVers {{
+                    BIND({tmp_named_graph_uri.n3()} AS ?g)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr .
+                    ?cg addr:appliedTo ?attr ; addr:outdates ?attrVers .
+                    FILTER NOT EXISTS {{ ?attr addr:hasNextChange ?comparedAttr . }}
+                    FILTER NOT EXISTS {{ ?attr addr:mayMakeEffective ?comparedAttr . }}
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?tmpChange)
+        }}
+    """
+            
+    queries = [query1, query2, query3, query4, query5a, query5b, query5c, query5d]
+    for query in queries:
+        gd.update_query(query, graphdb_url, facts_repository_name)
+
+
+def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
+    """
+    It may be more than two versions are similar to each other. To detect all the similar versions, we will associate them with a mergedVal constructed from the URIs of the similar versions.
+    So if v1 is similar to v2, v3 and v4, the mergedVal will be ‘uriV1;uriV2;uriV3;uriV4’ where uriVi is the URI of version i. v2, v3 and v4 will have the same mergedVal.
+    Triple created will then be <v1 addr:hasMergedVal ‘uriV1;uriV2;uriV3;uriV4’>.
+    This step is done with `query3`.
+    """
+    
+    # For each version, we create a value (versMergeVal) which is the fusion of the URIs of versions that are similar.
+    query1 = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?g {{ ?vers1 addr:versMergeVal ?versMergeVal }}
         }} WHERE {{
@@ -657,7 +1034,7 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url, facts_r
     """
 
     # We create an attribute version that acts as a root (aggregation of similar versions)
-    query5 = np.query_prefixes + f"""
+    query2 = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?gf {{
                 ?rootAttrVers a addr:AttributeVersion .
@@ -671,8 +1048,6 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url, facts_r
             BIND({facts_named_graph_uri.n3()} AS ?gf)
             BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
             BIND(URI(CONCAT(STR(URI(facts:)), "AV_", STRUUID())) AS ?rootAttrVers)
-            #BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?cg)
-            #BIND(URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())) AS ?ev)
             {{
                 SELECT DISTINCT ?versMergeVal WHERE {{
                     ?vers addr:versMergeVal ?versMergeVal .
@@ -682,107 +1057,120 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url, facts_r
         }}
     """
 
-    # We indicate that an attribute version 1 precedes an attribute version 2 if they have different values and if the landmark versions on which they depend follow one another.
-    query6a = np.query_prefixes + f"""
-        INSERT {{
-            GRAPH ?gt {{
-                [] a addr:ChangeDescription ; addr:appliedTo ?rootAttr ;
-                addr:outdatedAttributeVersion ?rootAttrVers1 ; addr:madeEffectiveAttributeVersion ?rootAttrVers2 ;
-                addr:hasTimeAfter ?startTime ; addr:hasTimeBefore ?endTime .
-            }}
-        }} WHERE {{
-            BIND({facts_named_graph_uri.n3()} AS ?gf)
-            BIND({tmp_named_graph_uri.n3()} AS ?gt)
-            BIND(URI(CONCAT(STR(URI(facts:)), "TMP_", STRUUID())) AS ?tmpChange)
-            GRAPH ?gf {{ ?rootAttr a addr:Attribute . }}
-            ?rootAttr addr:hasAttributeVersion ?rootAttrVers1, ?rootAttrVers2 .
-            FILTER (?rootAttrVers1 != ?rootAttrVers2)
-            ?rootAttrVers1 a addr:AttributeVersion ; addr:isRootOf [addr:isAttributeVersionOf ?attr1] .
-            ?rootAttrVers2 a addr:AttributeVersion ; addr:isRootOf [addr:isAttributeVersionOf ?attr2] .
-            ?attr1 (addr:hasNextVersion|addr:hasOverlappingVersion) ?attr2 .
-            ?lm1 addr:hasAttribute ?attr1 ; addr:hasTime [addr:hasEnd ?endTime] .
-            ?lm2 addr:hasAttribute ?attr2 ; addr:hasTime [addr:hasBeginning ?startTime] .
-        }}
-    """
-
-    # We indicate that an attribute version is not preceded by any other, i.e. we indicate the appearance of the 1st (known) version.
-    query6b = np.query_prefixes + f"""
-        INSERT {{
-            GRAPH ?gt {{
-                [] a addr:ChangeDescription ; addr:appliedTo ?rootAttr ;
-                addr:madeEffectiveAttributeVersion ?rootAttrVers ; addr:hasTimeBefore ?startTime .
-            }}
-        }} WHERE {{
-            BIND({facts_named_graph_uri.n3()} AS ?gf)
-            BIND({tmp_named_graph_uri.n3()} AS ?gt)
-            BIND(URI(CONCAT(STR(URI(facts:)), "TMP_", STRUUID())) AS ?tmpChange)
-            GRAPH ?gf {{ ?rootAttr a addr:Attribute . }}
-            ?rootAttr addr:hasAttributeVersion ?rootAttrVers .
-            ?rootAttrVers a addr:AttributeVersion ; addr:isRootOf [addr:isAttributeVersionOf ?attr] .
-            FILTER NOT EXISTS {{ ?x (addr:hasNextVersion|addr:hasOverlappingVersion) ?attr . }}
-            ?lm addr:hasAttribute ?attr ; addr:hasTime [addr:hasBeginning ?startTime] .
-        }}
-    """
-
-    # This indicates that one version of an attribute has not been succeeded by another, i.e. it indicates the disappearance of the last (known) version.
-    query6c = np.query_prefixes + f"""
-        INSERT {{
-            GRAPH ?gt {{
-                [] a addr:ChangeDescription ; addr:appliedTo ?rootAttr ;
-                addr:outdatedAttributeVersion ?rootAttrVers ; addr:hasTimeAfter ?endTime .
-            }}
-        }} WHERE {{
-            BIND({facts_named_graph_uri.n3()} AS ?gf)
-            BIND({tmp_named_graph_uri.n3()} AS ?gt)
-            BIND(URI(CONCAT(STR(URI(facts:)), "TMP_", STRUUID())) AS ?tmpChange)
-            GRAPH ?gf {{ ?rootAttr a addr:Attribute . }}
-            ?rootAttr addr:hasAttributeVersion ?rootAttrVers .
-            ?rootAttrVers a addr:AttributeVersion ; addr:isRootOf [addr:isAttributeVersionOf ?attr] .
-            FILTER NOT EXISTS {{ ?attr (addr:hasNextVersion|addr:hasOverlappingVersion) ?x . }}
-            ?lm addr:hasAttribute ?attr ; addr:hasTime [addr:hasEnd ?endTime] .
-        }}
-    """
-
-    # Creating events and changes
-    query7 = np.query_prefixes + f"""
-        INSERT {{
-            GRAPH ?gf {{
-                ?rootTimeAfter a addr:CrispTimeInstant .
-                ?rootTimeBefore a addr:CrispTimeInstant .
-                ?rootEv a addr:Event ; addr:hasTimeAfter ?rootTimeAfter ; addr:hasTimeBefore ?rootTimeBefore.
-                ?rootCg a addr:AttributeChange ; addr:isChangeType ctype:AttributeVersionTransition ;
-                    addr:appliedTo ?rootAttr ; addr:dependsOn ?rootEv ;
-                    addr:makesEffective ?rootAttrVers2 ; addr:outdates ?rootAttrVers1 .
-            }}
-            GRAPH ?gi {{
-                ?timeAfter addr:hasRoot ?rootTimeAfter .
-                ?timeBefore addr:hasRoot ?rootTimeBefore .
-                ?rootTimeAfter addr:hasTrace ?timeAfter .
-                ?rootTimeBefore addr:hasTrace ?timeBefore .
-            }}
-        }} WHERE {{
-            BIND({facts_named_graph_uri.n3()} AS ?gf)
-            BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-            ?changeDesc a addr:ChangeDescription ; addr:appliedTo ?rootAttr .
-            OPTIONAL {{ ?changeDesc addr:outdatedAttributeVersion ?rootAttrVers1 . }}
-            OPTIONAL {{ ?changeDesc addr:madeEffectiveAttributeVersion ?rootAttrVers2 . }}
-            OPTIONAL {{ ?changeDesc addr:hasTimeAfter ?timeAfter . }}
-            OPTIONAL {{ ?changeDesc addr:hasTimeBefore ?timeBefore . }}
-            BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())), ?x) AS ?rootCg)
-            BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())), ?x) AS ?rootEv)
-            BIND(IF(BOUND(?timeAfter), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeAfter)
-            BIND(IF(BOUND(?timeBefore), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeBefore)
-            }}
-    """
-
-    queries = [query1, query2, query3, query4, query5, query6a, query6b, query6c, query7]
+    queries = [query1, query2]
     for query in queries:
         gd.update_query(query, graphdb_url, facts_repository_name)
+
+def create_root_attribute_changes(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+    """
+    """
+
+    # Initialisation of attribute changes
+    query1 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?gf {{
+                ?rootChange a addr:AttributeChange ; addr:appliedTo ?rootAttr .
+            }}
+            GRAPH ?gi {{
+                ?cg addr:hasRoot ?rootChange .
+                ?rootChange addr:hasTrace ?cg .
+            }}
+        }} WHERE {{
+            {{
+                SELECT DISTINCT ?gf ?cg ?rootAttr WHERE {{
+                    BIND({facts_named_graph_uri.n3()} AS ?gf)
+                    BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+                    ?rootAttr a addr:Attribute ; addr:isRootOf ?attr .
+                    ?cg addr:appliedTo ?attr .
+                }}
+            }}
+            BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?rootChange)
+        }}
+        """
+    
+    # `cRoot addr:hasTrace cTrace ∧ vRoot addr:hasTrace vTrace ∧ cTrace addr:outdates vTrace -> cRoot addr:outdates vRoot` and
+    # `cRoot addr:hasTrace cTrace ∧ vRoot addr:hasTrace vTrace ∧ cTrace addr:makesEffective vTrace -> cRoot addr:makesEffective vRoot`
+    query2 = np.query_prefixes + f"""
+        INSERT {{
+            GRAPH ?g {{ ?rootChange ?changeProp ?rootAttrVers . }}
+        }} WHERE {{
+            BIND({facts_named_graph_uri.n3()} AS ?g)
+            ?rootAttr a addr:Attribute ; addr:hasAttributeVersion ?rootAttrVers .
+            ?rootAttrVers addr:isRootOf ?attrVers .
+            ?rootChange addr:appliedTo ?rootAttr ; addr:isRootOf ?change .
+            ?change ?changeProp ?attrVers .
+            FILTER(?changeProp IN (addr:makesEffective, addr:outdates))
+        }}
+        """
+    
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, facts_repository_name)
+
+def update_attribute_changes_and_versions(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+    """
+    Manage attribute changes and versions after having compared version values and sorted change and versions temporally. 
+    All triples are used to build other triples later so they are stored in a temporary named graph defined by `tmp_named_graph_uri`.
+    """
+
+    # Define attribute versions which has to be merged together after having sorted them.
+    get_attribute_versions_to_be_merged_together(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+
+    # Update of attribute changes for which the properties `addr:makesEffective` and `addr:outdates` are missing
+    get_updated_attribute_changes(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+
+    # Create attribute changes and attribute versions which are missing
+    get_attribute_changes_and_versions_to_be_created(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+
+
+def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
+    # Merge attribute versions which have to be merged together according previous function. To do so, attribute versions will be linked by a root.
+    # If v1, v2 and v3 have to be merged together, then `<v1 hasRoot vRoot> <v2 hasRoot vRoot> <v3 hasRoot vRoot>`.
+    merge_attribute_versions_to_be_merged(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri)
+
+    # Create root attribute changes
+    create_root_attribute_changes(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+
+    # # Creating events and changes
+    # query1 = np.query_prefixes + f"""
+    #     INSERT {{
+    #         GRAPH ?gf {{
+    #             ?rootTimeAfter a addr:CrispTimeInstant .
+    #             ?rootTimeBefore a addr:CrispTimeInstant .
+    #             ?rootEv a addr:Event ; addr:hasTimeAfter ?rootTimeAfter ; addr:hasTimeBefore ?rootTimeBefore.
+    #             ?rootCg a addr:AttributeChange ; addr:isChangeType ctype:AttributeVersionTransition ;
+    #                 addr:appliedTo ?rootAttr ; addr:dependsOn ?rootEv ;
+    #                 addr:makesEffective ?rootAttrVers2 ; addr:outdates ?rootAttrVers1 .
+    #         }}
+    #         GRAPH ?gi {{
+    #             ?timeAfter addr:hasRoot ?rootTimeAfter .
+    #             ?timeBefore addr:hasRoot ?rootTimeBefore .
+    #             ?rootTimeAfter addr:hasTrace ?timeAfter .
+    #             ?rootTimeBefore addr:hasTrace ?timeBefore .
+    #         }}
+    #     }} WHERE {{
+    #         BIND({facts_named_graph_uri.n3()} AS ?gf)
+    #         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+    #         ?changeDesc a addr:ChangeDescription ; addr:appliedTo ?rootAttr .
+    #         OPTIONAL {{ ?changeDesc addr:outdatedAttributeVersion ?rootAttrVers1 . }}
+    #         OPTIONAL {{ ?changeDesc addr:madeEffectiveAttributeVersion ?rootAttrVers2 . }}
+    #         OPTIONAL {{ ?changeDesc addr:hasTimeAfter ?timeAfter . }}
+    #         OPTIONAL {{ ?changeDesc addr:hasTimeBefore ?timeBefore . }}
+    #         BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())), ?x) AS ?rootCg)
+    #         BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())), ?x) AS ?rootEv)
+    #         BIND(IF(BOUND(?timeAfter), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeAfter)
+    #         BIND(IF(BOUND(?timeBefore), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeBefore)
+    #         }}
+    # """
+
+    # queries = [query1]
+    # for query in queries:
+    #     gd.update_query(query, graphdb_url, facts_repository_name)
 
     # Deleting the temporary graph
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
 
-def create_roots_and_traces_for_changes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri):
+def create_roots_and_traces_for_changes(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of changes in the fact graph (except for attribute changes, which are not unique)
     query = np.query_prefixes + f"""
     INSERT {{
@@ -815,7 +1203,7 @@ def create_roots_and_traces_for_changes(graphdb_url, repository_name, factoids_n
     """
     gd.update_query(query, graphdb_url, repository_name)
 
-def create_roots_and_traces_for_events(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri):
+def create_roots_and_traces_for_events(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of events in the fact graph
     # If two events have at least one change in common, they are considered to be equal (a change depends on only one event).
     query = np.query_prefixes + f"""
@@ -861,7 +1249,7 @@ This part includes functions for temporal sorting to manage attribute versions:
 - comparison of different versions of the same attribute. The comparison is based on their value (`<version addr:versionValue>`)
 """
 
-def order_temporally_landmark_versions(graphdb_url, repository_name, order_named_graph_uri, tmp_named_graph_uri):
+def order_temporally_landmark_versions(graphdb_url:URIRef, repository_name:str, order_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Calculating differences between landmark state versions
     query1 = np.query_prefixes + f"""
         PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
@@ -945,7 +1333,7 @@ def order_temporally_landmark_versions(graphdb_url, repository_name, order_named
     # Deleting the temporary graph
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
 
-def order_temporally_attribute_versions(graphdb_url, repository_name, order_named_graph_uri, tmp_named_graph_uri):
+def order_temporally_attribute_versions(graphdb_url:URIRef, repository_name:str, order_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Calculation of differences between attribute status versions
     query1 = np.query_prefixes + f"""
         PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
@@ -1034,7 +1422,7 @@ def order_temporally_attribute_versions(graphdb_url, repository_name, order_name
 
 ####################################################################
 
-def transfer_implicit_triples(graphdb_url, repository_name, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef):
+def transfer_implicit_triples(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?gf {{ ?rootElem ?p ?o }}
@@ -1058,7 +1446,7 @@ def transfer_implicit_triples(graphdb_url, repository_name, factoids_named_graph
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def transfer_version_values_to_roots(graphdb_url, repository_name, facts_named_graph_uri:URIRef):
+def transfer_version_values_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
     Transfer attribute version values to root versions: if <?av addr:versionValue ?value> and <?rootAv addr:hasTrace ?av> then <?rootAv addr:versionValue ?value>.
     """
@@ -1074,7 +1462,7 @@ def transfer_version_values_to_roots(graphdb_url, repository_name, facts_named_g
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def transfer_provenances_to_roots(graphdb_url, repository_name, facts_named_graph_uri:URIRef):
+def transfer_provenances_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
     Transférer les provenances (sources) des éléments vers leur racine
     """
@@ -1090,7 +1478,7 @@ def transfer_provenances_to_roots(graphdb_url, repository_name, facts_named_grap
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def transfer_crisp_time_instant_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri:URIRef):
+def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
     Transfer the crisp time instant elements to their root.
     """
@@ -1107,7 +1495,7 @@ def transfer_crisp_time_instant_elements_to_roots(graphdb_url, repository_name, 
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Landmarks are created as follows:
         * creation of links (using `addr:hasRoot`) between landmarks in the facts named graph and those which are in the factoid named graph ;
@@ -1124,7 +1512,7 @@ def link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_
     create_roots_and_traces_for_changes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
     create_roots_and_traces_for_events(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
 
-def import_factoids_in_facts(graphdb_url, repository_name, factoids_named_graph_name, facts_named_graph_name, inter_sources_name_graph_name):
+def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:URIRef, facts_named_graph_name:URIRef, inter_sources_name_graph_name:URIRef):
     facts_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, facts_named_graph_name)
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     inter_sources_name_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, inter_sources_name_graph_name)
@@ -1134,7 +1522,7 @@ def import_factoids_in_facts(graphdb_url, repository_name, factoids_named_graph_
 
     link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
 
-def infer_missing_changes_on_landmark_and_relations(graphdb_url, facts_repository_name, facts_named_graph_uri):
+def infer_missing_changes_on_landmark_and_relations(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef):
 
     # Create a change (appearance and/or disappearance) for landmarks and landmark relations for which change is missing.
     # Associate this change with an event. Tell the event has no time which has to be added (?event addr:timeToAdd "true"^^xsd:boolean)
@@ -1168,7 +1556,7 @@ def infer_missing_changes_on_landmark_and_relations(graphdb_url, facts_repositor
     gd.update_query(query, graphdb_url, facts_repository_name)
 
 
-def infer_missing_time_on_events(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri):
+def infer_missing_time_on_events(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # For events created from no factoid (event without any trace: `FILTER NOT EXISTS {{ ?rootEvent addr:hasTrace ?randomEvent . }}`) and containing changes applied to landmark and landmark relation, we deduce time thanks to landmark versions.
     # We deduce the event related to the appearance of a landmark or a landmark relation appears before the beginning of the interval of the first version (versions are already ordered temporally).
     # We deduce the event related to the disapearance of a landmark or a landmark relation appears after the end of the interval of the last version.
@@ -1260,7 +1648,7 @@ def infer_missing_time_on_events(graphdb_url, facts_repository_name, facts_named
 
 ## Creation sources
 
-def create_source_resource(graphdb_url, repository_name, source_uri:URIRef, source_label:str, publisher_label:str, lang:str, namespace:Namespace, named_graph_uri:URIRef):
+def create_source_resource(graphdb_url:URIRef, repository_name:str, source_uri:URIRef, source_label:str, publisher_label:str, lang:str, namespace:Namespace, named_graph_uri:URIRef):
     """
     Creation of the source for a resource
     """
@@ -1289,7 +1677,7 @@ def create_source_resource(graphdb_url, repository_name, source_uri:URIRef, sour
         """
         gd.update_query(query, graphdb_url, repository_name)
 
-def link_provenances_with_source(graphdb_url, repository_name, source_uri:URIRef, named_graph_uri:URIRef):
+def link_provenances_with_source(graphdb_url:URIRef, repository_name:str, source_uri:URIRef, named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
         INSERT {{
             GRAPH {named_graph_uri.n3()} {{
@@ -1332,7 +1720,7 @@ def create_landmark_version(g:Graph, lm_uri:URIRef, lm_type_uri:URIRef, lm_label
         gr.add_provenance_to_resource(g, lm_uri, provenance_uri)
 
 
-def detect_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url, repository_name, similar_property:URIRef, landmark_type:URIRef, landmark_relation_type:URIRef, factoids_named_graph_uri:URIRef):
+def detect_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, landmark_type:URIRef, landmark_relation_type:URIRef, factoids_named_graph_uri:URIRef):
     # Detection of similar landmarks on the sole criterion of hiddenlabel similarity and belonging to the same landmark (they must have the same type)
     query = np.query_prefixes + f"""
         INSERT {{
@@ -1374,7 +1762,7 @@ def detect_similar_landmarks_with_hidden_label(graphdb_url, repository_name, sim
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def detect_similar_landmark_versions_with_hidden_label(graphdb_url, repository_name, similar_property, landmark_type, factoids_named_graph_uri):
+def detect_similar_landmark_versions_with_hidden_label(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, landmark_type:URIRef, factoids_named_graph_uri:URIRef):
     # Detection of similar landmarks based solely on the hiddenlabel similarity criterion (they must have the same type).
     # To be considered as a version of a landmark, the landmark must be the subject of a triplet of the type `<?s addr:hasTime ?o>`.
     query = np.query_prefixes + f"""
@@ -1395,7 +1783,7 @@ def detect_similar_landmark_versions_with_hidden_label(graphdb_url, repository_n
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def detect_similar_attributes(graphdb_url, repository_name, similar_property:URIRef, factoids_named_graph_uri:URIRef):
+def detect_similar_attributes(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, factoids_named_graph_uri:URIRef):
     # Detection of similar attributes from the previous query
     query = np.query_prefixes + f"""
         INSERT {{
@@ -1418,7 +1806,7 @@ def detect_similar_attributes(graphdb_url, repository_name, similar_property:URI
     gd.update_query(query, graphdb_url, repository_name)
 
 
-def detect_similar_attribute_versions(graphdb_url, repository_name, similar_property:URIRef, factoids_named_graph_uri:URIRef):
+def detect_similar_attribute_versions(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, factoids_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?g {{
@@ -1439,7 +1827,7 @@ def detect_similar_attribute_versions(graphdb_url, repository_name, similar_prop
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def detect_similar_landmark_relations(graphdb_url, repository_name, similar_property:URIRef, factoids_named_graph_uri:URIRef):
+def detect_similar_landmark_relations(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, factoids_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
     INSERT {{
         GRAPH {factoids_named_graph_uri.n3()} {{
@@ -1456,7 +1844,7 @@ def detect_similar_landmark_relations(graphdb_url, repository_name, similar_prop
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def merge_similar_landmarks_with_hidden_labels(graphdb_url, repository_name, landmark_type:URIRef, factoids_named_graph_uri:URIRef):
+def merge_similar_landmarks_with_hidden_labels(graphdb_url:URIRef, repository_name:str, landmark_type:URIRef, factoids_named_graph_uri:URIRef):
     similar_property = np.SKOS["exactMatch"]
 
     # Detection and merging of similar landmarks
@@ -1471,7 +1859,7 @@ def merge_similar_landmarks_with_hidden_labels(graphdb_url, repository_name, lan
     detect_similar_attribute_versions(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
     remove_temporary_resources_and_transfert_triples(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
 
-def merge_similar_landmark_versions_with_hidden_labels(graphdb_url, repository_name, landmark_type:URIRef, factoids_named_graph_uri:URIRef):
+def merge_similar_landmark_versions_with_hidden_labels(graphdb_url:URIRef, repository_name:str, landmark_type:URIRef, factoids_named_graph_uri:URIRef):
     similar_property = np.SKOS["exactMatch"]
 
     # Detection and merging of similar landmarks
@@ -1486,7 +1874,7 @@ def merge_similar_landmark_versions_with_hidden_labels(graphdb_url, repository_n
     detect_similar_attribute_versions(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
     remove_temporary_resources_and_transfert_triples(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
 
-def merge_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url, repository_name, landmark_type:URIRef, landmark_relation_type:URIRef, factoids_named_graph_uri:URIRef):
+def merge_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url:URIRef, repository_name:str, landmark_type:URIRef, landmark_relation_type:URIRef, factoids_named_graph_uri:URIRef):
     similar_property = np.SKOS["exactMatch"]
 
     # Detection and merging of similar landmarks
@@ -1501,14 +1889,14 @@ def merge_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url,
     detect_similar_attribute_versions(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
     remove_temporary_resources_and_transfert_triples(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
 
-def merge_similar_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri:URIRef):
+def merge_similar_landmark_relations(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef):
     similar_property = np.SKOS["exactMatch"]
 
     # Detection and merging of similar landmark relations
     detect_similar_landmark_relations(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
     remove_temporary_resources_and_transfert_triples(graphdb_url, repository_name, similar_property, factoids_named_graph_uri)
 
-def detect_similar_time_interval_of_landmarks(graphdb_url, repository_name, similar_property, factoids_named_graph_uri:URIRef):
+def detect_similar_time_interval_of_landmarks(graphdb_url:URIRef, repository_name:str, similar_property, factoids_named_graph_uri:URIRef):
     query1 = np.query_prefixes  + f"""
         INSERT {{
             ?lm addr:hasTime ?time .
@@ -1563,7 +1951,7 @@ def detect_similar_time_interval_of_landmarks(graphdb_url, repository_name, simi
         remove_temporary_resources_and_transfert_triples(graphdb_url, repository_name, np.SKOS["exactMatch"], factoids_named_graph_uri)
 
 
-def remove_temporary_resources_and_transfert_triples(graphdb_url:str, repository_name:str, similar_property:URIRef, named_graph_uri:str):
+def remove_temporary_resources_and_transfert_triples(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, named_graph_uri:str):
     """
     Deletion of temporary resources and transfer of all their triplets to their associated resource (such as `<?resource skos:exactMatch ?temporaryResource>`).
     """
@@ -1622,7 +2010,7 @@ def add_other_labels_for_resource(g:Graph, res_uri:URIRef, res_label_value:str, 
         g.add((res_uri, SKOS.hiddenLabel, hidden_label_lit))
 
 
-def transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name:str, g:Graph, kg_file:str, tmp_folder, ont_file, ontology_named_graph_name):
+def transfert_rdflib_graph_to_factoids_repository(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, g:Graph, kg_file:str, tmp_folder:str, ont_file:str, ontology_named_graph_name:str):
     g.serialize(kg_file)
 
     # Creating repository

@@ -3,10 +3,10 @@ import unidecode
 from rdflib import Graph, RDFS, Literal, URIRef
 from difflib import SequenceMatcher
 
-def remove_spaces(str_value):
-    return str_value.replace(" ", "")
+def remove_spaces(value:str):
+    return value.replace(" ", "")
 
-def split_cell_content(cell_content:str, sep=",", remove_spaces=True):
+def split_cell_content(cell_content:str, sep:str=",", remove_spaces:bool=True):
     if cell_content == "" or cell_content is None:
         return []
     
@@ -133,7 +133,7 @@ def normalize_french_thoroughfare_name(thoroughfare_name:str):
     return normalized_name
 
 
-def simplify_french_landmark_name(landmark_name:str, keep_spaces=True, keep_diacritics=True, sort_characters=False):
+def simplify_french_landmark_name(landmark_name:str, keep_spaces:bool=True, keep_diacritics:bool=True, sort_characters:bool=False):
     words_to_remove = ["&","a","à","au","aux","d","de","des","du","en","ès","es","et","l","la","le","les","lès","ou"]
     commune_name_words = get_words_list_from_label(landmark_name, case_option="lower")
     new_commune_name_words = []
@@ -172,7 +172,7 @@ def get_lower_simplified_french_street_name_function(variable:str):
     lc_variable = f"LCASE({variable})"
     return get_remplacement_sparql_function(lc_variable, replacements)
 
-def get_remplacement_sparql_function(string, replacements):
+def get_remplacement_sparql_function(string:str, replacements:list):
     function_str = string
     for repl in replacements:
         arg, pattern, replacement = function_str, repl[0], repl[1]
@@ -201,74 +201,13 @@ def normalize_street_rdfs_labels_in_graph_file(graph_file:str):
 
     g.serialize(graph_file)
 
-def define_time_filter_for_sparql_query(val_tRef:str, cal_tRef:str, val_t1:str, cal_t1:str, val_t2:str, cal_t2:str, time_precision:URIRef="day"):
-    """
-    Creation of a time filter for queries in order to select data valid at time `tRef` such that t2 <= tRef <= t1
-    val_tX are query variables linked to timestamps (`?t1Value`, `?t2Value`...)
-    cal_tX are variables in the query related to calendars (`?t1Calendar`, `?t2Calendar`...)
-
-    time_precision` can take the following values:
-    * `URIRef("http://www.w3.org/2006/time#unitYear")` ;
-    * `URIRef("http://www.w3.org/2006/time#unitMonth")` ;
-    * `URIRef("http://www.w3.org/2006/time#unitDay")`.
-    """
-    
-    t1_get_t2 = "{t1} >= {t2}"
-    t1_let_t2 = "{t1} <= {t2}"
-    t_not_exists = "!BOUND({t})"
-    or_op = "||"
-    and_op = "&&"
-
-    t1_get_t2_year = t1_get_t2.format(t1="YEAR({t1})", t2="YEAR({t2})")
-    t1_get_t2_month = t1_get_t2.format(t1="MONTH({t1})",t2="MONTH({t2})")
-    t1_get_t2_year_month = f"{t1_get_t2_year} {and_op} {t1_get_t2_month}"
-
-    t1_let_t2_year = t1_let_t2.format(t1="YEAR({t1})", t2="YEAR({t2})")
-    t1_let_t2_month = t1_let_t2.format(t1="MONTH({t1})", t2="MONTH({t2})")
-    t1_let_t2_year_month = f"{t1_let_t2_year} {and_op} {t1_let_t2_month}"
-
-    if time_precision == URIRef("http://www.w3.org/2006/time#unitYear"):
-        t1_get_tRef_comp = t1_get_t2_year
-        t2_let_tRef_comp = t1_let_t2_year
-    elif time_precision == URIRef("http://www.w3.org/2006/time#unitMonth"):
-        t1_get_tRef_comp = t1_get_t2_year_month
-        t2_let_tRef_comp = t1_let_t2_year_month
-    else:
-        t1_get_tRef_comp = t1_get_t2
-        t2_let_tRef_comp = t1_let_t2
-
-    t1_get_tRef_val = t1_get_tRef_comp.format(t1=val_t1, t2=val_tRef)
-    t2_let_tRef_val = t2_let_tRef_comp.format(t1=val_t2, t2=val_tRef)
-    t1_not_exists_val = t_not_exists.format(t=val_t1)
-    t2_not_exists_val = t_not_exists.format(t=val_t2)
-    cal_t1_not_exists_val = t_not_exists.format(t=cal_t1)
-    cal_t2_not_exists_val = t_not_exists.format(t=cal_t2)
-
-    calendar_time_filter = f"""(
-        (({cal_t1} = {cal_tRef}) {and_op} ({cal_t2} = {cal_tRef})) {or_op}
-        (({cal_t1} = {cal_tRef}) {and_op} ({cal_t2_not_exists_val})) {or_op}
-        (({cal_t2} = {cal_tRef}) {and_op} ({cal_t1_not_exists_val})) {or_op}
-        ({cal_t1_not_exists_val} {and_op} {cal_t2_not_exists_val})
-        )"""
-
-    value_time_filter = f"""(
-        ({t1_get_tRef_val} {and_op} {t2_let_tRef_val}) {or_op}
-        ({t1_get_tRef_val} {and_op} {t2_not_exists_val}) {or_op}
-        ({t2_let_tRef_val} {and_op} {t1_not_exists_val}) {or_op}
-        ({t1_not_exists_val} {and_op} {t2_not_exists_val})
-        )
-    """
-
-    time_filter = f"""FILTER({value_time_filter} {and_op} {calendar_time_filter})"""
-    return time_filter
-
-def are_similar_names(name_1, name_2, min_score=0.9):
+def are_similar_names(name_1:str, name_2:str, min_score:float=0.9):
     similarity_score = SequenceMatcher(None, name_1, name_2).ratio()
     if similarity_score >= min_score:
         return True
     return False
 
-def normalize_french_name_version(name_version, name_type):
+def normalize_french_name_version(name_version:str, name_type:str):
     if name_type == "housenumber":
         return name_version.lower()
     elif name_type == "thoroughfare":
@@ -278,13 +217,13 @@ def normalize_french_name_version(name_version, name_type):
     else:
         return None
     
-def normalize_nolang_name_version(name_version, name_type):
+def normalize_nolang_name_version(name_version:str, name_type:str):
     if name_type == "housenumber":
         return name_version.lower()
     else:
         return None
     
-def normalize_name_version(name_version, name_type, name_lang):
+def normalize_name_version(name_version:str, name_type:str, name_lang:str):
     if name_version is None:
         return None
     elif name_lang is None:
@@ -294,7 +233,7 @@ def normalize_name_version(name_version, name_type, name_lang):
     
     return None
 
-def simplify_french_name_version(name_version, name_type):
+def simplify_french_name_version(name_version:str, name_type:str):
     if name_type == "housenumber":
         return remove_spaces(name_version)
     elif name_type in ["thoroughfare", "area"]:
@@ -302,12 +241,12 @@ def simplify_french_name_version(name_version, name_type):
     else:
         return None
 
-def simplify_nolang_name_version(name_version, name_type):
+def simplify_nolang_name_version(name_version:str, name_type:str):
     if name_type == "housenumber":
         return remove_spaces(name_version)
     return None
 
-def simplify_name_version(name_version, name_type, name_lang):
+def simplify_name_version(name_version:str, name_type:str, name_lang:str):
     if name_version is None:
         return None
     if name_lang is None:

@@ -7,7 +7,7 @@ from rdflib import URIRef, Graph
 
 np = NameSpaces()
 
-def compare_attribute_versions(graphdb_url:str, repository_name:str, comp_named_graph_name:str, comp_tmp_file:str, comparison_settings:dict={}):
+def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_named_graph_name:str, comp_tmp_file:str, comparison_settings:dict={}):
     """
     Compare versions related to the same attribute. The way of versions are compared are set by `comparison_settings`.
     """
@@ -111,7 +111,7 @@ def are_similar_name_versions(lm_type, vers_val_1, vers_val_2):
     else:
         return False
 
-def get_attribute_versions_to_compare(graphdb_url:str, repository_name:str):
+def get_attribute_versions_to_compare(graphdb_url:URIRef, repository_name:str):
     query = np.query_prefixes  + f"""
         SELECT DISTINCT ?ltype ?attrType ?attrVers1 ?attrVers2 ?versVal1 ?versVal2 WHERE {{
             ?rootLm a addr:Landmark ; addr:isRootOf ?lm1, ?lm2.

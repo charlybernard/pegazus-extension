@@ -33,7 +33,7 @@ def get_name_literal(label:str, lang:str=None):
     return Literal(label, lang=lang)
 
 def get_insee_literal(insee_num:str):
-    return np.GEOFLA.numInsee
+    return Literal(insee_num)
 
 def add_provenance_to_resource(g:Graph, resource_uri:URIRef, prov_uri:URIRef):
     g.add((resource_uri, np.PROV.wasDerivedFrom, prov_uri))
@@ -209,7 +209,6 @@ def get_boolean_value(boolean:Literal):
     It returns None is `boolean` is not a boolean
     """
 
-    
     boolean_val = boolean.strip()
     if boolean.datatype != XSD.boolean:
         return None

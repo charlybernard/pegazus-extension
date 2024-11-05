@@ -5,22 +5,28 @@ import requests
 
 ## Build uris from `graphdb_url` and `repository_name`
 
-def get_repository_uri_from_name(graphdb_url:str, repository_name:str):
+def get_repository_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
     """Get uri of the repository from its name and graphdb_url"""
-    return URIRef(f"{graphdb_url}/repositories/{repository_name}")
+    return graphdb_url + "/repositories/" + repository_name
 
-def get_repository_namespaces_uri_from_name(graphdb_url:str, repository_name:str):
-    return URIRef(f"{graphdb_url}/repositories/{repository_name}/namespaces")
+def get_repository_namespaces_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
+    return graphdb_url + "/repositories/" + repository_name + "/namespaces"
 
-def get_named_graph_uri_from_name(graphdb_url:str, repository_name:str, named_graph_name:str):
-    return URIRef(f"{graphdb_url}/repositories/{repository_name}/rdf-graphs/{named_graph_name}")
+def get_named_graph_uri_from_name(graphdb_url:URIRef, repository_name:str, named_graph_name:str) -> URIRef:
+    return graphdb_url + "/repositories/" + repository_name + "/rdf-graphs/" + named_graph_name
 
-def get_repository_uri_statements_from_name(graphdb_url:str, repository_name:str):
-    return URIRef(f"{graphdb_url}/repositories/{repository_name}/statements")
+def get_repository_uri_statements_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
+    return graphdb_url + "/repositories/" + repository_name + "/statements"
+
+def get_rest_repository_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
+    return graphdb_url + "/rest/repositories/" + repository_name
+
+def get_rest_respositories_uri(graphdb_url:URIRef) -> URIRef:
+    return graphdb_url + "/rest/repositories"
 
 ## Create repository
 
-def create_repository(graphdb_url:str, repository_name:str, repository_config_file:str, ruleset_file:str=None, ruleset_name:str=None, disable_same_as:bool=False, check_for_inconsistencies:bool=False):
+def create_repository(graphdb_url:URIRef, repository_name:str, repository_config_file:str, ruleset_file:str=None, ruleset_name:str=None, disable_same_as:bool=False, check_for_inconsistencies:bool=False):
     # Create a configuration file for the repository
     # Here `ruleset_name` is None as ruleset will be defined after having created the repository
     create_config_local_repository_file(repository_config_file, repository_name, ruleset_name=None, disable_same_as=disable_same_as, check_for_inconsistencies=check_for_inconsistencies)
@@ -36,8 +42,8 @@ def create_repository(graphdb_url:str, repository_name:str, repository_config_fi
 
     change_ruleset(graphdb_url, repository_name, ruleset_name)
 
-def create_repository_from_config_file(graphdb_url:str, local_config_file:str):
-    url = f"{graphdb_url}/rest/repositories"
+def create_repository_from_config_file(graphdb_url:URIRef, local_config_file:str):
+    url = get_rest_respositories_uri(graphdb_url)
     files = {"config":open(local_config_file,'rb')}
     r = requests.post(url, files=files)
     return r
@@ -97,28 +103,28 @@ def create_config_local_repository_file(config_repository_file:str, repository_n
     # Export created graph with the configuration file
     g.serialize(destination=config_repository_file)
     
-def load_ontologies(graphdb_url:str, repository_name:str, ont_files:list[str]=[], ontology_named_graph_name:str="ontology"):
+def load_ontologies(graphdb_url:URIRef, repository_name:str, ont_files:list[str]=[], ontology_named_graph_name:str="ontology"):
     """Import all ontologies in a named graph in the given repository"""
     for ont_file in ont_files:
         import_ttl_file_in_graphdb(graphdb_url, repository_name, ont_file, ontology_named_graph_name)
 
 ## Delete and/or clean repository
 
-def clear_repository(graphdb_url:str, repository_name:str):
+def clear_repository(graphdb_url:URIRef, repository_name:str):
     """Remove all contents from repository. /!\ The repository still exists after this process."""
 
     url = get_repository_uri_statements_from_name(graphdb_url, repository_name)
     r = requests.delete(url)
     return r
 
-def remove_repository(graphdb_url:str, repository_name:str):
+def remove_repository(graphdb_url:URIRef, repository_name:str):
     """Remove a repository defined by its name"""
 
     url = get_repository_uri_from_name(graphdb_url, repository_name)
     r = requests.delete(url)
     return r
 
-def reinitialize_repository(graphdb_url:str, repository_name:str, repository_config_file:str,
+def reinitialize_repository(graphdb_url:URIRef, repository_name:str, repository_config_file:str,
                             ruleset_file:str=None, ruleset_name:str=None, disable_same_as:bool=False,
                             check_for_inconsistencies:bool=False, allow_removal:bool=True):
     """
@@ -139,7 +145,7 @@ def reinitialize_repository(graphdb_url:str, repository_name:str, repository_con
 
 ### Remove named graphs with different ways
 
-def remove_named_graph(graphdb_url:str, repository_name:str, named_graph_name:str):
+def remove_named_graph(graphdb_url:URIRef, repository_name:str, named_graph_name:str):
     url = get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name).strip()
     r = requests.delete(url)
     return r
@@ -148,7 +154,7 @@ def remove_named_graph_from_uri(named_graph_uri:URIRef):
     r = requests.delete(named_graph_uri)
     return r
 
-def remove_named_graphs(graphdb_url:str, repository_name:str, named_graph_name_list:list[str]):
+def remove_named_graphs(graphdb_url:URIRef, repository_name:str, named_graph_name_list:list[str]):
     for named_graph_name in named_graph_name_list:
         remove_named_graph(graphdb_url, repository_name, named_graph_name)
 
@@ -156,7 +162,7 @@ def remove_named_graphs_from_uris(named_graph_uris_list:list[URIRef]):
     for g in named_graph_uris_list:
         remove_named_graph_from_uri(g)
 
-def remove_named_graph_from_query(graphdb_url:str, repository_name:str, named_graph_name:str):
+def remove_named_graph_from_query(graphdb_url:URIRef, repository_name:str, named_graph_name:str):
     graph_uri = get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name)
 
     query = f"""
@@ -171,7 +177,7 @@ def remove_named_graph_from_query(graphdb_url:str, repository_name:str, named_gr
     
     update_query(query, graphdb_url, repository_name)
 
-def remove_named_graphs_from_query(graphdb_url:str, repository_name:str, named_graph_names_list:list[str]):
+def remove_named_graphs_from_query(graphdb_url:URIRef, repository_name:str, named_graph_names_list:list[str]):
     named_graph_uris_list, selected_named_graphs = [], ""
     for named_graph_name in named_graph_names_list:
         named_graph_uris_list.append(get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name).n3())
@@ -192,7 +198,7 @@ def remove_named_graphs_from_query(graphdb_url:str, repository_name:str, named_g
 
 ## Select or extract data within graph
 
-def export_data_from_repository(graphdb_url:str, repository_name:str, out_ttl_file:str, named_graph_name:str=None, named_graph_uri:URIRef=None):
+def export_data_from_repository(graphdb_url:URIRef, repository_name:str, out_ttl_file:str, named_graph_name:str=None, named_graph_uri:URIRef=None):
     """
     Export data from a repository whose name is given `repository_name` to a turtle file whose path is given by `out_ttl_file`.
     If you only want to extract data from a specified named graph within the repository, you can select this named graph by giving its name (`named_graph_name`) or its URI (`named_graph_uri`).
@@ -211,7 +217,7 @@ def export_data_from_repository(graphdb_url:str, repository_name:str, out_ttl_fi
     r = requests.get(url, params=params, headers=headers)
     fm.write_file(r.text, out_ttl_file)
 
-def select_query_to_txt_file(query:str, graphdb_url:str, repository_name:str, res_query_file:str):
+def select_query_to_txt_file(query:str, graphdb_url:URIRef, repository_name:str, res_query_file:str):
     """Export data from repository whose name is given `repository_name` with a SELECT query to a text file whose path is given by `res_query_file`."""
 
     url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
@@ -220,7 +226,7 @@ def select_query_to_txt_file(query:str, graphdb_url:str, repository_name:str, re
     r = requests.post(url, data=data, headers=headers)
     fm.write_file(r.text, res_query_file)
 
-def select_query_to_json(query:str, graphdb_url:str, repository_name:str):
+def select_query_to_json(query:str, graphdb_url:URIRef, repository_name:str):
     """Return data within a JSON object from repository whose name is given `repository_name` with a SELECT query."""
     url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
     headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="application/json")
@@ -230,7 +236,7 @@ def select_query_to_json(query:str, graphdb_url:str, repository_name:str):
 
 ## Update graph with query or ttl file
 
-def update_query(query:str, graphdb_url:str, repository_name:str):
+def update_query(query:str, graphdb_url:URIRef, repository_name:str):
     """Send an update query (INSERT, INSERT DATA, DELETE, DELETE DATA) to a repository to update it"""
 
     url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip()
@@ -239,7 +245,7 @@ def update_query(query:str, graphdb_url:str, repository_name:str):
     r = requests.post(url, data=data, headers=headers)
     return r
 
-def import_ttl_file_in_graphdb(graphdb_url:str, repository_name:str, ttl_file:str, named_graph_name:str=None, named_graph_uri:URIRef=None):
+def import_ttl_file_in_graphdb(graphdb_url:URIRef, repository_name:str, ttl_file:str, named_graph_name:str=None, named_graph_uri:URIRef=None):
     """
     Import data from turtle file whose path is `ttl_file` to a repository whose name is given `repository_name`. 
     By default, data is imported default named graph but you can specify a named graph by giving its name (`named_graph_name`) or its URI (`named_graph_uri`).
@@ -263,7 +269,7 @@ def import_ttl_file_in_graphdb(graphdb_url:str, repository_name:str, ttl_file:st
 
 ## Manage namespaces
 
-def get_repository_namespaces(graphdb_url:str, repository_name:str):
+def get_repository_namespaces(graphdb_url:URIRef, repository_name:str):
     """Get all stored namespaces (with their related prefix) of a repository within a dictionary."""
 
     url = get_repository_namespaces_uri_from_name(graphdb_url, repository_name).strip()
@@ -278,18 +284,18 @@ def get_repository_namespaces(graphdb_url:str, repository_name:str):
 
     return namespaces
 
-def add_prefix_to_repository(graphdb_url:str, repository_name:str, namespace:Namespace, prefix:str):
+def add_prefix_to_repository(graphdb_url:URIRef, repository_name:str, namespace:Namespace, prefix:str):
     url = get_repository_namespaces_uri_from_name(graphdb_url, repository_name).strip() + "/" + prefix
     headers = get_http_headers_dictionary(content_type="text/plain")
     data = namespace.strip()
     r = requests.put(url, headers=headers, data=data)
     return r
 
-def add_prefixes_to_repository(graphdb_url:str, repository_name:str, namespace_prefixes:dict):
+def add_prefixes_to_repository(graphdb_url:URIRef, repository_name:str, namespace_prefixes:dict):
     for prefix, namespace in namespace_prefixes.items():
         add_prefix_to_repository(graphdb_url, repository_name, namespace, prefix)
 
-def get_repository_prefixes(graphdb_url:str, repository_name:str, perso_namespaces:dict=None):
+def get_repository_prefixes(graphdb_url:URIRef, repository_name:str, perso_namespaces:dict=None):
     """
     perso_namespaces is a dictionnary which stores personalised namespaces to add of overwrite repository namespaces.
     keys are prefixes and values are URIs
@@ -307,23 +313,9 @@ def get_repository_prefixes(graphdb_url:str, repository_name:str, perso_namespac
         
     return prefixes
 
-def get_query_prefixes_from_namespaces(namespaces:dict):
-    """
-    `namespaces` is a dictionnary which stores personalised namespaces
-    keys are prefixes and values are URIs
-    Ex: `{"geo":Namespace("http://data.ign.fr/def/geofla")}`
-    """
-
-    prefixes = ""
-    for prefix, uri in namespaces.items():
-        str_uri = uri[""].n3()
-        prefixes += f"PREFIX {prefix}: {str_uri}\n"
-        
-    return prefixes
-
 ## Manage repository inference and rulesets
 
-def reinfer_repository(graphdb_url:str, repository_name:str):
+def reinfer_repository(graphdb_url:URIRef, repository_name:str):
     """
     According to GraphDB : 'Statements are inferred only when you insert new statements. So, if reconnected to a repository with a different ruleset, it does not take effect immediately.'
     This function reinfers repository
@@ -336,7 +328,7 @@ def reinfer_repository(graphdb_url:str, repository_name:str):
 
     update_query(query, graphdb_url, repository_name)
 
-def turn_inference_off(graphdb_url:str, repository_name:str):
+def turn_inference_off(graphdb_url:URIRef, repository_name:str):
     query = """
     prefix sys: <http://www.ontotext.com/owlim/system#>
     INSERT DATA { [] sys:turnInferenceOff [] }
@@ -345,7 +337,7 @@ def turn_inference_off(graphdb_url:str, repository_name:str):
     update_query(query, graphdb_url, repository_name)
 
 
-def turn_inference_on(graphdb_url:str, repository_name:str):
+def turn_inference_on(graphdb_url:URIRef, repository_name:str):
     query = """
     prefix sys: <http://www.ontotext.com/owlim/system#>
     INSERT DATA { [] sys:turnInferenceOn [] }
@@ -363,7 +355,7 @@ def add_ruleset_from_file(graphdb_url, repository_name, ruleset_file, ruleset_na
 
     update_query(query, graphdb_url, repository_name)
 
-def add_ruleset_from_name(graphdb_url:str, repository_name:str, ruleset_name:str):
+def add_ruleset_from_name(graphdb_url:URIRef, repository_name:str, ruleset_name:str):
     query  = f"""
     prefix sys: <http://www.ontotext.com/owlim/system#>
     INSERT DATA {{
@@ -373,7 +365,7 @@ def add_ruleset_from_name(graphdb_url:str, repository_name:str, ruleset_name:str
 
     update_query(query, graphdb_url, repository_name)
 
-def change_ruleset(graphdb_url:str, repository_name:str, ruleset_name:str):
+def change_ruleset(graphdb_url:URIRef, repository_name:str, ruleset_name:str):
     query = f"""
     prefix sys: <http://www.ontotext.com/owlim/system#>
     INSERT DATA {{
@@ -385,12 +377,12 @@ def change_ruleset(graphdb_url:str, repository_name:str, ruleset_name:str):
 
 ## Auxiliary functions
 
-def get_repository_existence(graphdb_url:str, repository_name:str):
+def get_repository_existence(graphdb_url:URIRef, repository_name:str):
     """
     Get a boolean to know if the repository already exists (True if yes, False else)
     """
 
-    url = f"{graphdb_url}/rest/repositories/{repository_name}"
+    url = get_rest_repository_uri_from_name(graphdb_url, repository_name)
     headers = get_http_headers_dictionary(content_type="application/x-turtle")
     r = requests.get(url, headers=headers)
 
