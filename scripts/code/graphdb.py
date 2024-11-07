@@ -232,7 +232,12 @@ def select_query_to_json(query:str, graphdb_url:URIRef, repository_name:str):
     headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="application/json")
     data = {"query":query}
     r = requests.post(url, data=data, headers=headers)
-    return r.json()
+    
+    if r.status_code == 400:
+        print(r.content)
+        return None
+    else:
+        return r.json()
 
 ## Update graph with query or ttl file
 

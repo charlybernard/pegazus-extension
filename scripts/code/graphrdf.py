@@ -162,6 +162,9 @@ def convert_result_elem_to_rdflib_elem(result_elem:dict):
     From a dictionary describing an element of a query result, convert it into an element of a graph triplet (URIRef, Literal, Bnode)
     """
     
+    if result_elem is None:
+        return None
+    
     res_type = result_elem.get("type")
     res_value = result_elem.get("value")
     
@@ -173,6 +176,8 @@ def convert_result_elem_to_rdflib_elem(result_elem:dict):
         return Literal(res_value, lang=res_lang, datatype=res_datatype)
     elif res_type == "bnode":
         return BNode(res_value)
+    else:
+        return None
     
 def generate_uri(namespace:Namespace=None, prefix:str=None):
     if prefix:
