@@ -575,7 +575,7 @@ def create_roots_and_traces_for_landmark_attributes(graphdb_url:URIRef, reposito
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def sort_events_and_states_on_attributes(graphdb_url, facts_repository_name, order_named_graph_uri, tmp_named_graph_uri):
+def sort_events_and_states_on_attributes(graphdb_url, repository_name, order_named_graph_uri, tmp_named_graph_uri):
     # Detection of overlapping versions of attribute states
     query1 = np.query_prefixes + f"""
         PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
@@ -678,9 +678,9 @@ def sort_events_and_states_on_attributes(graphdb_url, facts_repository_name, ord
 
     queries = [query1, query2, query3]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
-def get_attribute_versions_to_be_merged_together(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+def get_attribute_versions_to_be_merged_together(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     # Aggregation of successive versions with similar values (in several queries)
     # Add triples indicating similarity (addr:toBeMergedWith) with successive versions that have similar values (addr:hasNextVersion or addr:hasOverlappingVersion)
 
@@ -770,9 +770,9 @@ def get_attribute_versions_to_be_merged_together(graphdb_url:URIRef, facts_repos
 
     queries = [query1, query2a, query2b, query2c, query3]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
-def get_updated_attribute_changes(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+def get_updated_attribute_changes(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     # If a change which does not outdate any version but which may outdate a version, then this change outdate the version (works for makes effective / may make effective) 
     # `addr:mayOutdate(c1, vA) ∧ ∄ addr:outdates(c1, vB) -> addr:outdates(c1, vA)` and
     # `addr:mayMakeEffective(c1, vA) ∧ ∄ addr:makesEffective(c1, vB) -> addr:makesEffective(c1, vA)`
@@ -829,9 +829,9 @@ def get_updated_attribute_changes(graphdb_url:URIRef, facts_repository_name:str,
 
     queries = [query1, query2a, query2b]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
-def get_attribute_changes_and_versions_to_be_created(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+def get_attribute_changes_and_versions_to_be_created(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     """
     """
 
@@ -1007,10 +1007,10 @@ def get_attribute_changes_and_versions_to_be_created(graphdb_url:URIRef, facts_r
             
     queries = [query1, query2, query3, query4, query5a, query5b, query5c, query5d]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
 
-def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
+def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     """
     It may be more than two versions are similar to each other. To detect all the similar versions, we will associate them with a mergedVal constructed from the URIs of the similar versions.
     So if v1 is similar to v2, v3 and v4, the mergedVal will be ‘uriV1;uriV2;uriV3;uriV4’ where uriVi is the URI of version i. v2, v3 and v4 will have the same mergedVal.
@@ -1059,9 +1059,9 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, facts_repository_n
 
     queries = [query1, query2]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
-def create_root_attribute_changes(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def create_root_attribute_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     """
 
@@ -1105,31 +1105,31 @@ def create_root_attribute_changes(graphdb_url:URIRef, facts_repository_name:str,
     
     queries = [query1, query2]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
-def update_attribute_changes_and_versions(graphdb_url:URIRef, facts_repository_name:str, tmp_named_graph_uri:URIRef):
+def update_attribute_changes_and_versions(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     """
     Manage attribute changes and versions after having compared version values and sorted change and versions temporally. 
     All triples are used to build other triples later so they are stored in a temporary named graph defined by `tmp_named_graph_uri`.
     """
 
     # Define attribute versions which has to be merged together after having sorted them.
-    get_attribute_versions_to_be_merged_together(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+    get_attribute_versions_to_be_merged_together(graphdb_url, repository_name, tmp_named_graph_uri)
 
     # Update of attribute changes for which the properties `addr:makesEffective` and `addr:outdates` are missing
-    get_updated_attribute_changes(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+    get_updated_attribute_changes(graphdb_url, repository_name, tmp_named_graph_uri)
 
     # Create attribute changes and attribute versions which are missing
-    get_attribute_changes_and_versions_to_be_created(graphdb_url, facts_repository_name, tmp_named_graph_uri)
+    get_attribute_changes_and_versions_to_be_created(graphdb_url, repository_name, tmp_named_graph_uri)
 
 
-def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
+def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Merge attribute versions which have to be merged together according previous function. To do so, attribute versions will be linked by a root.
     # If v1, v2 and v3 have to be merged together, then `<v1 hasRoot vRoot> <v2 hasRoot vRoot> <v3 hasRoot vRoot>`.
-    merge_attribute_versions_to_be_merged(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri)
+    merge_attribute_versions_to_be_merged(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri)
 
     # Create root attribute changes
-    create_root_attribute_changes(graphdb_url, facts_repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+    create_root_attribute_changes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
 
     # # Creating events and changes
     # query1 = np.query_prefixes + f"""
@@ -1165,7 +1165,7 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url:URIRef, 
 
     # queries = [query1]
     # for query in queries:
-    #     gd.update_query(query, graphdb_url, facts_repository_name)
+    #     gd.update_query(query, graphdb_url, repository_name)
 
     # Deleting the temporary graph
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
@@ -1522,7 +1522,7 @@ def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str, factoids_n
 
     link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
 
-def infer_missing_changes_on_landmark_and_relations(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef):
+def infer_missing_changes_on_landmark_and_relations(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
 
     # Create a change (appearance and/or disappearance) for landmarks and landmark relations for which change is missing.
     # Associate this change with an event. Tell the event has no time which has to be added (?event addr:timeToAdd "true"^^xsd:boolean)
@@ -1553,10 +1553,10 @@ def infer_missing_changes_on_landmark_and_relations(graphdb_url:URIRef, facts_re
     }}
     """
 
-    gd.update_query(query, graphdb_url, facts_repository_name)
+    gd.update_query(query, graphdb_url, repository_name)
 
 
-def infer_missing_time_on_events(graphdb_url:URIRef, facts_repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def infer_missing_time_on_events(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # For events created from no factoid (event without any trace: `FILTER NOT EXISTS {{ ?rootEvent addr:hasTrace ?randomEvent . }}`) and containing changes applied to landmark and landmark relation, we deduce time thanks to landmark versions.
     # We deduce the event related to the appearance of a landmark or a landmark relation appears before the beginning of the interval of the first version (versions are already ordered temporally).
     # We deduce the event related to the disapearance of a landmark or a landmark relation appears after the end of the interval of the last version.
@@ -1642,7 +1642,7 @@ def infer_missing_time_on_events(graphdb_url:URIRef, facts_repository_name:str, 
 
     queries = [query1a, query1b, query2]
     for query in queries:
-        gd.update_query(query, graphdb_url, facts_repository_name)
+        gd.update_query(query, graphdb_url, repository_name)
 
 ####################################################################
 
