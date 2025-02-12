@@ -1,0 +1,11 @@
+.map_timeline {
+  display: flex;
+  flex-direction: row;
+  resize: both;
+}
+
+.resizer {
+  width: 7px;
+  cursor: ew-resize;
+  background-color: gray;
+}

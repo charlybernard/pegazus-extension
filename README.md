@@ -12,6 +12,7 @@ This repository contains the documentation of the ODySSEA (Ontology of spatio-te
 │       ├── sources
 │       ├── temporal_evolution
 ├── scripts                    <- Implementation of the algorithm
+├── web_app                    <- Web application to see the evolution of landmark
 ├── LICENCE.md
 └── README.md
 ```
@@ -40,3 +41,8 @@ Each modelet documentation has 3 or 4 files:
 This folder contains code to build knowledge graphs.
 
 ⚠️ To get more information about their content, please read their [readme](scripts/README.md).
+
+### `web_app` folder
+This folder contains code for the web application to see the evolution of the landmarks.
+
+⚠️ To get more information about their content, please read their [readme](web_app/README.md).
