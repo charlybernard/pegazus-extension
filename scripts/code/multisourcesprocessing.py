@@ -1495,6 +1495,11 @@ def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository
 
     gd.update_query(query, graphdb_url, repository_name)
 
+def transfer_elements_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
+    transfer_version_values_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
+    transfer_provenances_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
+    transfer_crisp_time_instant_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
+
 def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Landmarks are created as follows:
