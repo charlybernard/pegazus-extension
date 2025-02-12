@@ -25,7 +25,7 @@ Before launching the web app, please ensure `settings.js` is correctly filled ou
 
 Then, to allow the interaction with the repository, you have to avoid CORS errors. To do so, click on `Settings...` in GraphDB Desktop window.
 
-![image](./images/graphdb_main.png)
+![image](./images/graphdb_desktop.png)
 
 Next, you can custom properties by typing their name and value.
 
