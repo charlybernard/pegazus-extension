@@ -126,19 +126,25 @@ def merge_landmark_multiple_geometries(graphdb_url, repository_name, factoids_na
     g.serialize(geom_kg_file)
     gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, geom_kg_file, named_graph_uri=factoids_named_graph_uri)
 
+    remove_all_triples_for_resources_to_remove(graphdb_url, repository_name)
+
+def remove_all_triples_for_resources_to_remove(graphdb_url, repository_name):
+    to_remove_property = np.ADDR["toRemove"]
+
     query = np.query_prefixes + f"""
-        DELETE {{
-            ?s ?p ?tmpResource.
-            ?tmpResource ?p ?o.
-        }}
-        WHERE {{
-            ?tmpResource {to_remove_property.n3()} ?toRemove.
-            FILTER(?toRemove)
-            {{?tmpResource ?p ?o}} UNION {{?s ?p ?tmpResource}}
-        }}
+    DELETE {{
+        ?s ?p ?tmpResource.
+        ?tmpResource ?p ?o.
+    }}
+    WHERE {{
+        ?tmpResource {to_remove_property.n3()} ?toRemove.
+        FILTER(?toRemove)
+        {{?tmpResource ?p ?o}} UNION {{?s ?p ?tmpResource}}
+    }}
     """
 
     gd.update_query(query, graphdb_url, repository_name)
+
 
 def transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri):
     """
@@ -1132,42 +1138,6 @@ def create_roots_and_traces_for_landmark_attribute_versions(graphdb_url:URIRef, 
     # Create root attribute changes
     create_root_attribute_changes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
 
-    # # Creating events and changes
-    # query1 = np.query_prefixes + f"""
-    #     INSERT {{
-    #         GRAPH ?gf {{
-    #             ?rootTimeAfter a addr:CrispTimeInstant .
-    #             ?rootTimeBefore a addr:CrispTimeInstant .
-    #             ?rootEv a addr:Event ; addr:hasTimeAfter ?rootTimeAfter ; addr:hasTimeBefore ?rootTimeBefore.
-    #             ?rootCg a addr:AttributeChange ; addr:isChangeType ctype:AttributeVersionTransition ;
-    #                 addr:appliedTo ?rootAttr ; addr:dependsOn ?rootEv ;
-    #                 addr:makesEffective ?rootAttrVers2 ; addr:outdates ?rootAttrVers1 .
-    #         }}
-    #         GRAPH ?gi {{
-    #             ?timeAfter addr:hasRoot ?rootTimeAfter .
-    #             ?timeBefore addr:hasRoot ?rootTimeBefore .
-    #             ?rootTimeAfter addr:hasTrace ?timeAfter .
-    #             ?rootTimeBefore addr:hasTrace ?timeBefore .
-    #         }}
-    #     }} WHERE {{
-    #         BIND({facts_named_graph_uri.n3()} AS ?gf)
-    #         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-    #         ?changeDesc a addr:ChangeDescription ; addr:appliedTo ?rootAttr .
-    #         OPTIONAL {{ ?changeDesc addr:outdatedAttributeVersion ?rootAttrVers1 . }}
-    #         OPTIONAL {{ ?changeDesc addr:madeEffectiveAttributeVersion ?rootAttrVers2 . }}
-    #         OPTIONAL {{ ?changeDesc addr:hasTimeAfter ?timeAfter . }}
-    #         OPTIONAL {{ ?changeDesc addr:hasTimeBefore ?timeBefore . }}
-    #         BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())), ?x) AS ?rootCg)
-    #         BIND(IF(BOUND(?changeDesc), URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())), ?x) AS ?rootEv)
-    #         BIND(IF(BOUND(?timeAfter), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeAfter)
-    #         BIND(IF(BOUND(?timeBefore), URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())), ?x) AS ?rootTimeBefore)
-    #         }}
-    # """
-
-    # queries = [query1]
-    # for query in queries:
-    #     gd.update_query(query, graphdb_url, repository_name)
-
     # Deleting the temporary graph
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
 
@@ -1686,7 +1656,7 @@ def create_source_resource(graphdb_url:URIRef, repository_name:str, source_uri:U
 def link_provenances_with_source(graphdb_url:URIRef, repository_name:str, source_uri:URIRef, named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
         INSERT {{
-            GRAPH {named_graph_uri.n3()} {{
+            GRAPH ?g {{
                 ?prov rico:isOrWasDescribedBy ?sourceUri .
             }}
         }} WHERE {{
@@ -1836,7 +1806,7 @@ def detect_similar_attribute_versions(graphdb_url:URIRef, repository_name:str, s
 def detect_similar_landmark_relations(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, factoids_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
     INSERT {{
-        GRAPH {factoids_named_graph_uri.n3()} {{
+        GRAPH ?gs {{
             ?lr1 {similar_property.n3()} ?lr2 .
         }}
     }}
@@ -2040,10 +2010,147 @@ def add_validity_time_interval_to_landmark(g:Graph, lm_uri:URIRef, time_descript
 
 #####################################################################################################################
 
+# Get the appearance and disappearance of landmark
+
+def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri):
+   # Add missing landmark changes after having imported all factoids
+    # All landmarks must be related with two changes :
+    # - one which describes its apprearance
+    # - an other one which describes its disappearance (even if this landmark still exists)
+    query1 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{
+            ?missingChange a addr:LandmarkChange ; addr:isChangeType ?changeType ; addr:appliedTo ?lm ; addr:dependsOn ?missingEvent .
+            ?missingEvent a addr:Event .
+        }}
+    }} WHERE {{
+        {{
+            SELECT * WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                VALUES ?changeType {{ ctype:LandmarkAppearance ctype:LandmarkDisappearance }}
+                GRAPH ?gf {{ ?lm a addr:Landmark . }}
+
+                FILTER NOT EXISTS {{
+                    ?change addr:isChangeType ?changeType ; addr:appliedTo ?lm .
+                }}
+            }}
+        }}
+        BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?missingChange)
+        BIND(URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())) AS ?missingEvent)
+    }}
+    """
+
+    # For each landmark, get the oldest and the soonest times which refers to it.
+    # The goal is to estimates the time of appearance and disappearance of each landmark
+    query2 = np.query_prefixes + f"""
+    PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
+    PREFIX wd: <http://www.wikidata.org/entity/>
+
+    INSERT {{
+        GRAPH ?gt {{
+            ?lm addr:hasTimeMin ?timeMin ; addr:hasTimeMax ?timeMax .
+        }}
+    }} WHERE {{
+            BIND({tmp_named_graph_uri.n3()} AS ?gt)
+        {{
+            SELECT DISTINCT ?lm (MIN(?diffTime) AS ?diffTimeMin) (MAX(?diffTime) AS ?diffTimeMax) WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                BIND(wd:Q1985727 AS ?timeCal)
+                GRAPH ?gf {{
+                    ?lm a addr:Landmark .
+                }}
+                ?lm addr:hasTrace ?lmTrace .
+                ?lmTrace addr:hasTime [addr:hasBeginning|addr:hasEnd ?time ] .
+                ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal.
+                BIND(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) AS ?diffTime)
+            }}
+            GROUP BY ?lm 
+        }}
+
+        ?lm addr:hasTrace ?lmTraceMin, ?lmTraceMax .
+        ?lmTraceMin addr:hasTime [addr:hasBeginning|addr:hasEnd ?timeMin ] .
+        ?timeMin addr:timeStamp ?timeStampMin .
+        ?lmTraceMax addr:hasTime [addr:hasBeginning|addr:hasEnd ?timeMax ] .
+        ?timeMax addr:timeStamp ?timeStampMax .
+        FILTER(ofn:asDays(?timeStampMin - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTimeMin)
+        FILTER(ofn:asDays(?timeStampMax - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTimeMax)
+    }}
+    """
+
+    # Remove triples created by previous query if there are more than one min (or max) time related to one landmark with different precisions.
+    # In this case, the triple which is removed is the one whose object is the time with the lowest precision.
+    query3 = np.query_prefixes + f"""
+    DELETE {{
+        ?lm ?tmpTimeProp ?t2 .
+    }}
+    WHERE {{
+        BIND({tmp_named_graph_uri.n3()} AS ?gt)
+        VALUES ?tmpTimeProp {{addr:hasTimeMin addr:hasTimeMax}}
+        GRAPH ?gt {{
+            ?lm ?tmpTimeProp ?t1, ?t2 .
+        }}
+        ?t1 addr:timePrecision ?t1Prec .
+        ?t2 addr:timePrecision ?t2Prec .
+        BIND(IF(?t1Prec = time:unitMillenium, "1"^^xsd:integer, 
+                IF(?t1Prec = time:unitCentury, "2"^^xsd:integer,
+                    IF(?t1Prec = time:unitDecade, "3"^^xsd:integer,
+                        IF(?t1Prec = time:unitYear, "4"^^xsd:integer,
+                            IF(?t1Prec = time:unitMonth, "5"^^xsd:integer,
+                                IF(?t1Prec = time:unitDay, "6"^^xsd:integer,
+                                    "0"^^xsd:integer)
+                            ))))) AS ?t1PrecInt)
+
+        BIND(IF(?t2Prec = time:unitMillenium, "1"^^xsd:integer, 
+                IF(?t2Prec = time:unitCentury, "2"^^xsd:integer,
+                    IF(?t2Prec = time:unitDecade, "3"^^xsd:integer,
+                        IF(?t2Prec = time:unitYear, "4"^^xsd:integer,
+                            IF(?t2Prec = time:unitMonth, "5"^^xsd:integer,
+                                IF(?t2Prec = time:unitDay, "6"^^xsd:integer,
+                                    "0"^^xsd:integer)
+                            ))))) AS ?t2PrecInt)
+        FILTER (?t1 != ?t2 && ?t1PrecInt < ?t2PrecInt )
+    }}
+    """
+
+    # Creation of time ressources to estimate the time of appearance and disappearance of landmarks
+    query4 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{
+            ?missingTime a addr:CrispTimeInstant ; addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal ; addr:timePrecision ?timePrec .
+            ?event ?timeProp ?missingTime .
+        }}
+        GRAPH ?gi {{ ?missingTime addr:hasTrace ?time }}
+    }} WHERE {{
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+        {{
+            SELECT DISTINCT ?gf ?lm ?event ?tmpTimeProp ?timeProp WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                VALUES (?changeType ?tmpTimeProp ?timeProp)
+                {{ (ctype:LandmarkAppearance addr:hasTimeMin addr:hasTimeBefore) (ctype:LandmarkDisappearance addr:hasTimeMax addr:hasTimeAfter) }}
+                GRAPH ?gf {{
+                    ?lm a addr:Landmark .
+                    ?change addr:isChangeType ?changeType ; addr:appliedTo ?lm ; addr:dependsOn ?event .}}
+                FILTER NOT EXISTS {{ ?event addr:hasTrace ?eventTrace . }}
+            }}
+        }}
+        BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?missingTime)
+        ?lm ?tmpTimeProp ?time .
+        ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal ; addr:timePrecision ?timePrec .
+    }}
+    """
+
+    queries = [query1, query2, query3, query4]
+    for query in queries:
+        a = gd.update_query(query, graphdb_url, repository_name)
+        print(a.__dict__)
+
+    gd.remove_named_graph_from_uri(tmp_named_graph_uri)
+
+#####################################################################################################################
+
 # Construction of the evolution from states (versions) and events (changes)
 
-
-def get_time_description(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+def get_elementary_divisions_of_versions_and_changes(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     # For each attribute, create as many TimeDescription object as there are temporal values related to it
     query1 = np.query_prefixes + f"""
     PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
@@ -2273,23 +2380,20 @@ def remove_empty_attribute_versions(graphdb_url:URIRef, repository_name:str, tmp
     """
 
     query = np.query_prefixes + f"""
-        DELETE {{
-            ?toRemoveChangeME addr:appliedTo ?attr ; addr:dependsOn ?eventME ; addr:makesEffective ?version ; addr:outdates ?vO .
-            ?toRemoveChangeO addr:appliedTo ?attr ; addr:dependsOn ?eventO ; addr:outdates ?version ; addr:makesEffective ?vME.
-            ?attr addr:hasAttributeVersion ?version .
-            ?version a addr:AttributeVersion .
-        }}
         INSERT {{
             GRAPH ?gt {{
+                ?toRemoveChangeME addr:toRemove "true"^^xsd:boolean .
+                ?toRemoveChangeO addr:toRemove "true"^^xsd:boolean .
+                ?version addr:toRemove "true"^^xsd:boolean .
                 ?change a addr:AttributeChange ; addr:appliedTo ?attr ; addr:dependsOn ?event ; addr:makesEffective ?vME ; addr:outdates ?vO.
                 ?event a addr:Event ; addr:hasTimeAfter ?timeME ; addr:hasTimeBefore ?timeO .
                 }}
         }}
         WHERE {{
             {{
-                SELECT DISTINCT ?g ?attr ?version ?changeME ?changeO ?hasChangeMETrace ?hasChangeOTrace WHERE {{
+                SELECT DISTINCT ?gt ?attr ?version ?changeME ?changeO ?hasChangeMETrace ?hasChangeOTrace WHERE {{
                     BIND({tmp_named_graph_uri.n3()} AS ?gt)
-                    GRAPH ?g {{
+                    GRAPH ?gt {{
                         ?attr addr:hasAttributeVersion ?version .
                         ?version a addr:AttributeVersion .
                         ?changeME a addr:AttributeChange ; addr:makesEffective ?version .
@@ -2341,6 +2445,10 @@ def remove_empty_attribute_versions(graphdb_url:URIRef, repository_name:str, tmp
         """
     
     gd.update_query(query, graphdb_url, repository_name)
+
+    # Remove all triples where resources r for which it exists a triple <r addr:toRemove "true"^^xsd:boolean> is in these triples
+    # In this case, remove selected versions and their related changes which are not traced
+    remove_all_triples_for_resources_to_remove(graphdb_url, repository_name)
 
 # Get attribute versions to merge
 def to_be_merged_with(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
@@ -2431,7 +2539,7 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                 ?rootAttrVers a addr:AttributeVersion .
             }}
             GRAPH ?gt {{
-                ?rootAttrVers addr:createdFrom ?attrVers .
+                ?rootAttrVers addr:isDerivedFrom ?attrVers .
             }}
         }}
         WHERE {{
@@ -2458,8 +2566,8 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                 ?newEvent a addr:Event .
             }}
             GRAPH ?gt {{
-                ?newChange addr:createdFrom ?change .
-                ?newEvent addr:createdFrom ?event .
+                ?newChange addr:isDerivedFrom ?change .
+                ?newEvent addr:isDerivedFrom ?event .
             }}
         }}
         WHERE {{
@@ -2470,16 +2578,16 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                     ?change a addr:AttributeChange .
                     {{
                         ?change addr:makesEffective ?vMETrace ; addr:outdates ?vOTrace .
-                        ?vME addr:createdFrom ?vMETrace .
-                        ?vO addr:createdFrom ?vOTrace .
+                        ?vME addr:isDerivedFrom ?vMETrace .
+                        ?vO addr:isDerivedFrom ?vOTrace .
                         FILTER(!sameTerm(?vME, ?vO))
                     }} UNION {{
                         ?change addr:makesEffective ?vMETrace .
-                        ?vME addr:createdFrom ?vMETrace .
+                        ?vME addr:isDerivedFrom ?vMETrace .
                         FILTER NOT EXISTS {{ ?change addr:outdates ?vOTrace . }}
                     }} UNION {{
                         ?change addr:outdates ?vOTrace .
-                        ?vO addr:createdFrom ?vOTrace .
+                        ?vO addr:isDerivedFrom ?vOTrace .
                         FILTER NOT EXISTS {{ ?change addr:makesEffective ?vMETrace . }}
                     }}
                 }}
@@ -2497,12 +2605,12 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                 ?event ?timeProp ?newTime .
             }}
             GRAPH ?gt {{
-                ?newTime addr:createdFrom ?timeTrace . 
+                ?newTime addr:isDerivedFrom ?timeTrace . 
             }}
         }} WHERE {{ 
             {{
                 SELECT * WHERE {{
-                    ?event a addr:Event ; addr:createdFrom ?eventTrace .
+                    ?event a addr:Event ; addr:isDerivedFrom ?eventTrace .
                     {{
                         BIND(addr:hasTime AS ?timeProp)
                         ?eventTrace addr:hasTime ?timeTrace .
@@ -2527,7 +2635,7 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
             }}
         }} WHERE {{
             BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-            ?elem addr:createdFrom ?tmpElem .
+            ?elem addr:isDerivedFrom ?tmpElem .
             ?tmpElem addr:hasTrace ?elemTrace .
         }}
         """

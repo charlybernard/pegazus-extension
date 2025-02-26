@@ -1,23 +1,44 @@
-var repertoireGraphDB = graphDBURL + "/repositories/" + graphName
+var graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
+var factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
 
-function initTimeline(repertoireGraphDB, landmarkURI, map){
+////////////////////////////////////////////////////////////////////////////////////
 
+function getGraphDBRepositoryURI(graphDBURI, graphName){
+  return graphDBURI + "/repositories/" + graphName ;
+}
+
+function getNamedGraphURI(graphDBURI, graphName, namedGraphName){
+  return graphDBURI + "/repositories/" + graphName + "/" + namedGraphName ;
+}
+
+function getQueryValidTimeForLandmark(landmarkURI, namedGraphURI){
   var query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-SELECT DISTINCT ?lm ?attrType ?attrVers ?tStampME ?tPrecME ?tStampO ?tPrecO ?tStampMEBefore ?tPrecMEBefore ?tStampMEAfter ?tPrecMEAfter ?tStampOBefore ?tPrecOBefore ?tStampOAfter ?tPrecOAfter WHERE {` +
-  "    BIND (<" + landmarkURI + "> AS ?lm)" +
-  `    ?lm rdfs:label ?lmLabel .
-      ?lm a addr:Landmark ; addr:hasAttribute [addr:isAttributeType ?attrType ; addr:hasAttributeVersion ?attrVers] .
-      ?cgME addr:makesEffective ?attrVers ; addr:dependsOn ?evME.
-      ?cgO addr:outdates ?attrVers ; addr:dependsOn ?evO.
-      OPTIONAL { ?evME addr:hasTime [addr:timeStamp ?tStampME ; addr:timePrecision ?tPrecME] }
-      OPTIONAL { ?evO addr:hasTime [addr:timeStamp ?tStampO ; addr:timePrecision ?tPrecO] }
-      OPTIONAL { ?evME addr:hasTimeBefore [addr:timeStamp ?tStampMEBefore ; addr:timePrecision ?tPrecMEBefore] }
-      OPTIONAL { ?evME addr:hasTimeAfter [addr:timeStamp ?tStampMEAfter ; addr:timePrecision ?tPrecMEAfter] }
-      OPTIONAL { ?evO addr:hasTimeBefore [addr:timeStamp ?tStampOBefore ; addr:timePrecision ?tPrecOBefore] }
-      OPTIONAL { ?evO addr:hasTimeAfter [addr:timeStamp ?tStampOAfter ; addr:timePrecision ?tPrecOAfter] }
-  }`
+PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
+SELECT DISTINCT ?lm 
+?tStampApp ?tPrecApp ?tStampDis ?tPrecDis
+?tStampAppBefore ?tPrecAppBefore ?tStampAppAfter ?tPrecAppAfter
+?tStampDisBefore ?tPrecDisBefore ?tStampDisAfter ?tPrecDisAfter
+WHERE {
+    BIND(<` + namedGraphURI + `> AS ?g)
+    BIND (<` + landmarkURI + `> AS ?lm)
 
+    ?changeApp a addr:Change ; addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?evApp .
+    ?changeDis a addr:Change ; addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?evDis .
+
+    OPTIONAL { ?evApp addr:hasTime [addr:timeStamp ?tStampApp ; addr:timePrecision ?tPrecApp] }
+    OPTIONAL { ?evApp addr:hasTimeBefore [addr:timeStamp ?tStampAppBefore ; addr:timePrecision ?tPrecAppBefore] }
+    OPTIONAL { ?evApp addr:hasTimeAfter [addr:timeStamp ?tStampAppAfter ; addr:timePrecision ?tPrecAppAfter] }
+    OPTIONAL { ?evDis addr:hasTime [addr:timeStamp ?tStampDis ; addr:timePrecision ?tPrecDis] }
+    OPTIONAL { ?evDis addr:hasTimeBefore [addr:timeStamp ?tStampDisBefore ; addr:timePrecision ?tPrecDisBefore] }
+    OPTIONAL { ?evDis addr:hasTimeAfter [addr:timeStamp ?tStampDisAfter ; addr:timePrecision ?tPrecDisAfter] }
+}
+LIMIT 1
+`
+return query ;
+}
+
+function getQueryToInitTimeline(landmarkURI, namedGraphURI){
   // Requête qui marche bien, ne pas y toucher !!!!
   var query = `PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -25,9 +46,9 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT DISTINCT ?lm ?attrType ?attrVers ?cgME ?cgO
 ?tStampME ?tPrecME ?tStampO ?tPrecO
 ?tStampMEBefore ?tPrecMEBefore ?tStampMEAfter ?tPrecMEAfter ?tStampOBefore ?tPrecOBefore ?tStampOAfter ?tPrecOAfter
-WHERE {` +
-    "BIND (<" + landmarkURI + "> AS ?lm)" +
-    `BIND(<http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/facts> AS ?g)
+WHERE {
+    BIND(<` + namedGraphURI + `> AS ?g)
+    BIND (<` + landmarkURI + `> AS ?lm)
     ?lm a addr:Landmark ; addr:hasAttribute [addr:isAttributeType ?attrType ; addr:hasAttributeVersion ?attrVers] .
     ?cgME addr:makesEffective ?attrVers ; addr:dependsOn ?evME.
     ?cgO addr:outdates ?attrVers ; addr:dependsOn ?evO.
@@ -41,31 +62,13 @@ WHERE {` +
 ORDER BY ?tStampME
   `
 
-  // Requête en test
-  var queryTest = `PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+  return query ;
+}
 
-  SELECT DISTINCT ?lm ?attrType ?attrVers ?cgME ?cgO
-  ?tStampME ?tPrecME ?tStampO ?tPrecO
-  ?tStampMEBefore ?tPrecMEBefore ?tStampMEAfter ?tPrecMEAfter ?tStampOBefore ?tPrecOBefore ?tStampOAfter ?tPrecOAfter
-  WHERE {` +
-      "BIND (<" + landmarkURI + "> AS ?lm)" +
-      `BIND(<http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/facts> AS ?g)
-      ?lm a addr:Landmark ; addr:hasAttribute [addr:isAttributeType ?attrType ; addr:hasAttributeVersion ?attrVers] .
-      GRAPH ?g {?attrVers a addr:AttributeVersion . }
-      ?cgME addr:makesEffective ?attrVers ; addr:dependsOn [addr:createdFrom ?evME].
-      ?cgO addr:outdates ?attrVers ; addr:dependsOn [addr:createdFrom ?evO].
-      OPTIONAL { ?evME addr:hasTime [addr:timeStamp ?tStampME ; addr:timePrecision ?tPrecME] }
-      OPTIONAL { ?evO addr:hasTime [addr:timeStamp ?tStampO ; addr:timePrecision ?tPrecO] }
-      OPTIONAL { ?evME addr:hasTimeBefore [addr:timeStamp ?tStampMEBefore ; addr:timePrecision ?tPrecMEBefore] }
-      OPTIONAL { ?evME addr:hasTimeAfter [addr:timeStamp ?tStampMEAfter ; addr:timePrecision ?tPrecMEAfter] }
-      OPTIONAL { ?evO addr:hasTimeBefore [addr:timeStamp ?tStampOBefore ; addr:timePrecision ?tPrecOBefore] }
-      OPTIONAL { ?evO addr:hasTimeAfter [addr:timeStamp ?tStampOAfter ; addr:timePrecision ?tPrecOAfter] }
-  }
-  ORDER BY ?tStampME
-    `
+function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map){
 
-    // var query = queryTest ;
+  var queryToInitTimeline = getQueryToInitTimeline(landmarkURI, namedGraphURI) ;
+  var queryValidTimeForLandmark = getQueryValidTimeForLandmark(landmarkURI, namedGraphURI) ;
 
   var timelinejson = {"title": {"text":{"headline":'Attributs pour le landmark'}}, "events": []}
 
@@ -80,11 +83,27 @@ ORDER BY ?tStampME
   var versions = {} ;
 
   $.ajax({
-    url: repertoireGraphDB,
+    url: graphDBRepositoryURI,
     Accept: "application/sparql-results+json",
     contentType:"application/sparql-results+json",
     dataType:"json",
-    data:{"query":query}
+    data:{"query":queryValidTimeForLandmark}
+  }).done((promise) => {
+    $.each(promise.results.bindings, function(i,bindings){
+      console.log(bindings);
+      // console.log(bindings.tStampAppBefore.value);
+      // var uri = bindings.tStampAppBefore.value;
+      // bindings.values = []
+      // versions[uri] = bindings ;
+      });
+  });
+
+  $.ajax({
+    url: graphDBRepositoryURI,
+    Accept: "application/sparql-results+json",
+    contentType:"application/sparql-results+json",
+    dataType:"json",
+    data:{"query":queryToInitTimeline}
   }).done((promise) => {
     //Create Timeline JS JSON
     //INIT TimelineJson END
@@ -102,7 +121,7 @@ ORDER BY ?tStampME
     `?vers addr:versionValue ?val }`
 
     $.ajax({
-      url: repertoireGraphDB,
+      url: graphDBRepositoryURI,
       Accept: "application/sparql-results+json",
       contentType:"application/sparql-results+json",
       dataType:"json",
@@ -181,7 +200,9 @@ function createTimelineText(attrVersion, attrVersionValues){
     values.push(element.value);
   });
 
-  var headline = attrVersion.value.replace("http://rdf.geohistoricaldata.org/id/address/factoids/","")
+  var headline = attrVersion.value.replace("http://rdf.geohistoricaldata.org/id/address/","")
+  var headline = headline.replace("facts/","")
+  var headline = headline.replace("factoids/","")
   var text = { "headline": headline, "text": values.join("<br>") };
 
   return text ;
@@ -422,18 +443,19 @@ function displayGeometryOnMap(element, map){
 }
 
 function changeSelectedLandmark(event){
-  initTimeline(repertoireGraphDB, dropDownMenu.value, map=map);
+  initTimeline(graphDBRepositoryURI, dropDownMenu.value, factsNamedGraphURI, map=map);
 }
 
-function getLandmarks(repertoireGraphDB, dropDownMenu){
+function getLandmarks(graphDBRepositoryURI, dropDownMenu){
   var query = `
 PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel WHERE {
+SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
+WHERE {
     ?lm rdfs:label ?lmPartLabel .
-    FILTER(LANG(?lmPartLabel) = "fr")
+    FILTER(LANG(?lmPartLabel) IN ("fr", ""))
     {
         SELECT DISTINCT ?lm ?lmType WHERE {
             BIND(<http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/facts> AS ?g)
@@ -443,11 +465,11 @@ SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel WHERE {
     }
     OPTIONAL {
         ?lmType skos:prefLabel ?lmTypeLabel .
-        FILTER(LANG(?lmTypeLabel) = "fr")
+        FILTER(LANG(?lmTypeLabel) IN ("fr", ""))
     }
     OPTIONAL {
-        ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:IsPartOf ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
-        FILTER(LANG(?relatumLabel) = "fr")
+        ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+        FILTER(LANG(?relatumLabel) IN ("fr", ""))
     }
     BIND(IF(BOUND(?relatumLabel), CONCAT(?lmPartLabel, " ", ?relatumLabel), ?lmPartLabel) AS ?lmLabel)
 }
@@ -455,7 +477,7 @@ SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel WHERE {
 ` ;
 
 $.ajax({
-  url: repertoireGraphDB,
+  url: graphDBRepositoryURI,
   Accept: "application/sparql-results+json",
   contentType:"application/sparql-results+json",
   dataType:"json",
@@ -537,12 +559,13 @@ document.addEventListener('mouseup', () => {
   map.invalidateSize(); // Recentrer la carte
 });
 
-////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////
 
 var layersToRemove = [];
 // Appel aux fonctions d'initialisation
 var map = initLeaflet();
-//initTimeline(repertoireGraphDB, lmLabel, lmLabelLang, map=map);
+//initTimeline(graphDBRepositoryURI, lmLabel, lmLabelLang, map=map);
 
 // var button = document.getElementById("enterName") ;
 var dropDownMenu = document.getElementById("landmarkNames");
@@ -552,4 +575,4 @@ var dropDownMenu = document.getElementById("landmarkNames");
 dropDownMenu.addEventListener("change",changeSelectedLandmark);
 
 // Afficher les landmarks dans un menu déroulant
-getLandmarks(repertoireGraphDB, dropDownMenu) ;
+getLandmarks(graphDBRepositoryURI, dropDownMenu) ;
