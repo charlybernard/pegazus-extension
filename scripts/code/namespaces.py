@@ -29,6 +29,8 @@ class NameSpaces():
         self.XSD = Namespace("http://www.w3.org/2001/XMLSchema#")
         self.OWL = Namespace("http://www.w3.org/2002/07/owl#")
 
+        self.OFN = Namespace("http://www.ontotext.com/sparql/functions/")
+
     def __get_namespaces_with_prefixes(self):
         self.namespaces_with_prefixes = {}
         for key, value in self.__dict__.items():

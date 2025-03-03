@@ -1,5 +1,10 @@
+document.getElementsByClassName("map_timeline")[0].style.height = window.screen.height;
+
 var graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
 var factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
+var landmarkValidTimeDivId = "landmark_valid_time" ;
+var landmarkNamesDivId = "landmark_names" ;
+
 
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -81,7 +86,7 @@ function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map){
     }
 
   var versions = {} ;
-
+    console.log(queryValidTimeForLandmark);
   $.ajax({
     url: graphDBRepositoryURI,
     Accept: "application/sparql-results+json",
@@ -90,12 +95,15 @@ function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map){
     data:{"query":queryValidTimeForLandmark}
   }).done((promise) => {
     $.each(promise.results.bindings, function(i,bindings){
-      console.log(bindings);
-      // console.log(bindings.tStampAppBefore.value);
-      // var uri = bindings.tStampAppBefore.value;
-      // bindings.values = []
-      // versions[uri] = bindings ;
-      });
+      var times = getValidTimeForLandmark(
+        {stamp:bindings.tStampApp, precision:bindings.tPrecApp}, {stamp:bindings.tStampDis, precision:bindings.tPrecDis},
+        {stamp:bindings.tStampAppBefore, precision:bindings.tPrecAppBefore}, {stamp:bindings.tStampAppAfter, precision:bindings.tPrecAppAfter},
+        {stamp:bindings.tStampDisBefore, precision:bindings.tPrecDisBefore}, {stamp:bindings.tStampDisAfter, precision:bindings.tPrecDisAfter}
+      );
+      var validTimeForLandmarkLabel = getValidTimeForLandmarkLabel(times.appTime, times.disTime) ;
+      var landmarkValidTimeDiv = document.getElementById(landmarkValidTimeDivId) ;
+      landmarkValidTimeDiv.innerHTML = validTimeForLandmarkLabel
+    });
   });
 
   $.ajax({
@@ -141,7 +149,7 @@ function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map){
           ) ;
           timelinejson.events.push(feature);
         }
-        var timeline = new TL.Timeline('timeline-embed', timelinejson, options) ;
+        var timeline = new TL.Timeline('timeline', timelinejson, options) ;
         timeline.on('change', function (event) {
           var uri = timeline.current_id;
           addGeometriesOfVersion(versions[uri], map);
@@ -152,6 +160,48 @@ function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map){
 
 
 };//FUNCTION END
+
+
+function getValidTimeForLandmark(timeApp={}, timeDis={}, timeBeforeApp={}, timeAfterApp={}, timeBeforeDis={}, timeAfterDis={}){
+  var startTime = {} ;
+  var startTimePrec = undefined ;
+  var startTimeBefore = undefined ;
+  var startTimeAfter = undefined ;
+  if(timeApp.stamp && timeApp.precision){
+    var startTimePrec = getTimeWithFrenchabel(timeApp.stamp.value, timeApp.precision.value) ;
+    startTime.precise = startTimePrec ;
+  }else if(timeBeforeApp.stamp && timeBeforeApp.precision && timeAfterApp.stamp && timeAfterApp.precision){
+    var startTimeBefore = getTimeWithFrenchabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
+    var startTimeAfter = getTimeWithFrenchabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
+    startTime.before = startTimeBefore ;
+    startTime.after = startTimeAfter ;
+  }else if (timeBeforeApp.stamp && timeBeforeApp.precision){
+    var startTimeBefore = getTimeWithFrenchabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
+    startTime.before = startTimeBefore ;
+  }else if (timeAfterApp.stamp && timeAfterApp.precision){
+    var startTimeAfter = getTimeWithFrenchabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
+    startTime.after = startTimeAfter ;
+  }
+
+  var endTime = {} ;
+  if(timeDis.stamp && timeDis.precision){
+    var endTimePrec = getTimeWithFrenchabel(timeDis.stamp.value, timeDis.precision.value) ;
+    endTime.precise = endTimePrec ;
+  }else if(timeBeforeDis.stamp && timeBeforeDis.precision && timeAfterDis.stamp && timeAfterDis.precision){
+    var endTimeBefore = getTimeWithFrenchabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
+    var endTimeAfter = getTimeWithFrenchabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
+    endTime.before = endTimeBefore ;
+    endTime.after = endTimeAfter ;
+  }else if (timeBeforeDis.stamp && timeBeforeDis.precision){
+    var endTimeBefore = getTimeWithFrenchabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
+    endTime.before = endTimeBefore ;
+  }else if (timeAfterDis.stamp && timeAfterDis.precision){
+    var endTimeAfter = getTimeWithFrenchabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
+    endTime.after = endTimeAfter ;
+  }
+
+  return {"appTime":startTime, "disTime":endTime}
+}
 
 
 function createTimelineFeature(attrVersion, attrType, attrVersionValues, timeME={}, timeO={}, timeBeforeME={}, timeAfterME={}, timeBeforeO={}, timeAfterO={}){
@@ -220,6 +270,76 @@ function getValuesForQuery(variable, values){
 
 /// Gestion des temps dans timeline.js
 
+
+function getValidTimeForLandmarkLabel(appTime, disTime){
+  var label = "";
+  if (appTime.precise){
+    label += "<b>Date de création :</b> " + appTime.precise.label ;
+  } else if (appTime.before && appTime.after){
+    label += "<b>Date de création :</b> entre " + appTime.before.label + " et " + appTime.after.label ;
+  } else if (appTime.before){
+    label += "<b>Date de création :</b> avant " + appTime.before.label ;
+  } else if (appTime.after){
+    label += "<b>Date de création :</b> après " + appTime.after.label ;
+  }
+
+  label += "<br>" ;
+
+  if (disTime.precise){
+    label += "<b>Date de disparition :</b> " + disTime.precise.label ;
+  } else if (disTime.before && disTime.after){
+    label += "<b>Date de disparition :</b> entre " + disTime.before.label + " et " + disTime.after.label ;
+  } else if (disTime.before){
+    label += "<b>Date de disparition :</b> avant " + disTime.before.label ;
+  } else if (disTime.after){
+    label += "<b>Date de disparition :</b> après " + disTime.after.label ;
+  }
+
+  return label
+
+}
+
+function getTimeWithFrenchabel(timeStamp, timePrecision){
+  var timeElems = extractElementsFromTimeStamp(timeStamp) ;
+  var precision = extractElementsFromTimePrecision(timePrecision) ;
+  var months = {1:"janvier", 2:"février", 3:"mars", 4:"avril", 5:"mai", 6:"juin", 7:"juillet", 8:"août", 9:"septembre", 10:"octobre", 11:"novembre", 12:"décembre"} ;
+  
+  var frenchTimeString = "";
+  if (precision == "millenium"){
+    var millenium = String(Math.ceil(parseInt(timeElems.year)/1000)) ;
+    var superscript = "e"
+    if (millenium = "1"){superscript = "re"};
+    var frenchTimeString =  millenium + superscript + " millénaire" ;
+  } else if (precision == "century"){
+    var century = String(Math.ceil(parseInt(timeElems.year)/100)) ;
+    var superscript = "e"
+    if (century = "1"){superscript = "er"};
+    var frenchTimeString =  millenium + superscript + " siècle" ;
+  } else if (precision == "decade"){
+    var decade = String(Math.trunc(parseInt(timeElems.year)/10)*10) ;
+    var frenchTimeString =  "années " + decade ;
+  } else if (precision == "year"){
+    var year = timeElems.year ;
+    var frenchTimeString = year ;
+  } else if (precision == "month"){
+    var year = timeElems.year ;
+    var intMonth = parseInt(timeElems.month);
+    var month = months[intMonth] ;
+    var frenchTimeString =  month + " " + year ;
+  } else if (["day", "hours", "minutes", "seconds", "milliseconds"].includes(precision)){
+    var year = timeElems.year ;
+    var intMonth = parseInt(timeElems.month);
+    var month = months[intMonth] ;
+    var day = timeElems.day ;
+    if (day == "1"){day = "1er"}
+    var frenchTimeString =  day + " " + month + " " + year ;
+  }
+
+  timeElems.label = frenchTimeString ;
+  timeElems.precision = precision
+  return timeElems;
+}
+
 function createTimelineTime(year=null, month=null, day=null, hour=null, minute=null, second=null, millisecond=null, format=null){
   year = (!year) ? '' : year ;
   month = (!month) ? '' : month ;
@@ -231,7 +351,6 @@ function createTimelineTime(year=null, month=null, day=null, hour=null, minute=n
   format = (!format) ? '' : format ;
   return {year, month, day, hour, minute, second, millisecond, format}
 }
-
 
 function createTime(timeStamp, timePrecision){
   var timeElems = extractElementsFromTimeStamp(timeStamp) ;
@@ -292,6 +411,12 @@ function extractElementsFromTimePrecision(timePrecision){
     return "month"
   }else if (timePrecision == "http://www.w3.org/2006/time#unitYear"){
     return "year"
+  }else if (timePrecision == "http://www.w3.org/2006/time#unitDecade"){
+    return "decade"
+  }else if (timePrecision == "http://www.w3.org/2006/time#unitCentury"){
+    return "century"
+  }else if (timePrecision == "http://www.w3.org/2006/time#unitMillenium"){
+    return "millenium"
   }else{
     return null
   }
@@ -314,13 +439,13 @@ function extractElementsFromTimeStamp(timeStamp){
 
 function extractElementsFromTime(time){
   // Récupérer les différentes parties
-  var year = String(time.getFullYear());      // Année
-  var month = String(time.getMonth() + 1);   // Mois (commence à 0, donc ajouter 1)
-  var day = String(time.getDate());          // Jour
-  var hours = String(time.getHours());       // Heures
-  var minutes = String(time.getMinutes());   // Minutes
-  var seconds = String(time.getSeconds());   // Secondes
-  var milliseconds = String(time.getMilliseconds()); // Millisecondes
+  var year = String(time.getUTCFullYear());      // Année
+  var month = String(time.getUTCMonth() + 1);   // Mois (commence à 0, donc ajouter 1)
+  var day = String(time.getUTCDate());          // Jour
+  var hours = String(time.getUTCHours());       // Heures
+  var minutes = String(time.getUTCMinutes());   // Minutes
+  var seconds = String(time.getUTCSeconds());   // Secondes
+  var milliseconds = String(time.getUTCMilliseconds()); // Millisecondes
   return { year, month, day, hours, minutes, seconds, milliseconds }
 }
 
@@ -568,7 +693,7 @@ var map = initLeaflet();
 //initTimeline(graphDBRepositoryURI, lmLabel, lmLabelLang, map=map);
 
 // var button = document.getElementById("enterName") ;
-var dropDownMenu = document.getElementById("landmarkNames");
+var dropDownMenu = document.getElementById(landmarkNamesDivId);
 
 // Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
 // button.addEventListener("click",changeSelectedLandmark);

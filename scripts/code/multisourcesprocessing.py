@@ -584,8 +584,6 @@ def create_roots_and_traces_for_landmark_attributes(graphdb_url:URIRef, reposito
 def sort_events_and_states_on_attributes(graphdb_url, repository_name, order_named_graph_uri, tmp_named_graph_uri):
     # Detection of overlapping versions of attribute states
     query1 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?go {{
                 ?attr addr:hasOverlappingVersion ?overlappedAttr.
@@ -615,8 +613,6 @@ def sort_events_and_states_on_attributes(graphdb_url, repository_name, order_nam
     # If base is related to a state, we get the end of valid time to compute gap, else we get the given time.
     # If compared is related to a state, we get the beginning of valid time to compute gap, else we get the given time
     query2 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?g {{
                 ?rootAttr addr:hasTimeGap [ addr:hasValue ?timeGap ; addr:hasBaseElem ?baseAttr ; addr:hasToCompareElem ?toCompareAttr ;
@@ -1223,8 +1219,6 @@ This part includes functions for temporal sorting to manage attribute versions:
 def order_temporally_landmark_versions(graphdb_url:URIRef, repository_name:str, order_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Calculating differences between landmark state versions
     query1 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?g {{
                 ?rootLm addr:hasTimeGap [ addr:hasValue ?timeGap ; addr:isFirstRL ?lm1 ; addr:isSecondRL ?lm2] .
@@ -1244,8 +1238,6 @@ def order_temporally_landmark_versions(graphdb_url:URIRef, repository_name:str, 
 
     # Detection of overlapping versions of landmark states
     query2 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?go {{
                 ?landmark addr:hasOverlappingVersion ?overlappedLandmark.
@@ -1307,8 +1299,6 @@ def order_temporally_landmark_versions(graphdb_url:URIRef, repository_name:str, 
 def order_temporally_attribute_versions(graphdb_url:URIRef, repository_name:str, order_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Calculation of differences between attribute status versions
     query1 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?g {{
                 ?rootAttr addr:hasTimeGap [ addr:hasValue ?timeGap ; addr:isFirstRL ?attr1 ; addr:isSecondRL ?attr2] .
@@ -1331,8 +1321,6 @@ def order_temporally_attribute_versions(graphdb_url:URIRef, repository_name:str,
 
     # Detection of overlapping versions of attribute states
     query2 = np.query_prefixes + f"""
-        PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
         INSERT {{
             GRAPH ?go {{
                 ?attr addr:hasOverlappingVersion ?overlappedAttr.
@@ -1614,7 +1602,6 @@ def infer_missing_time_on_events(graphdb_url:URIRef, repository_name:str, facts_
         ?rootEvent addr:hasTrace [addr:hasTime ?instant] .
     }}
     """
-    print(query2)
 
     queries = [query1a, query1b, query2]
     for query in queries:
@@ -2013,6 +2000,9 @@ def add_validity_time_interval_to_landmark(g:Graph, lm_uri:URIRef, time_descript
 # Get the appearance and disappearance of landmark
 
 def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri, tmp_named_graph_uri):
+
+    gregorian_calendar_uri = URIRef("http://www.wikidata.org/entity/Q1985727")
+
    # Add missing landmark changes after having imported all factoids
     # All landmarks must be related with two changes :
     # - one which describes its apprearance
@@ -2040,111 +2030,109 @@ def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_
     }}
     """
 
-    # For each landmark, get the oldest and the soonest times which refers to it.
-    # The goal is to estimates the time of appearance and disappearance of each landmark
+    # For each event in facts named graph which are not related to any time, rely it with all possible times in a temporary named graph
+    # Possible times are all times related to their event traces or landmark valid time (startTime if it is a event related to a LandmarkAppearance, endTime if it is a event related to a LandmarkDisappearance)
     query2 = np.query_prefixes + f"""
-    PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-    PREFIX wd: <http://www.wikidata.org/entity/>
-
     INSERT {{
         GRAPH ?gt {{
-            ?lm addr:hasTimeMin ?timeMin ; addr:hasTimeMax ?timeMax .
+            ?event ?propInstantTime ?time .
         }}
-    }} WHERE {{
-            BIND({tmp_named_graph_uri.n3()} AS ?gt)
-        {{
-            SELECT DISTINCT ?lm (MIN(?diffTime) AS ?diffTimeMin) (MAX(?diffTime) AS ?diffTimeMax) WHERE {{
-                BIND({facts_named_graph_uri.n3()} AS ?gf)
-                BIND(wd:Q1985727 AS ?timeCal)
-                GRAPH ?gf {{
-                    ?lm a addr:Landmark .
-                }}
-                ?lm addr:hasTrace ?lmTrace .
-                ?lmTrace addr:hasTime [addr:hasBeginning|addr:hasEnd ?time ] .
-                ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal.
-                BIND(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) AS ?diffTime)
-            }}
-            GROUP BY ?lm 
-        }}
-
-        ?lm addr:hasTrace ?lmTraceMin, ?lmTraceMax .
-        ?lmTraceMin addr:hasTime [addr:hasBeginning|addr:hasEnd ?timeMin ] .
-        ?timeMin addr:timeStamp ?timeStampMin .
-        ?lmTraceMax addr:hasTime [addr:hasBeginning|addr:hasEnd ?timeMax ] .
-        ?timeMax addr:timeStamp ?timeStampMax .
-        FILTER(ofn:asDays(?timeStampMin - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTimeMin)
-        FILTER(ofn:asDays(?timeStampMax - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTimeMax)
-    }}
-    """
-
-    # Remove triples created by previous query if there are more than one min (or max) time related to one landmark with different precisions.
-    # In this case, the triple which is removed is the one whose object is the time with the lowest precision.
-    query3 = np.query_prefixes + f"""
-    DELETE {{
-        ?lm ?tmpTimeProp ?t2 .
     }}
     WHERE {{
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
-        VALUES ?tmpTimeProp {{addr:hasTimeMin addr:hasTimeMax}}
-        GRAPH ?gt {{
-            ?lm ?tmpTimeProp ?t1, ?t2 .
+        GRAPH ?gf {{ ?lm a addr:Landmark . }}
+        ?lm addr:hasTrace ?lmTrace .
+        ?change addr:isChangeType ?changeType ; addr:appliedTo ?lm ; addr:dependsOn ?event .
+        {{
+            VALUES (?changeType ?propIntervalTime ?propInstantTime) {{
+                (ctype:LandmarkAppearance addr:hasBeginning addr:hasTimeBefore)
+                (ctype:LandmarkDisappearance addr:hasEnd addr:hasTimeAfter)
+            }}
+            ?lmTrace addr:hasTime [?propIntervalTime ?time ] .
+        }} UNION {{
+            ?changeTrace addr:isChangeType ?changeType ; addr:appliedTo ?lmTrace ; addr:dependsOn ?eventTrace .
+            ?eventTrace ?propInstantTime ?time .
+            FILTER (?propInstantTime IN (addr:hasTime, addr:hasTimeBefore, addr:hasTimeAfter))
         }}
-        ?t1 addr:timePrecision ?t1Prec .
-        ?t2 addr:timePrecision ?t2Prec .
-        BIND(IF(?t1Prec = time:unitMillenium, "1"^^xsd:integer, 
-                IF(?t1Prec = time:unitCentury, "2"^^xsd:integer,
-                    IF(?t1Prec = time:unitDecade, "3"^^xsd:integer,
-                        IF(?t1Prec = time:unitYear, "4"^^xsd:integer,
-                            IF(?t1Prec = time:unitMonth, "5"^^xsd:integer,
-                                IF(?t1Prec = time:unitDay, "6"^^xsd:integer,
-                                    "0"^^xsd:integer)
-                            ))))) AS ?t1PrecInt)
-
-        BIND(IF(?t2Prec = time:unitMillenium, "1"^^xsd:integer, 
-                IF(?t2Prec = time:unitCentury, "2"^^xsd:integer,
-                    IF(?t2Prec = time:unitDecade, "3"^^xsd:integer,
-                        IF(?t2Prec = time:unitYear, "4"^^xsd:integer,
-                            IF(?t2Prec = time:unitMonth, "5"^^xsd:integer,
-                                IF(?t2Prec = time:unitDay, "6"^^xsd:integer,
-                                    "0"^^xsd:integer)
-                            ))))) AS ?t2PrecInt)
-        FILTER (?t1 != ?t2 && ?t1PrecInt < ?t2PrecInt )
+        FILTER NOT EXISTS {{ GRAPH ?gf {{ ?event addr:hasTime ?t }} }}
     }}
     """
 
-    # Creation of time ressources to estimate the time of appearance and disappearance of landmarks
-    query4 = np.query_prefixes + f"""
+    # Select the best time(s) from the sources to be the trace of the time of each event related to the appearance or disappearance of landmarks
+    # First query get the precise time of each event (if it exists) : <?event addr:hasTime ?time>
+    # Second one give a time estimation for event which does not have any precise time (according first query) : <?event addr:hasTimeBefore ?time> and/or <?event addr:hasTimeAfter ?time>
+    query3a = np.query_prefixes + f"""
     INSERT {{
         GRAPH ?gf {{
-            ?missingTime a addr:CrispTimeInstant ; addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal ; addr:timePrecision ?timePrec .
-            ?event ?timeProp ?missingTime .
+            ?time a addr:CrispTimeInstant .
+            ?event ?propTime ?time .
         }}
-        GRAPH ?gi {{ ?missingTime addr:hasTrace ?time }}
-    }} WHERE {{
+        GRAPH ?gi {{ ?time addr:hasTrace ?timeTrace . }}
+    }}
+    WHERE {{
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
         {{
-            SELECT DISTINCT ?gf ?lm ?event ?tmpTimeProp ?timeProp WHERE {{
+            SELECT DISTINCT ?gf ?gt ?propTime ?timeCal ?event ?diffTime WHERE {{
                 BIND({facts_named_graph_uri.n3()} AS ?gf)
-                VALUES (?changeType ?tmpTimeProp ?timeProp)
-                {{ (ctype:LandmarkAppearance addr:hasTimeMin addr:hasTimeBefore) (ctype:LandmarkDisappearance addr:hasTimeMax addr:hasTimeAfter) }}
-                GRAPH ?gf {{
-                    ?lm a addr:Landmark .
-                    ?change addr:isChangeType ?changeType ; addr:appliedTo ?lm ; addr:dependsOn ?event .}}
-                FILTER NOT EXISTS {{ ?event addr:hasTrace ?eventTrace . }}
+                BIND({tmp_named_graph_uri.n3()} AS ?gt)
+                BIND({gregorian_calendar_uri.n3()} AS ?timeCal)
+                BIND(addr:hasTime AS ?propTime)
+                GRAPH ?gf {{ ?lm a addr:Landmark . }}
+                ?change addr:dependsOn ?event ; addr:appliedTo ?lm .
+                GRAPH ?gt {{ ?event ?propTime ?time . }}
+                ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal .
+                BIND(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) AS ?diffTime)
+                FILTER NOT EXISTS {{ GRAPH ?gf {{ ?event addr:hasTime ?t }}}}
             }}
         }}
-        BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?missingTime)
-        ?lm ?tmpTimeProp ?time .
-        ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal ; addr:timePrecision ?timePrec .
+        BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?time)
+        ?event ?propTime ?timeTrace .
+        ?timeTrace addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal .
+        FILTER(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTime)
     }}
     """
 
-    queries = [query1, query2, query3, query4]
+    query3b = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{
+            ?time a addr:CrispTimeInstant .
+            ?event ?propTime ?time .
+        }}
+        GRAPH ?gi {{ ?time addr:hasTrace ?timeTrace . }}
+    }}
+    WHERE {{
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+        {{
+            SELECT DISTINCT ?gf ?gt ?propTime ?timeCal ?event (MIN(?diffTime) AS ?diffTimeMin) (MAX(?diffTime) AS ?diffTimeMax) WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                BIND({tmp_named_graph_uri.n3()} AS ?gt)
+                BIND({gregorian_calendar_uri.n3()} AS ?timeCal)
+                VALUES ?propTime {{ addr:hasTimeBefore addr:hasTimeAfter }}
+                GRAPH ?gf {{ ?lm a addr:Landmark . }}
+                ?change addr:dependsOn ?event ; addr:appliedTo ?lm .
+                GRAPH ?gt {{ ?event ?propTime ?time . }}
+                ?time addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal .
+                BIND(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) AS ?diffTime)
+                FILTER NOT EXISTS {{ GRAPH ?gf {{ ?event addr:hasTime ?t }}}}
+            }}
+            GROUP BY ?gf ?gt ?propTime ?timeCal ?event
+        }}
+        BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?time)
+        BIND(IF(?propTime = addr:hasTimeBefore, ?diffTimeMin, ?diffTimeMax) AS ?diffTime)
+        ?event ?propTime ?timeTrace .
+        ?timeTrace addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal .
+        FILTER(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) = ?diffTime)
+    }}
+
+    """
+
+    queries = [query1, query2, query3a, query3b]
     for query in queries:
-        a = gd.update_query(query, graphdb_url, repository_name)
-        print(a.__dict__)
+        gd.update_query(query, graphdb_url, repository_name)
 
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
+    transfer_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
 
 #####################################################################################################################
 
@@ -2153,8 +2141,6 @@ def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_
 def get_elementary_divisions_of_versions_and_changes(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
     # For each attribute, create as many TimeDescription object as there are temporal values related to it
     query1 = np.query_prefixes + f"""
-    PREFIX ofn: <http://www.ontotext.com/sparql/functions/>
-
     INSERT {{
         GRAPH ?g {{
             ?rootAttr addr:hasTimeDescription [a addr:TimeDescription ; addr:hasTime ?time ; addr:hasTimeType ?timeType ; addr:hasSimplifiedTime ?simplifiedTime ; addr:hasRelatedElem ?attrElem ] .

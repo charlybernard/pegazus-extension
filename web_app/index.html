@@ -17,16 +17,19 @@
    </head>
    <body>
       <div>
-         <label for="landmarkNames">Entité à sélectionner</label>
-         <select name="landmarkNames" id="landmarkNames"></select>
+         <label for="landmark_names">Entité à sélectionner</label>
+         <select name="landmark_names" id="landmark_names"></select>
          <!-- <button id="enterName" type="button">Entrée</button> -->
       </div>
 
+      <div id="landmark_valid_time">
+
+      </div>
 
       <div class="map_timeline">
-         <div id="timeline-embed" style="width: 70%; height: 600px;"></div>
+         <div id="timeline"></div>
          <div id="map_timeline_resizer" class="resizer"></div>
-         <div id="map" style="width: 30%; height: 600px;"></div>
+         <div id="map"></div>
       </div>
 
       <script type="text/javascript" src="./scripts/functions.js"></script>
