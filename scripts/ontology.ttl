@@ -4,16 +4,16 @@
 #Others namespaces
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix xml: <http://www.w3.org/XML/1998/namespace> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix voaf: <http://purl.org/vocommons/voaf#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix organization: <http://www.w3.org/ns/org#> .
 @prefix vann: <http://purl.org/vocab/vann/> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix cc: <http://creativecommons.org/ns#> .
 
 # Core namespaces
@@ -53,20 +53,20 @@
 	      foaf:name "Charly Bernard" ;
           foaf:workInfoHomepage <https://www.umr-lastig.fr/charly-bernard/> ;
 	    ] ;
-        dcterms:description "Ontologie PeGaZus pour décrire l'évolution des entités géographiques"@fr,
-		                    "PeGaZus ontology to describe evolution of geographical entities"@en;
+        dcterms:description "Ontologie ODySSEA pour décrire l'évolution des entités géographiques"@fr,
+		                    "ODySSEA ontology to describe evolution of geographical entities"@en;
         dcterms:issued "2023-10-30"^^xsd:date ;
         dcterms:modified "2024-09-13"^^xsd:date ;
         dcterms:publisher <http://fr.dbpedia.org/resource/Institut_national_de_l%27information_g%C3%A9ographique_et_foresti%C3%A8re> ;
-        dcterms:title "Ontologie PeGaZus"@fr, "PeGaZus ontology"@en ;
+        dcterms:title "Ontologie ODySSEA"@fr, "ODySSEA ontology"@en ;
         vann:preferredNamespacePrefix "addr" ;
 		vann:preferredNamespaceUri <http://rdf.geohistoricaldata.org/def/address#> ;
-		dcterms:rights "Copyright 2024, IGN" ;
+		dcterms:rights "Copyright 2025, IGN" ;
 		cc:license <http://www.data.gouv.fr/Licence-Ouverte-Open-Licence> ;
 		cc:license <http://creativecommons.org/licenses/by/2.0/> ;
 		cc:license <http://opendatacommons.org/licenses/by/> ;
     #owl:priorVersion <> ;
-		owl:versionInfo "Version 0.1 - 2024-09-13" .
+		owl:versionInfo "Version 0.1 - 2025-03-04" .
 
 #################################################################
 #    Annotation properties
@@ -125,14 +125,14 @@ skos:prefLabel rdf:type owl:AnnotationProperty .
       rdfs:label "est chevauché par"@fr, "is overlapped by version"@en .
 
 ###  http://rdf.geohistoricaldata.org/def/address#hasTrace
-addr:hasTrace a owl:ObjectProperty ;
+:hasTrace a owl:ObjectProperty ;
     rdfs:label "a pour trace"@fr, "has trace"@en ;
-    owl:inverseOf addr:isTraceOf.
+    owl:inverseOf :isTraceOf.
 
 ###  http://rdf.geohistoricaldata.org/def/address#isTraceOf
-addr:isTraceOf a owl:ObjectProperty ;
+:isTraceOf a owl:ObjectProperty ;
     rdfs:label "est une trace de"@fr, "is trace of"@en ;
-    owl:inverseOf addr:hasTrace.
+    owl:inverseOf :hasTrace.
 
 ###  http://rdf.geohistoricaldata.org/def/address#hasRoot
 :hasRoot rdf:type owl:ObjectProperty ;
@@ -1416,3 +1416,10 @@ time:unitYear rdf:type owl:NamedIndividual ,
                                           skos:definition "Extension du calendrier grégorien à avant son introduction"@fr ;
                                           skos:prefLabel "calendrier grégorien proleptique"@fr ,
                                                          "proleptic Gregorian calendar"@en .
+
+####  http://www.wikidata.org/entity/Q1985786
+<http://www.wikidata.org/entity/Q1985786> rdf:type owl:NamedIndividual ,
+                                                   time:TRS ;
+                                          skos:definition "Extension du calendrier julien à avant son introduction"@fr ;
+                                          skos:prefLabel "calendrier julien proleptique"@fr ,
+                                                         "proleptic Julian calendar"@en .
