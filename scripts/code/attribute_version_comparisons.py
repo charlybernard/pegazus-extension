@@ -1,6 +1,6 @@
 from namespaces import NameSpaces
-import geomprocessing as gp
-import strprocessing as sp
+import geom_processing as gp
+import str_processing as sp
 import graphdb as gd
 import graphrdf as gr
 from rdflib import URIRef, Graph

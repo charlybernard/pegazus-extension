@@ -1,4 +1,4 @@
-import filemanagement as fm
+import file_management as fm
 from rdflib import Graph, Namespace, Literal, BNode, URIRef
 from rdflib.namespace import RDF
 import requests

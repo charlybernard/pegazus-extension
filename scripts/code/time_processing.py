@@ -541,9 +541,6 @@ def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_
         gd.update_query(query, graphdb_url, repository_name)
 
 def get_time_instant_elements(time_dict:dict):
-    if time_dict is None:
-        return [None, None, None]
-
     time_namespace = Namespace("http://www.w3.org/2006/time#")
     wd_namespace = Namespace("http://www.wikidata.org/entity/")
 
@@ -558,11 +555,19 @@ def get_time_instant_elements(time_dict:dict):
 
     time_calendars = {
         "gregorian": wd_namespace["Q1985727"],
-        "republican": wd_namespace["Q181974"]
+        "republican": wd_namespace["Q181974"],
+        "julian": wd_namespace["Q1985786"],
     }
+
+    if not isinstance(time_dict, dict):
+        return [None, None, None]
+    
     time_stamp = time_dict.get("stamp")
     time_cal = time_dict.get("calendar")
     time_prec = time_dict.get("precision")
+    
+    if None in [time_stamp, time_cal, time_prec]:
+        return [None, None, None]
     
     stamp = get_literal_time_stamp(time_stamp)
     precision = time_units.get(time_prec)
@@ -573,20 +578,20 @@ def get_time_instant_elements(time_dict:dict):
 def get_literal_time_stamp(time_stamp:str):
     return Literal(time_stamp, datatype=XSD.dateTimeStamp)
 
-def get_current_datetimestamp():
+def get_current_timestamp():
     return datetime.datetime.now().isoformat() + "Z"
 
 def get_valid_time_description(time_description:dict):
     stamp_key, calendar_key, precision_key = "stamp", "calendar", "precision"
     start_time_key, end_time_key = "start_time", "end_time"
     start_time = get_time_instant_elements(time_description.get(start_time_key))
-    end_time = get_time_instant_elements(time_description.get("end_time"))
+    end_time = get_time_instant_elements(time_description.get(end_time_key))
 
-    if start_time is None or None in start_time:
-        time_description[start_time_key] = {stamp_key:get_current_datetimestamp(), precision_key:"day", calendar_key:"gregorian"}
+    if not isinstance(start_time, list) or None in start_time:
+        time_description[start_time_key] = {stamp_key:None, precision_key:None, calendar_key:None}
 
-    if end_time is None or None in end_time:
-        time_description[end_time_key] = {stamp_key:get_current_datetimestamp(), precision_key:"day", calendar_key:"gregorian"}
+    if not isinstance(end_time, list) or None in end_time:
+        time_description[end_time_key] = {stamp_key:get_current_timestamp(), precision_key:"day", calendar_key:"gregorian"}
 
     return time_description
 

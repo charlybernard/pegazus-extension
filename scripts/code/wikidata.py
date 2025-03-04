@@ -1,4 +1,4 @@
-import filemanagement as fm
+import file_management as fm
 import sys
 from SPARQLWrapper import SPARQLWrapper, JSON
 import ssl
