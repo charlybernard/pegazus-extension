@@ -1,9 +1,4 @@
 @prefix wd: <http://www.wikidata.org/entity/> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
-@prefix contact: <http://www.w3.org/2000/10/swap/pim/contact#>.
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
-@prefix dc: <http://purl.org/dc/elements/1.1/#>.
-@prefix exterms: <http://www.example.org/terms/>.
 @prefix addr: <http://rdf.geohistoricaldata.org/def/address#> .
 @prefix factoids: <http://rdf.geohistoricaldata.org/id/address/factoids/>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
@@ -12,6 +7,7 @@
 @prefix atype: <http://rdf.geohistoricaldata.org/id/codes/address/attributeType/>.
 @prefix ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix prov: <http://www.w3.org/ns/prov#>.
 
 factoids:RueGerardRuePGEvent a addr:Event ; rdfs:comment "Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin."@fr ; addr:hasTime factoids:RueGerardRuePGEventTime ; prov:wasDerivedFrom <https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)> .
 factoids:RueGerardRuePGEventTime a addr:CrispTimeInstant ; addr:timeStamp "1978-08-30T00:00:00"^^xsd:dateTimeStamp ; addr:timeCalendar wd:Q1985727 ; addr:timePrecision time:unitDay ; prov:wasDerivedFrom <https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)>.
