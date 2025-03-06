@@ -237,6 +237,7 @@ def merge_similar_crisp_time_instants(graphdb_url:URIRef, repository_name:str, f
     """
     Merge all crisp time instants which are similar, ie they are same time stamp, same calendar and same precision.
     """
+    to_remove_property = np.ADDR["toRemove"]
 
     query = np.query_prefixes + f"""
         DELETE {{
@@ -246,6 +247,7 @@ def merge_similar_crisp_time_instants(graphdb_url:URIRef, repository_name:str, f
             GRAPH ?gs {{
                 ?s ?p ?newTime .
                 ?newTime a addr:CrispTimeInstant ; addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCalendar ; addr:timePrecision ?timePrecision .
+                ?time {to_remove_property.n3()} "true"^^xsd:boolean .
             }}
         }}
         WHERE {{
@@ -267,6 +269,7 @@ def merge_similar_time_intervals(graphdb_url:URIRef, repository_name:str, factoi
     """
     Merge all time interval which are similar, ie they have the same borders
     """
+    to_remove_property = np.ADDR["toRemove"]
 
     query = np.query_prefixes + f"""
         DELETE {{
@@ -276,6 +279,7 @@ def merge_similar_time_intervals(graphdb_url:URIRef, repository_name:str, factoi
             GRAPH ?gs {{
                 ?s ?p ?newTimeInterval .
                 ?newTimeInterval addr:hasBeginning ?startTime ; addr:hasEnd ?endTime .
+                ?timeInterval {to_remove_property.n3()} "true"^^xsd:boolean .
             }}
         }}
         WHERE {{
@@ -296,6 +300,7 @@ def merge_similar_time_intervals(graphdb_url:URIRef, repository_name:str, factoi
 def merge_similar_temporal_entities(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef):
     merge_similar_crisp_time_instants(graphdb_url, repository_name, factoids_named_graph_uri)
     merge_similar_time_intervals(graphdb_url, repository_name, factoids_named_graph_uri)
+    msp.remove_all_triples_for_resources_to_remove(graphdb_url, repository_name)
 
 
 def remove_temporary_resources_and_transfert_triples(graphdb_url:URIRef, repository_name:str, similar_property:URIRef, named_graph_uri:str):

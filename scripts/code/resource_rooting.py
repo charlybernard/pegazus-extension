@@ -21,7 +21,9 @@ def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_n
     make_rooting_for_landmarks(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_landmark_attributes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+    make_rooting_for_temporal_entities(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
     manage_labels_after_landmark_rooting(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+    
 
     # Les racines de modification sont créées sauf pour les modifications d'attributs.
     make_rooting_for_changes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
@@ -364,6 +366,81 @@ def make_rooting_for_landmark_attributes(graphdb_url:URIRef, repository_name:str
     """
 
     gd.update_query(query, graphdb_url, repository_name)
+
+########## Temporal entities
+
+def make_rooting_for_crisp_time_instants(graphdb_url:URIRef, repository_name:str,
+                                        facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+    query = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{ ?rootTime a addr:CrispTimeInstant ; addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp . }}
+        GRAPH ?gi {{
+            ?time addr:hasRoot ?rootTime .
+            ?rootTime addr:hasTrace ?time .
+        }}
+    }} WHERE {{
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+        {{
+            SELECT DISTINCT ?gf ?rootTime ?existingRootTime ?toCreateRootTime ?ts ?tc ?tp WHERE {{
+                {{
+                    SELECT DISTINCT ?gf ?existingRootTime ?ts ?tc ?tp {{
+                        BIND({facts_named_graph_uri.n3()} AS ?gf)
+                        GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+                        OPTIONAL {{
+                            GRAPH ?gf {{ ?existingRootTime addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+                        }}
+                        FILTER (?gs != ?gf)
+                    }}
+                }}
+                BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTime)
+                BIND(IF(BOUND(?existingRootTime), ?existingRootTime, ?toCreateRootTime) AS ?rootTime)
+            }}
+        }}
+        GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+        FILTER (?gs != ?gf)
+    }}
+    """
+
+    gd.update_query(query, graphdb_url, repository_name)
+
+def make_rooting_for_crisp_time_intervals(graphdb_url:URIRef, repository_name:str,
+                                          facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+
+    query = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{ ?rootTimeInt a addr:CrispTimeInterval ; addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime. }}
+        GRAPH ?gi {{
+            ?timeInt addr:hasRoot ?rootTimeInt .
+            ?rootTimeInt addr:hasTrace ?timeInt .
+        }}
+    }} WHERE {{
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+        {{
+            SELECT DISTINCT ?gf ?rootTimeInt ?existingRootTimeInt ?toCreateRootTimeInt ?rootStartTime ?rootEndTime WHERE {{
+                {{
+                    SELECT DISTINCT ?gf ?existingRootTimeInt ?rootStartTime ?rootEndTime {{
+                        BIND({facts_named_graph_uri.n3()} AS ?gf)
+                        GRAPH ?gs {{ ?time addr:hasBeginning ?startTime ; addr:hasEnd ?endTime . }}
+                        ?rootStartTime addr:hasTrace ?startTime .
+                        ?rootEndTime addr:hasTrace ?endTime .
+                        OPTIONAL {{ GRAPH ?gf {{?existingRootTimeInt addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .}} }}
+                        FILTER (?gs != ?gf)
+                    }}
+                }}
+                BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTimeInt)
+                BIND(IF(BOUND(?existingRootTimeInt), ?existingRootTimeInt, ?toCreateRootTimeInt) AS ?rootTimeInt)
+            }}
+        }}
+        GRAPH ?gs {{ ?timeInt addr:hasBeginning ?startTime ; addr:hasEnd ?endTime .}}
+        FILTER (?gs != ?gf)
+    }}
+    """
+
+    gd.update_query(query, graphdb_url, repository_name)
+
+def make_rooting_for_temporal_entities(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+    make_rooting_for_crisp_time_instants(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+    make_rooting_for_crisp_time_intervals(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
 
 ###################################################### Other processes ######################################################
 

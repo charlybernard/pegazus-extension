@@ -267,7 +267,7 @@ def clean_repository_osm(graphdb_url:URIRef, repository_name:str, factoids_named
         fc.merge_similar_landmarks_with_hidden_label_and_landmark_relation(graphdb_url, repository_name, ltype, lrtype, factoids_named_graph_uri)
 
     fc.merge_similar_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri)
-    fc.merge_similar_time_intervals(graphdb_url, repository_name, factoids_named_graph_uri)
+    fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
 
     # Transfer all provenance descriptions to the permanent named graph
     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
@@ -509,9 +509,6 @@ def clean_repository_ville_paris(graphdb_url:str, repository_name:str, factoids_
 
     # Transfer all provenance descriptions to the permanent named graph
     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
-
-    # Merge temporal entities which are similar
-    fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
 
     # The URI below defines the source linked to Ville de Paris (city of Paris)
     vdp_source_uri = np.FACTS["Source_VDP"]
@@ -849,6 +846,7 @@ def clean_repository_wikidata_paris(graphdb_url:str, repository_name:str, source
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 
     create_landmark_relations_for_wikidata_paris(graphdb_url, repository_name, factoids_named_graph_uri)
+    fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
 
     # Transfer all provenance descriptions to the permanent named graph
     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)

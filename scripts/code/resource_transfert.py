@@ -137,4 +137,4 @@ def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository
 def transfer_elements_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     transfer_version_values_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
     transfer_provenances_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
-    transfer_crisp_time_instant_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
+    # transfer_crisp_time_instant_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
