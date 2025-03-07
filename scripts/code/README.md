@@ -1,6 +1,7 @@
 # `code` folder
 This folder is composed of multiple python files to create and manage knowledge graph:
 * `attribute_version_comparisons.py`: functions to compare attribute version thanks to their values ;
+* `evolution_construction.py`: functions to make the process about construction of the evoltution of landmark attributes ;
 * `factoids_creation.py`: functions to create graphs from different data, they are used for a specific source ;
 * `factoids_cleaning.py`: functions to clean graphs created by functions in `factoids_creation.py` ;
 * `file_management.py`: read or write files (csv, json, ttl...) ;
