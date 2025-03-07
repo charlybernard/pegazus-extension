@@ -178,7 +178,7 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
         gd.update_query(query, graphdb_url, repository_name)
 
 
-def get_elementary_changes(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+def get_elementary_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     gregorian_calendar_uri = URIRef("http://www.wikidata.org/entity/Q1985727")
 
     # Four step to get elementary changes : 
@@ -196,8 +196,10 @@ def get_elementary_changes(graphdb_url:URIRef, repository_name:str, tmp_named_gr
     }}
     WHERE {{
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({gregorian_calendar_uri.n3()} AS ?timeCal)
-        ?rootAttr a addr:Attribute ; addr:hasTrace ?attr .
+        GRAPH ?gf {{ ?rootAttr a addr:Attribute . }}
+        ?rootAttr addr:hasTrace ?attr .
         ?change a addr:AttributeChange ; addr:appliedTo ?attr ; addr:dependsOn [addr:hasTime ?time] .
         ?rootTime addr:hasTrace ?time ; addr:timeStamp ?timeStamp ; addr:timeCalendar ?timeCal .
         BIND(ofn:asDays(?timeStamp - "0001-01-01"^^xsd:dateTimeStamp) AS ?simplifiedTime)
@@ -231,6 +233,7 @@ def get_elementary_changes(graphdb_url:URIRef, repository_name:str, tmp_named_gr
         {{
             SELECT ?gt ?attr ?cg (MIN(?diffTime) AS ?minDiffTime) WHERE {{
                 BIND({tmp_named_graph_uri.n3()} AS ?gt)
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
                 GRAPH ?gt {{
                     ?cg addr:appliedTo ?attr ; addr:hasTimeDescription [addr:hasSimplifiedTime ?st ; addr:hasTimeProperty addr:hasTime].
                     ?cgBis addr:appliedTo ?attr ; addr:hasTimeDescription [addr:hasSimplifiedTime ?stBis ; addr:hasTimeProperty addr:hasTime].
@@ -257,8 +260,9 @@ def get_elementary_changes(graphdb_url:URIRef, repository_name:str, tmp_named_gr
         {{
             SELECT DISTINCT ?gt ?attr ?cg ?firstChangeMissing ?st WHERE {{
                 BIND({tmp_named_graph_uri.n3()} AS ?gt)
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                GRAPH ?gf {{ ?attr a addr:Attribute . }}
                 GRAPH ?gt {{ ?cg addr:appliedTo ?attr . }}
-                ?attr a addr:Attribute ; addr:hasTrace ?attrTrace  .
                 {{
                     FILTER NOT EXISTS {{ ?cg addr:hasNextChange ?x }}
                     BIND("false"^^xsd:boolean AS ?firstChangeMissing)
@@ -280,10 +284,10 @@ def get_elementary_changes(graphdb_url:URIRef, repository_name:str, tmp_named_gr
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
     
-def get_elementary_versions(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+def get_elementary_versions(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Create versions between two successive changes (one makes effective the version while the other outdates it)
     # Get an explicit triple to have successive changes (`?cg1 addr:hasNextChange ?cg2`)
-    query = np.query_prefixes + f"""
+    query1 = np.query_prefixes + f"""
     INSERT {{
         GRAPH ?gt {{
             ?attr addr:hasAttributeVersion ?vers .
@@ -295,7 +299,8 @@ def get_elementary_versions(graphdb_url:URIRef, repository_name:str, tmp_named_g
         {{
             SELECT DISTINCT ?gt ?attr ?cg1 ?cg2 WHERE {{
                 BIND({tmp_named_graph_uri.n3()} AS ?gt)
-                ?attr a addr:Attribute .
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                GRAPH ?gf {{ ?attr a addr:Attribute . }}
                 GRAPH ?gt {{
                     ?cg1 addr:appliedTo ?attr .
                     ?cg2 addr:appliedTo ?attr .
@@ -307,29 +312,45 @@ def get_elementary_versions(graphdb_url:URIRef, repository_name:str, tmp_named_g
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    # Order versions : hasNextVersion()
+    query2 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gt {{
+            ?vO addr:hasNextVersion ?vME .
+        }}
+    }} WHERE {{
+        BIND({tmp_named_graph_uri.n3()} AS ?gt)
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        GRAPH ?gf {{ ?attr a addr:Attribute . }}
+        ?cg addr:appliedTo ?attr ; addr:makesEffective ?vME ; addr:outdates ?vO .
+    }}
+    """
 
-def get_elementary_change_traces(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
+
+def get_elementary_change_traces(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Link existing attribute changes with created one when the are related
     query = np.query_prefixes + f"""
     INSERT {{
-        GRAPH ?gt {{ ?cg addr:isDerivedFrom ?cgTrace ; ?propTrace ?cgTrace. }}
+        GRAPH ?gt {{ ?cg addr:derives ?cgTrace ; ?propTrace ?cgTrace. }}
     }} WHERE {{
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
-        ?attr a addr:Attribute .
-        ?cgTrace a addr:AttributeChange .
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        GRAPH ?gf {{ ?attr a addr:Attribute . }}
         GRAPH ?gt {{
             ?cg addr:appliedTo ?attr ; addr:hasTimeDescription [addr:hasSimplifiedTime ?st ; addr:hasTimeProperty addr:hasTime] .
             ?attr addr:hasTimeDescription [addr:hasSimplifiedTime ?st ; addr:hasRelatedChange ?cgTrace] .
         }}
         ?cgTrace a addr:AttributeChange ; addr:isRealChange ?realChange .
-        BIND(IF(?realChange, addr:hasTrace, addr:isDerivedFrom) AS ?propTrace)
+        BIND(IF(?realChange, addr:hasTrace, addr:derives) AS ?propTrace)
     }}
     """
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
 
     # Link existing attribute versions related to changes with created one when the are related :
     # * addr:makesEffective(cg, v) ^ addr:makesEffective(cgTrace, vTrace) ^ addr:hasTrace(cg, cgTrace) => addr:hasTrace(v, vTrace)
@@ -340,7 +361,8 @@ def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, tmp_n
     }}
     WHERE {{
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
-        ?attr a addr:Attribute .
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        GRAPH ?gf {{ ?attr a addr:Attribute . }}
         ?cgTrace ?changeProp ?versTrace .
         GRAPH ?gt {{
             VALUES ?changeProp {{ addr:makesEffective addr:outdates }}
@@ -355,16 +377,18 @@ def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, tmp_n
     INSERT {{
         GRAPH ?gt {{ ?vers addr:hasTrace ?vTrace . }}
         }}
-        WHERE {{
+    WHERE {{
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        GRAPH ?gf {{ ?attr a addr:Attribute . }}
+        ?attr addr:hasAttributeVersion ?vers .
         GRAPH ?gt {{
-            ?vers a addr:AttributeVersion .
             ?cgME addr:makesEffective ?vers .
             ?cgO addr:outdates ?vers .
             {{ ?cgStart addr:hasNextChange+ ?cgME }} UNION {{ BIND(?cgME AS ?cgStart) }}
             {{ ?cgO addr:hasNextChange+ ?cgEnd }} UNION {{ BIND(?cgO AS ?cgEnd) }}
-            ?cgStart addr:isDerivedFrom ?cgMEVTrace .
-            ?cgEnd addr:isDerivedFrom ?cgOVTrace .
+            ?cgStart addr:derives ?cgMEVTrace .
+            ?cgEnd addr:derives ?cgOVTrace .
         }}
         ?cgMEVTrace addr:makesEffective ?vTrace .
         ?cgOVTrace addr:outdates ?vTrace .
@@ -375,12 +399,12 @@ def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, tmp_n
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
-def get_elementary_versions_and_changes(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
+def get_elementary_versions_and_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     create_changes_for_versions_with_valid_time(graphdb_url, repository_name, tmp_named_graph_uri)
-    get_elementary_changes(graphdb_url, repository_name, tmp_named_graph_uri)
-    get_elementary_versions(graphdb_url, repository_name, tmp_named_graph_uri)
-    get_elementary_change_traces(graphdb_url, repository_name, tmp_named_graph_uri)
-    get_elementary_version_traces(graphdb_url, repository_name, tmp_named_graph_uri)
+    get_elementary_changes(graphdb_url, repository_name, facts_named_graph_uri, tmp_named_graph_uri)
+    get_elementary_versions(graphdb_url, repository_name, facts_named_graph_uri, tmp_named_graph_uri)
+    get_elementary_change_traces(graphdb_url, repository_name, facts_named_graph_uri, tmp_named_graph_uri)
+    get_elementary_version_traces(graphdb_url, repository_name, facts_named_graph_uri, tmp_named_graph_uri)
 
     
 def remove_empty_attribute_versions(graphdb_url:URIRef, repository_name:str, tmp_named_graph_uri:URIRef):
@@ -568,7 +592,7 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                 ?rootAttrVers a addr:AttributeVersion .
             }}
             GRAPH ?gt {{
-                ?rootAttrVers addr:isDerivedFrom ?attrVers .
+                ?rootAttrVers addr:derives ?attrVers .
             }}
         }}
         WHERE {{
@@ -595,7 +619,7 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                 ?newChange a addr:AttributeChange ; addr:appliedTo ?attr ; addr:makesEffective ?vME ; addr:outdates ?vO .
             }}
             GRAPH ?gt {{
-                ?newChange addr:isDerivedFrom ?change .
+                ?newChange addr:derives ?change .
             }}
         }}
         WHERE {{
@@ -606,16 +630,16 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
                     ?change a addr:AttributeChange .
                     {{
                         ?change addr:makesEffective ?vMETrace ; addr:outdates ?vOTrace .
-                        ?vME addr:isDerivedFrom ?vMETrace .
-                        ?vO addr:isDerivedFrom ?vOTrace .
+                        ?vME addr:derives ?vMETrace .
+                        ?vO addr:derives ?vOTrace .
                         FILTER(!sameTerm(?vME, ?vO))
                     }} UNION {{
                         ?change addr:makesEffective ?vMETrace .
-                        ?vME addr:isDerivedFrom ?vMETrace .
+                        ?vME addr:derives ?vMETrace .
                         FILTER NOT EXISTS {{ ?change addr:outdates ?vOTrace . }}
                     }} UNION {{
                         ?change addr:outdates ?vOTrace .
-                        ?vO addr:isDerivedFrom ?vOTrace .
+                        ?vO addr:derives ?vOTrace .
                         FILTER NOT EXISTS {{ ?change addr:makesEffective ?vMETrace . }}
                     }}
                 }}
@@ -668,7 +692,7 @@ def create_events_and_times_from_attribute_changes(graphdb_url:URIRef, repositor
             ?change addr:appliedTo ?attr ; addr:dependsOn ?event .
             ?attr a addr:Attribute .
         }}
-        ?change addr:isDerivedFrom ?derivedCg .
+        ?change addr:derives ?derivedCg .
         {{
             VALUES ?propTime {{ addr:hasTime }}
             ?derivedCg addr:hasTimeDescription [ addr:hasSimplifiedTime ?st ; addr:hasTimeProperty ?propTime ].
@@ -691,7 +715,7 @@ def create_events_and_times_from_attribute_changes(graphdb_url:URIRef, repositor
         GRAPH ?gf {{
             ?version a addr:AttributeVersion .
         }}
-        ?version addr:isDerivedFrom [ addr:hasTrace ?versionTrace ] .
+        ?version addr:derives [ addr:hasTrace ?versionTrace ] .
     }}
     """
 
