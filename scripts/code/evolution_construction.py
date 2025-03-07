@@ -429,9 +429,6 @@ def remove_empty_attribute_versions(graphdb_url:URIRef, repository_name:str, tmp
             BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?newChange)
             BIND(IF(!?hasChangeMETrace && !?hasChangeOTrace, ?newChange, IF(!?hasChangeMETrace, ?changeO, ?changeME)) AS ?change)
 
-            ?changeME addr:isDerivedFrom ?changeMEDerived .
-            ?changeO addr:isDerivedFrom ?changeODerived .
-
             OPTIONAL {{
                 ?changeME addr:hasTimeDescription [addr:hasSimplifiedTime ?stME ; addr:hasTimeProperty addr:hasTime ] .
                 FILTER(!?hasChangeMETrace)
