@@ -274,25 +274,25 @@ function getValuesForQuery(variable, values){
 function getValidTimeForLandmarkLabel(appTime, disTime){
   var label = "";
   if (appTime.precise){
-    label += "<b>Date de création :</b> " + appTime.precise.label ;
+    label += "<div><b>Date de création :</b> " + appTime.precise.label + "</div>" ;
   } else if (appTime.before && appTime.after){
-    label += "<b>Date de création :</b> entre " + appTime.before.label + " et " + appTime.after.label ;
+    label += "<div><b>Date de création :</b> entre " + appTime.before.label + " et " + appTime.after.label + "</div>" ;
   } else if (appTime.before){
-    label += "<b>Date de création :</b> avant " + appTime.before.label ;
+    label += "<div><b>Date de création :</b> avant " + appTime.before.label + "</div>" ;
   } else if (appTime.after){
-    label += "<b>Date de création :</b> après " + appTime.after.label ;
+    label += "<div><b>Date de création :</b> après " + appTime.after.label + "</div>" ;
   }
 
   label += "<br>" ;
 
   if (disTime.precise){
-    label += "<b>Date de disparition :</b> " + disTime.precise.label ;
+    label += "<div><b>Date de disparition :</b> " + disTime.precise.label + "</div>" ;
   } else if (disTime.before && disTime.after){
-    label += "<b>Date de disparition :</b> entre " + disTime.before.label + " et " + disTime.after.label ;
+    label += "<div><b>Date de disparition :</b> entre " + disTime.before.label + " et " + disTime.after.label + "</div>" ;
   } else if (disTime.before){
-    label += "<b>Date de disparition :</b> avant " + disTime.before.label ;
+    label += "<div><b>Date de disparition :</b> avant " + disTime.before.label + "</div>" ;
   } else if (disTime.after){
-    label += "<b>Date de disparition :</b> après " + disTime.after.label ;
+    label += "<div><b>Date de disparition :</b> après " + disTime.after.label + "</div>" ;
   }
 
   return label
