@@ -1,11 +1,11 @@
-# ODySSEA: Ontologie des DYnamiques Spatio-temporelles pour les Suivi d'Entités géographiques et d'Adresses
+# PeGazUs : PErpetual GAZeteer of approach-address UtteranceS
 
-This repository contains the documentation of the ODySSEA (Ontology of spatio-temporal dynamics for geographical entities and addresses) ontology and knowledge graph construction method.
+This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of approach-address UtteranceS) ontology and knowledge graph construction method.
 
 ## Structure of the repository
 ```
 ├── data                      <- Raw resources used to build the graph
-├── ontology                  <- ODySSEA Ontology
+├── ontology                  <- PeGazUs Ontology
 │   ├── ontology.ttl          <- Core part of the ontology to describe landmarks and addresses
 │   ├── documentation
 │       ├── addresses
