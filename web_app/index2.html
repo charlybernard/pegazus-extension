@@ -13,28 +13,20 @@
       <script type="text/javascript" src="./settings.js"></script>
       <script type="text/javascript" src="./scripts/timeline.js"></script>
       <script type="text/javascript" src="./scripts/geometry.js"></script>
-      <script type="text/javascript" src="./scripts/time.js"></script>
+      <!-- <script type="text/javascript" src="./scripts/time.js"></script> -->
       <script type="text/javascript" src="./scripts/queries.js"></script>
       <script type="text/javascript" src="./scripts/functions.js"></script>
       <link href="./styles/timeline.css" rel="stylesheet">
       <link href="./styles/style.css" rel="stylesheet">
    </head>
    <body>
-      <div>
-         <label for="landmark_names" id="landmark_names_label"></label>
-         <select name="landmark_names" id="landmark_names"></select>
-      </div>
+      <label for="date-slider">Sélectionner une date :</label>
+      <input type="range" id="date-slider" min="0" max="100" value="0">
+      <input type="date" id="date-input">
+      <button id="date-validaton-button">Valider</button>
 
-      <div id="landmark_valid_time">
+      <div id="map"></div>
 
-      </div>
-
-      <div class="map_timeline">
-         <div id="timeline"></div>
-         <div id="map_timeline_resizer" class="resizer"></div>
-         <div id="map"></div>
-      </div>
-
-      <script type="text/javascript" src="./scripts/script.js"></script>
+      <script type="text/javascript" src="./scripts/script2.js"></script>
    </body>
 </html>

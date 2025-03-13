@@ -7,11 +7,14 @@ This repository contains the documentation of the ODySSEA (Ontology of spatio-te
 ├── styles                    <- CSS files to describe the style of web page
 ├── scripts                   <- JS files to describe the actions while launching page and interacting with it
 │   ├── functions.js          <- Functions which are specific to the web page
-│   ├── geom_processes.js     <- Functions deal with geometries (geometric transformations for instance)
-│   ├── geom_processes.js     <- File to use [jQuery](https://jquery.com/)
+│   ├── geometry.js           <- Functions deal with geometries (geometric transformations for instance)
+│   ├── jquery-3.6.1.js       <- File to use [jQuery](https://jquery.com/)
+│   ├── queries.js            <- Functions to build SPARQL queries
+│   ├── script.js             <- Main script to be launched during web page loading 
+│   ├── time.js               <- Functions to manage time
 │   ├── timeline.js           <- File to use [timeline.js](https://timeline.knightlab.com/)
-├── settings.js                <- Settings of GraphDB repository to interact with it (URL, lang, repository name...)
-├── index.html                 <- Web page to open
+├── settings.js               <- Settings of GraphDB repository to interact with it (URL, lang, repository name...)
+├── index.html                <- Web page to open
 └── README.md
 ```
 
