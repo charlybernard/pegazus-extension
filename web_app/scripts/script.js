@@ -1,37 +1,13 @@
-// Description: Script principal de l'application web
+var value = "Snapshot";
+var name = "visu_selection";
+var inputId = "snapshot";
+var inputClass = "visu_selection";
+var isChecked = false;
 
-document.getElementsByClassName("map_timeline")[0].style.height = window.screen.height;
+var div = createInputRadio(L, name, value, inputId, inputClass, isChecked=false);
+document.body.appendChild(div);
 
-var graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
-var factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
-var landmarkValidTimeDivId = "landmark_valid_time" ;
-var landmarkNamesDivId = "landmark_names" ;
-var landmarkNamesLabelDivId = "landmark_names_label" ;
+var inputs = {"name":"visu_selection", "label":"Type de visualisation", "values":{"snapshot":{"label":"Snapshot"}, "timeline":{"label":"Timeline"}}}
 
-var landmarkNamesLabel = "Entité à sélectionner :" ;
-
-
-var lat = 48.8566;
-var lon = 2.3522;
-var zoom = 13;
-
-//////////////////////////////////////////////////////////////////
-
-setInnerHTMLToDivFromId(landmarkNamesLabelDivId, landmarkNamesLabel) ;
-
-var layersToRemove = [];
-
-// Appel aux fonctions d'initialisation
-var map = initLeaflet(lat, lon, zoom);
-allowMapTimelineResize("resizer", map) ;
-//initTimeline(graphDBRepositoryURI, lmLabel, lmLabelLang, map=map);
-
-// var button = document.getElementById("enterName") ;
-var dropDownMenu = document.getElementById(landmarkNamesDivId);
-
-// Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
-dropDownMenu.addEventListener("change", function(event) { changeSelectedLandmark(event, map, layersToRemove) ;});
-
-// Afficher les landmarks dans un menu déroulant
-console.log(factsNamedGraphURI);
-getLandmarks(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu) ;
+var div2 = createInputRadioDiv(L, inputs, isReadOnly=false);
+document.body.appendChild(div2);

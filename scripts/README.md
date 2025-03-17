@@ -120,8 +120,8 @@ Once the files are in the `data` folder, the process can be started by running `
 * Download GraphDB from https://www.ontotext.com/products/graphdb/download/
 * Download the repository, for instance:
 ```
-git clone git@github.com:charlybernard/odyssea-ontology.git
-cd pegazus-ontology
+git clone git@github.com:charlybernard/pegazus-extension.git
+cd pegazus-extension
 ```
 * Create an environment with conda for instance:
 ```

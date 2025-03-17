@@ -95,7 +95,7 @@ function getCrsFromWkt(geomWkt){
       var crsCode = match[1];
       return crsCode;
   } else {
-      console.log("CRS non trouvé");
+      // console.log("CRS non trouvé");
       return null;
   }
 }
@@ -119,4 +119,65 @@ function getGeoJsonGeom(element){
 
   var geoJsonGeom = projectWkt(geomWkt, 'EPSG:' + crsCode, 'EPSG:4326');
   return geoJsonGeom;
+}
+
+//////////////////////////////////////// Functions around layer group management ////////////////////////////////////////////////////
+
+function createLayerGroup(map){
+  var layerGroup = L.layerGroup().addTo(map);
+  return layerGroup ;
+}
+
+function createOverlayLayerGroups(map, layerGroupNames){
+  var overlayLayerGroups = {};
+  layerGroupNames.forEach(layerGroupName => {
+    overlayLayerGroups[layerGroupName] = createLayerGroup(map);
+  });
+
+  return overlayLayerGroups ;
+}
+
+function initOverlayLayerGroups(map, layerGroupNames){
+  var overlayLayerGroups = createOverlayLayerGroups(map, layerGroupNames);
+
+  var layerControl = L.control.layers().addTo(map);
+
+    $.each(overlayLayerGroups, function(key, value){
+      layerControl.addOverlay(value, key);
+      value.addTo(map);
+    });
+
+  return overlayLayerGroups ;
+}
+
+function clearOverlayLayerGroups(overlayLayerGroups){
+  for (var key in overlayLayerGroups) {
+    if (overlayLayerGroups.hasOwnProperty(key)) {
+      overlayLayerGroups[key].clearLayers();
+    }
+  }
+}
+
+function fitBoundsToOverlayLayerGroups(overlayLayerGroups) {
+  var bounds = L.latLngBounds();  // Créer un LatLngBounds vide pour accumuler les limites
+
+  // Itérer sur chaque couche dans overlayMaps
+  for (var key in overlayLayerGroups) {
+      if (overlayLayerGroups.hasOwnProperty(key)) {
+          // Récupérer la couche
+          var layerGroup = overlayLayerGroups[key];
+          var layers = layerGroup.getLayers() ;
+          layers.forEach(layer => {
+            if (layer.getBounds) {
+              var lBounds = layer.getBounds();
+              bounds.extend(lBounds);
+            } else if (layer.getLatLng) {
+              var lBounds = layer.getBounds();
+              bounds.extend(lBounds);
+            }
+          });
+      }
+  }
+  // Appliquer fitBounds sur la carte avec les limites combinées
+  map.fitBounds(bounds);
 }

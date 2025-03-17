@@ -3,30 +3,31 @@
    <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-      <script src="./scripts/jquery-3.6.1.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
-      <script src="https://unpkg.com/terraformer@1.0.8"></script>
-      <script src="https://unpkg.com/terraformer-wkt-parser@1.1.2"></script>
       <script type="text/javascript" src="./settings.js"></script>
-      <script type="text/javascript" src="./scripts/timeline.js"></script>
+      <script type="text/javascript" src="./scripts/libs/leaflet.js"></script>
+      <script type="text/javascript" src="./scripts/libs/jquery.js"></script>
+      <script type="text/javascript" src="./scripts/libs/proj4.js"></script>
+      <script type="text/javascript" src="./scripts/libs/terraformer.js"></script>
+      <script type="text/javascript" src="./scripts/libs/terraformer-wkt-parser.js"></script>
+      <script type="text/javascript" src="./scripts/utils.js"></script>
+      <script type="text/javascript" src="./scripts/time-slider.js"></script>
+      <script type="text/javascript" src="./scripts/time.js"></script>
       <script type="text/javascript" src="./scripts/geometry.js"></script>
-      <!-- <script type="text/javascript" src="./scripts/time.js"></script> -->
       <script type="text/javascript" src="./scripts/queries.js"></script>
-      <script type="text/javascript" src="./scripts/functions.js"></script>
-      <link href="./styles/timeline.css" rel="stylesheet">
+      <script type="text/javascript" src="./scripts/func-evolution.js"></script>
+      <script type="text/javascript" src="./scripts/func-snapshot.js"></script>
+      <link href="./styles/libs/leaflet.css" rel="stylesheet">
+      <link href="./styles/libs/timeline.css" rel="stylesheet">
       <link href="./styles/style.css" rel="stylesheet">
    </head>
    <body>
       <label for="date-slider">Sélectionner une date :</label>
       <input type="range" id="date-slider" min="0" max="100" value="0">
       <input type="date" id="date-input">
-      <button id="date-validaton-button">Valider</button>
+      <button id="date-validation-button">Valider</button>
 
       <div id="map"></div>
 
-      <script type="text/javascript" src="./scripts/script2.js"></script>
+      <script type="text/javascript" src="./scripts/script-snapshot.js"></script>
    </body>
 </html>

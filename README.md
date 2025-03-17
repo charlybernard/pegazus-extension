@@ -3,25 +3,24 @@
 This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of approach-address UtteranceS) ontology and knowledge graph construction method.
 
 ## Structure of the repository
-```
-├── data                      <- Raw resources used to build the graph
-├── ontology                  <- PeGazUs Ontology
-│   ├── ontology.ttl          <- Core part of the ontology to describe landmarks and addresses
-│   ├── documentation
-│       ├── addresses
-│       ├── sources
-│       ├── temporal_evolution
-├── scripts                    <- Implementation of the algorithm
-├── web_app                    <- Web application to see the evolution of landmark
-├── LICENCE.md
-└── README.md
-```
+📂  
+├── 📄 [`README.md`](./README.md)  
+├── 📄 [`index.html`](./index.html)  
+├── 📂 [`data`](./data/)   
+├── 📂 [`ontology`](./ontology/)   
+│   ├── 📄 [`ontology.ttl`](./ontology/ontology.ttl)  
+│   └── 📂 [`documentation`](./ontology/documentation/)  
+│   │   ├── 📂 [`addresses`](./ontology/documentation/addresses/)   
+│   │   ├── 📂 [`sources`](./ontology/documentation/sources/)   
+│   │   └── 📂 [`temporal_evolution`](./ontology/documentation/temporal_evolution/)   
+├── 📄 [`LICENCE.md`](./LICENCE.md)  
+└── 📄 [`README.md`](./README.md)  
 
 ### `data` folder
 
 This folder stores files used to build knowledge graph. It contains csv and geojson files which describe addresses and streets from different sources at different times (RDF resources are built during process.
 
-⚠️ To get more information about their content, please read their readme : [addresses](data/README.md).
+⚠️ To get more information about their content, please read their [readme](data/README.md).
 
 ### `ontology` folder
 `ontology.ttl` describes the ontology: it is the core part of the ontology and describe landmarks and addresses.

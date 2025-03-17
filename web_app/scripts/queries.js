@@ -138,7 +138,7 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
         OPTIONAL {
             ?appEv addr:hasTimeAfter ?appTimeAfter .
             ?appTimeAfter addr:timeStamp ?appTimeAfterStamp ; addr:timeCalendar ?timeCalendar .
-            BIND(?appTimeAfterStamp > ?timeStamp AS ?appTimeAfterExists)
+            BIND(?appTimeAfterStamp <= ?timeStamp AS ?appTimeAfterExists)
         }
         OPTIONAL {
             ?disEv addr:hasTimeAfter ?disTimeAfter .
@@ -146,11 +146,11 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
             BIND(?disTimeAfterStamp > ?timeStamp AS ?disTimeAfterExists)
         }
   
-        FILTER(!(BOUND(?appTimeExists) && !?appTimeExists))
-        FILTER(!(BOUND(?disTimeExists) && !?disTimeExists))
-        FILTER(!(!BOUND(?appTimeExists) && BOUND(?appTimeAfterExists) && !?appTimeAfterExists))
-        FILTER(!(!BOUND(?appTimeExists) && BOUND(?disTimeBeforeExists) && !?disTimeBeforeExists))
-  
+        FILTER(!BOUND(?appTimeExists) || ?appTimeExists)
+        FILTER(!BOUND(?disTimeExists) || ?disTimeExists)
+        FILTER(BOUND(?appTimeExists) || !BOUND(?appTimeAfterExists) || ?appTimeAfterExists)
+        FILTER(BOUND(?disTimeExists) || !BOUND(?disTimeBeforeExists) || ?disTimeBeforeExists)
+
         BIND(IF((BOUND(?appTimeBeforeExists) && !?appTimeBeforeExists) || (BOUND(?disTimeAfterExists) && !?disTimeAfterExists), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
     }
     `
@@ -205,7 +205,7 @@ SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
     OPTIONAL {
         ?meEv addr:hasTimeAfter ?meTimeAfter .
         ?meTimeAfter addr:timeStamp ?meTimeAfterStamp ; addr:timeCalendar ?timeCalendar .
-        BIND(?meTimeAfterStamp > ?timeStamp AS ?meTimeAfterExists)
+        BIND(?meTimeAfterStamp <= ?timeStamp AS ?meTimeAfterExists)
     }
     OPTIONAL {
         ?oEv addr:hasTimeAfter ?oTimeAfter .
@@ -213,10 +213,10 @@ SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
         BIND(?oTimeAfterStamp > ?timeStamp AS ?oTimeAfterExists)
     }
 
-    FILTER(!(BOUND(?meTimeExists) && !?meTimeExists))
-    FILTER(!(BOUND(?oTimeExists) && !?oTimeExists))
-    FILTER(!(!BOUND(?meTimeExists) && BOUND(?meTimeAfterExists) && !?meTimeAfterExists))
-    FILTER(!(!BOUND(?meTimeExists) && BOUND(?oTimeBeforeExists) && !?oTimeBeforeExists))
+    FILTER(!BOUND(?meTimeExists) || ?meTimeExists)
+    FILTER(!BOUND(?oTimeExists) || ?oTimeExists)
+    FILTER(BOUND(?meTimeExists) || !BOUND(?meTimeAfterExists) || ?meTimeAfterExists)
+    FILTER(BOUND(?oTimeExists) || !BOUND(?oTimeBeforeExists) || ?oTimeBeforeExists)
 
     BIND(IF((BOUND(?meTimeBeforeExists) && !?meTimeBeforeExists) || (BOUND(?oTimeAfterExists) && !?oTimeAfterExists), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
 }  
