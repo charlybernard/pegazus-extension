@@ -101,7 +101,7 @@ function initTimeline(graphDBRepositoryURI, landmarkURI, namedGraphURI, map, lay
     return text ;
   }
   
-  function changeSelectedLandmark(event){
+  function changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, dropDownMenu, map, layersToRemove){
     initTimeline(graphDBRepositoryURI, dropDownMenu.value, factsNamedGraphURI, map=map, layersToRemove=layersToRemove);
   }
   

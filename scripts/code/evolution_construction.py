@@ -144,6 +144,7 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
         }}
     }}
     WHERE {{
+        BIND({tmp_named_graph_uri.n3()} AS ?gt)
         ?rootAttr addr:hasTrace ?attr .
         ?change addr:appliedTo ?attr .
     }}

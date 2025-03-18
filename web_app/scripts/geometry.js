@@ -16,16 +16,65 @@ proj4.defs([
 
 // Gestion du côté leaflet
 
-function initLeaflet(lat, lon, zoom) {
+function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[]) {
     // Initialisation de la carte
-    var map = L.map('map').setView([lat, lon], zoom);
+    var map = L.map(id).setView([lat, lon], zoom);
+    var layerControl = L.control.layers();
+    var tileLayers = {};
+    var overlayLayers = {};
 
-    // Ajout de la couche de tuiles OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 20
-    }).addTo(map);
-    return map;
+    // Ajout des couches de tuiles
+    initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers);
+
+    return [map, layerControl, tileLayers, overlayLayers];
+}
+
+function initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers){
+
+  tileLayersSettings.forEach(setting => {
+    var tileLayer = initLeafletTileLayer(setting);
+    if (tileLayer){
+      layerControl.addBaseLayer(tileLayer, setting.name);
+      tileLayers[setting.name] = tileLayer;
+    }
+  });
+
+  if (Object.keys(tileLayers).length == 0){
+    var xyzUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    var tileLayer = initLeafletTileLayerForXyz(xyzUrl);
+    tileLayer.addTo(map);
+  } else if (Object.keys(tileLayers).length == 1){
+    var tileLayer = tileLayers[Object.keys(tileLayers)[0]];
+    tileLayer.addTo(map);
+  } else {
+    var tileLayer = tileLayers[Object.keys(tileLayers)[0]];
+    tileLayer.addTo(map);
+    layerControl.addTo(map);
+  }
+  
+}
+
+function initLeafletTileLayer(tileLayerSettings){
+  
+  if (tileLayerSettings.type == "xyz") {
+    var tileLayer = initLeafletTileLayerForXyz(tileLayerSettings.url);
+  } else if (tileLayerSettings.type == "wms") {
+    var tileLayer = initLeafletTileLayerForWms(tileLayerSettings.url, tileLayerSettings.layer);
+  } else { 
+    var tileLayer = null;
+  }
+  return tileLayer;
+}
+
+function initLeafletTileLayerForXyz(url){
+  var tileLayer = L.tileLayer(url);
+  return tileLayer;
+}
+
+function initLeafletTileLayerForWms(url, layer){
+  var tileLayer = L.tileLayer.wms(url, {
+    layers: layer});
+    return tileLayer;
 }
 
 // Fonction de projection des coordonnées
@@ -137,10 +186,8 @@ function createOverlayLayerGroups(map, layerGroupNames){
   return overlayLayerGroups ;
 }
 
-function initOverlayLayerGroups(map, layerGroupNames){
+function initOverlayLayerGroups(map, layerControl, layerGroupNames){
   var overlayLayerGroups = createOverlayLayerGroups(map, layerGroupNames);
-
-  var layerControl = L.control.layers().addTo(map);
 
     $.each(overlayLayerGroups, function(key, value){
       layerControl.addOverlay(value, key);
@@ -150,34 +197,40 @@ function initOverlayLayerGroups(map, layerGroupNames){
   return overlayLayerGroups ;
 }
 
-function clearOverlayLayerGroups(overlayLayerGroups){
-  for (var key in overlayLayerGroups) {
-    if (overlayLayerGroups.hasOwnProperty(key)) {
-      overlayLayerGroups[key].clearLayers();
-    }
-  }
+function clearLayerGroups(layerGroups){
+  layerGroups.forEach(layerGroup => {
+    layerGroup.clearLayers();
+  });
 }
 
-function fitBoundsToOverlayLayerGroups(overlayLayerGroups) {
-  var bounds = L.latLngBounds();  // Créer un LatLngBounds vide pour accumuler les limites
 
-  // Itérer sur chaque couche dans overlayMaps
-  for (var key in overlayLayerGroups) {
-      if (overlayLayerGroups.hasOwnProperty(key)) {
-          // Récupérer la couche
-          var layerGroup = overlayLayerGroups[key];
-          var layers = layerGroup.getLayers() ;
-          layers.forEach(layer => {
-            if (layer.getBounds) {
-              var lBounds = layer.getBounds();
-              bounds.extend(lBounds);
-            } else if (layer.getLatLng) {
-              var lBounds = layer.getBounds();
-              bounds.extend(lBounds);
-            }
-          });
-      }
-  }
-  // Appliquer fitBounds sur la carte avec les limites combinées
+function getLayerGroupBounds(layerGroup){
+  var bounds = L.latLngBounds();  // Créer un LatLngBounds vide pour accumuler les limites
+  var layers = layerGroup.getLayers()
+
+  layers.forEach(layer => {
+    if (layer.getBounds) {
+      var lBounds = layer.getBounds();
+      bounds.extend(lBounds);
+    } else if (layer.getLatLng) {
+      var lBounds = layer.getLatLng();
+      bounds.extend(lBounds);
+    }
+  });
+
+  return bounds;
+}
+
+function getLayerGroupsBounds(layerGroups){
+  var bounds = L.latLngBounds();  // Créer un LatLngBounds vide pour accumuler les limites
+  layerGroups.forEach(layerGroup => {
+    bounds.extend(getLayerGroupBounds(layerGroup));
+  })
+
+  return bounds;
+}
+
+function fitBoundsToLayerGroups(map, layerGroups) {
+  var bounds = getLayerGroupsBounds(layerGroups);
   map.fitBounds(bounds);
 }
