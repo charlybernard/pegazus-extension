@@ -25,6 +25,7 @@ This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of
 │   └── 📄 [`terraformer-wkt-parser.js`](./libs/terraformer-wkt-parser.js)  
 ├── 📂 [`styles`](./styles/)   
 │   ├── 📄 [`style.css`](./styles/style.css)  
+├── 📂 [`symbols`](./symbols/)  
 └── 📄 [`settings.js`](./settings.js)  
 
 ### `styles` - CSS files for styling the webpage
@@ -53,6 +54,9 @@ This folder contains the JavaScript files necessary for managing user interactio
 - **`time.js`**: Functions to manage time-related features in the application.
 - **`time-slider.js`**: Functions for controlling and managing the time slider.
 - **`utils.js`**: Utility functions that support the app’s general operations.
+
+### `symbols` - Folder containing symbols used to be displayed on the page
+This symbols contains icons or graphical symbols intended for display on the page.
 
 ### `settings.js` - Configuration file for the GraphDB repository
 This file contains the settings for connecting and interacting with the GraphDB repository, including the URL, language, and repository name.

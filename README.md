@@ -13,6 +13,7 @@ This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of
 │   │   ├── 📂 [`addresses`](./ontology/documentation/addresses/)   
 │   │   ├── 📂 [`sources`](./ontology/documentation/sources/)   
 │   │   └── 📂 [`temporal_evolution`](./ontology/documentation/temporal_evolution/)   
+├── 📂 [`scripts`](./scripts/)   
 ├── 📄 [`LICENCE.md`](./LICENCE.md)  
 └── 📄 [`README.md`](./README.md)  
 
