@@ -6,14 +6,23 @@ import re
 
 np = NameSpaces()
 
+def get_literal_without_option(value:str):
+    return Literal(value)
+
+def get_literal_with_lang(value:str, lang:str):
+    return Literal(value, lang=lang)
+
+def get_literal_with_datatype(value:str, datatype:URIRef):
+    return Literal(value, datatype=datatype)
+
 def get_geometry_wkt_literal(geom_wkt:str):
-    return Literal(geom_wkt, datatype=np.GEO.wktLiteral)
+    return get_literal_with_datatype(geom_wkt, np.GEO.wktLiteral)
 
 def get_name_literal(label:str, lang:str=None):
-    return Literal(label, lang=lang)
+    return get_literal_with_lang(label, lang)
 
 def get_insee_literal(insee_num:str):
-    return Literal(insee_num)
+    return get_literal_without_option(insee_num)
 
 def convert_result_elem_to_rdflib_elem(result_elem:dict):
     """

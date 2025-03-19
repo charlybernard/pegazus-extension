@@ -14,14 +14,15 @@ np = NameSpaces()
 ######### Landmark management #########
 # Functions to manage with landmarks 
 
-def create_landmark(g:Graph, landmark_uri:URIRef, label:str, lang:str, landmark_type:URIRef):
+def create_landmark(g:Graph, landmark_uri:URIRef, label:Literal, landmark_type:URIRef):
     g.add((landmark_uri, RDF.type, np.ADDR["Landmark"]))
     g.add((landmark_uri, np.ADDR["isLandmarkType"], landmark_type))
     if label is not None:
-        g.add((landmark_uri, RDFS.label, Literal(label, lang=lang)))
+        g.add((landmark_uri, RDFS.label, label))
 
 def create_landmark_version(g:Graph, lm_uri:URIRef, lm_type_uri:URIRef, lm_label:str, attr_types_and_values:list[list], time_description:dict, provenance_uri:URIRef, factoids_namespace:Namespace, lang:str):
-    create_landmark(g, lm_uri, lm_label, lang, lm_type_uri)
+    lm_label_lit = gr.get_name_literal(lm_label, lang)
+    create_landmark(g, lm_uri, lm_label_lit, lm_type_uri)
 
     for attr in attr_types_and_values:
         attr_type_uri, attr_value_lit = attr
@@ -93,13 +94,14 @@ def create_landmark_change(g:Graph, change_uri:URIRef, change_type_uri:URIRef, l
     create_change(g, change_uri, change_type_uri, change_class="LandmarkChange")
     g.add((change_uri, np.ADDR["appliedTo"], landmark_uri))
 
-def create_landmark_relation_change(g:Graph, change_uri:URIRef, change_type_uri:URIRef, landmark_uri:URIRef):
+def create_landmark_relation_change(g:Graph, change_uri:URIRef, change_type_uri:URIRef, landmark_relation_uri:URIRef):
     create_change(g, change_uri, change_type_uri, change_class="LandmarkRelationChange")
-    g.add((change_uri, np.ADDR["appliedTo"], landmark_uri))
+    g.add((change_uri, np.ADDR["appliedTo"], landmark_relation_uri))
 
 def create_landmark_with_changes(g:Graph, landmark_uri:URIRef, label:str, lang:str, landmark_type:URIRef,
                                 resource_namespace:Namespace):
-    create_landmark(g, landmark_uri, label, lang, landmark_type, np.ADDR)
+    label_lit = gr.get_name_literal(label, lang)
+    create_landmark(g, landmark_uri, label_lit, landmark_type)
     creation_change_uri, creation_event_uri = gr.generate_uri(resource_namespace, "CH"), gr.generate_uri(resource_namespace, "EV")
     dissolution_change_uri, dissolution_event_uri = gr.generate_uri(resource_namespace, "CH"), gr.generate_uri(resource_namespace, "EV")
 

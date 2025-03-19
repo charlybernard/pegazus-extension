@@ -1,0 +1,61 @@
+{
+   "events":[
+      {
+         "time":{
+            "stamp":"1851-02-18",
+            "calendar":"gregorian",
+            "precision":"day"
+         },
+         "label":"Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"rue du Père Guérin",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "makes_effective":[
+                        {
+                           "value":"rue du Père Guérin",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "name":"rue Gérard",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  }
+               ]
+            }
+         ],
+         "relations":[
+            {
+               "type":"Touches",
+               "locatum":1,
+               "relatum":2
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"
+         }
+      }
+   ]
+}

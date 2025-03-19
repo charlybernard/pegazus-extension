@@ -1,7 +1,7 @@
 import json
 import re
 from rdflib import Graph, Literal, URIRef, Namespace, XSD
-from rdflib.namespace import RDF, XSD, SKOS
+from rdflib.namespace import RDF, RDFS, XSD, SKOS
 from namespaces import NameSpaces
 import geom_processing as gp
 import file_management as fm
@@ -327,7 +327,7 @@ def create_graph_from_ville_paris_caduques(vpc_file:str, source_valid_time:dict,
 
 def create_landmark_change_and_event(g:Graph, lm_label:str, lm_type:URIRef, lm_prov_uri:URIRef, appeareance:bool, time_list:list, lang:str):
         # Creating URIs
-        lm_label_lit, lm_uri = Literal(lm_label, lang=lang), gr.generate_uri(np.FACTOIDS, "LM")
+        lm_label_lit, lm_uri = gr.get_name_literal(lm_label, lang), gr.generate_uri(np.FACTOIDS, "LM")
         name_attr_uri, name_attr_type_uri, name_attr_version_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
         time_uri, event_uri = gr.generate_uri(np.FACTOIDS, "TI"), gr.generate_uri(np.FACTOIDS, "EV")
         lm_change_app_uri, name_attr_change_app_uri = gr.generate_uri(np.FACTOIDS, "CG"), gr.generate_uri(np.FACTOIDS, "CG")
@@ -343,7 +343,7 @@ def create_landmark_change_and_event(g:Graph, lm_label:str, lm_type:URIRef, lm_p
             name_attr_change_app_type_uri = np.CTYPE["AttributeVersionDisappearance"]
             ri.create_attribute_change(g, name_attr_change_app_uri, name_attr_change_app_type_uri, name_attr_uri, outdated_versions_uris=[name_attr_version_uri])
 
-        ri.create_landmark(g, lm_uri, lm_label, lang, lm_type)
+        ri.create_landmark(g, lm_uri, lm_label_lit, lm_type)
         ri.create_landmark_attribute_and_version(g, lm_uri, name_attr_uri, name_attr_type_uri, name_attr_version_uri, lm_label_lit)
         ri.create_landmark_change(g, lm_change_app_uri, lm_change_app_type_uri, lm_uri)
         ri.create_crisp_time_instant(g, time_uri, time_stamp, time_calendar, time_precision)
@@ -362,13 +362,13 @@ def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str
     `source_valid_time = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
     """
 
-
     # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
     th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
     name_attr_uri, name_attr_type_uri, name_attr_version_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
     name_attr_version_value = gr.get_name_literal(th_label, lang)
 
-    ri.create_landmark(g, th_uri, th_label, lang, th_type_uri)
+
+    ri.create_landmark(g, th_uri, name_attr_version_value, th_type_uri)
     ri.create_landmark_attribute_and_version(g, th_uri, name_attr_uri, name_attr_type_uri, name_attr_version_uri, name_attr_version_value)
     ri.add_validity_time_interval_to_landmark(g, th_uri, source_valid_time)
 
@@ -484,7 +484,7 @@ def create_area_location_of_landmark(g, area_label, area_type, lm_uri, lm_prov_u
     name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
     name_attr_version_area_value = gr.get_name_literal(area_label, lang)
 
-    ri.create_landmark(g, area_uri, area_label, lang, area_type_uri)
+    ri.create_landmark(g, area_uri, name_attr_version_area_value, area_type_uri)
     ri.create_landmark_attribute_and_version(g, area_uri, name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri, name_attr_version_area_value)
     ri.create_landmark_relation(g, lr_uri, np.LRTYPE["Within"], lm_uri, [area_uri])
     ri.add_other_labels_for_resource(g, area_uri, area_label, lang, area_type_uri)
@@ -1000,19 +1000,219 @@ def clean_repository_geojson_states(graphdb_url:URIRef, repository_name:str, geo
 
 ########################################### Events ##########################################""
 
-def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder, ttl_file,
+def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
+                                      events_json_file, events_kg_file,
                                       ont_file, ontology_named_graph_name,
                                       factoids_named_graph_name, permanent_named_graph_name):
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
     
-    # Creating repository
-    msp.create_factoid_repository(graphdb_url, repository_name, tmp_folder,
-                                ont_file, ontology_named_graph_name, ruleset_name="rdfsplus-optimized",
-                                disable_same_as=False, clear_if_exists=True)
-    
-    # Import ttl file in repository
-    gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, ttl_file, named_graph_name=factoids_named_graph_name)
+    json_data = fm.read_json_file(events_json_file)
+    event_descriptions = json_data.get("events")
 
+    # Creation of a basic graph with rdflib
+    g = create_graph_from_event_descriptions(event_descriptions)
+
+    # Export the graph and import it into the repository
+    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, events_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+    
     # Transfer all provenance descriptions to the permanent named graph
     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+
+def create_graph_from_event_descriptions(event_descriptions:list[dict]):
+    g = Graph()
+    for desc in event_descriptions:
+        g += create_graph_from_event_description(desc)
+
+    return g
+
+def create_graph_from_event_description(event_description:dict):
+    """
+    Generate a graph describing an event from a description which is a dictionary
+    Example of event_description
+
+    ```
+    event_description = {
+        "time": {"stamp":"1851-02-18", "calendar":"gregorian", "precision":"day"},
+        "label":"Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
+        "lang":"fr",
+        "landmarks":[
+            {"id":1, "name":"rue du Père Guérin", "type":"Thoroughfare", "changes":[
+                {"on":"landmark", "type":"appearance"},
+                {"on":"attribute", "attribute":"Geometry"},
+                {"on":"attribute", "attribute":"Name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
+            ]},
+            {"id":2, "name":"rue Gérard", "type":"Thoroughfare", "changes":[
+                {"on":"attribute", "attribute":"Geometry"},
+            ]}
+        ],
+        "relations":[
+            {"type":"Touches", "locatum":1, "relatum":2}
+        ], 
+        "provenance": {"uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"}
+    }
+    ```
+    """
+
+    g = Graph()
+    event_uri = gr.generate_uri(np.FACTOIDS, "EV")
+    landmark_uris = {}
+    created_entities = [event_uri]
+
+    time_description = event_description.get("time")
+    label = event_description.get("label")
+    lang = event_description.get("lang")
+    landmark_descriptions = event_description.get("landmarks")
+    landmark_relation_descriptions = event_description.get("relations")
+    provenance_description = event_description.get("provenance")
+
+    ev_label = gr.get_literal_with_lang(label, lang)
+    create_event_with_time(g, event_uri, time_description)
+    g.add((event_uri, RDFS.comment, ev_label))
+
+    prov_uri = get_event_provenance_uri(provenance_description)
+    create_event_provenance(g, prov_uri, provenance_description)
+
+    for desc in landmark_descriptions:
+        lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")
+        landmark_uris[lm_id] = lm_uri
+        new_entities = create_event_landmark(g, event_uri, lm_uri, desc, lang)
+        created_entities += new_entities
+
+    for desc in landmark_relation_descriptions:
+        lr_uri = gr.generate_uri(np.FACTOIDS, "LR")
+        create_event_landmark_relation(g, event_uri, lr_uri, desc, landmark_uris)
+        created_entities.append(lr_uri)
+
+    for entity in created_entities:
+        ri.add_provenance_to_resource(g, entity, prov_uri)
+
+    return g
+
+def get_event_provenance_uri(provenance_description:dict):
+    prov_uri_str = provenance_description.get("uri")
+    prov_uri = URIRef(prov_uri_str)
+    return prov_uri
+
+def create_event_provenance(g, prov_uri:URIRef, provenance_description:dict):
+    ri.create_prov_entity(g, prov_uri)
+
+def create_event_with_time(g:Graph, event_uri:URIRef, time_description:dict):
+    time_uri = gr.generate_uri(np.FACTOIDS, "TI")
+    ri.create_event_with_time(g, event_uri, time_uri)
+    create_event_time_instant(g, time_uri, time_description)
+
+def create_event_time_instant(g:Graph, time_uri:URIRef, time_description:dict):
+    stamp, calendar, precision = tp.get_time_instant_elements(time_description)
+    ri.create_crisp_time_instant(g, time_uri, stamp, calendar, precision)
+
+def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict, lang:str=None):
+    created_entities = [landmark_uri]
+    label = landmark_description.get("name")
+    label_lit = gr.get_name_literal(label, lang)
+    type = landmark_description.get("type")
+    type_uri = np.LTYPE[type]
+    ri.create_landmark(g, landmark_uri, label_lit, type_uri)
+    
+    changes = landmark_description.get("changes")
+    for change in changes:
+        created_entities_from_change = create_event_change(g, event_uri, landmark_uri, change)
+        created_entities += created_entities_from_change
+        
+    return created_entities
+
+def create_event_change(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
+    created_entities = []
+    on = change_description.get("on")
+    if on == "landmark":
+        create_event_change_on_landmark(g, event_uri, landmark_uri, change_description)
+    elif on == "attribute":
+        created_versions = create_event_change_on_landmark_attribute(g, event_uri, landmark_uri, change_description)
+        created_entities += created_versions
+
+    return created_entities
+
+def create_event_change_on_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
+    change_types = {"appearance":np.CTYPE["LandmarkAppearance"], "disappearance":np.CTYPE["LandmarkDisappearance"]}
+    
+    change_uri = gr.generate_uri(np.FACTOIDS, "CG")
+    change_type = change_description.get("type")
+    change_type_uri = change_types.get(change_type)
+
+    ri.create_landmark_change(g, change_uri, change_type_uri, landmark_uri)
+    ri.create_change_event_relation(g, change_uri, event_uri)
+    
+def create_event_change_on_landmark_attribute(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
+    change_type_uri = np.CTYPE["AttributeVersionTransition"]
+    attribute_type = change_description.get("attribute")
+    attribute_type_uri = np.ATYPE[attribute_type]
+
+    attribute_uri = gr.generate_uri(np.FACTOIDS, "ATTR")
+    change_uri = gr.generate_uri(np.FACTOIDS, "CG")
+
+    made_effective_versions = change_description.get("makes_effective") or []
+    outdates_versions = change_description.get("outdates") or []
+
+    made_effective_versions_uris, outdated_versions_uris = [], []
+
+    for vers in made_effective_versions:
+        vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
+        create_event_attribute_version(g, attribute_uri, vers_uri, vers)
+        made_effective_versions_uris.append(vers_uri)
+
+    for vers in outdates_versions:
+        vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
+        create_event_attribute_version(g, attribute_uri, vers_uri, vers)
+        
+        outdates_versions.append(vers_uri)
+
+    created_entities = made_effective_versions_uris + outdated_versions_uris
+
+    ri.create_landmark_attribute(g, attribute_uri, attribute_type_uri, landmark_uri)
+    ri.create_attribute_change(g, change_uri, change_type_uri, attribute_uri, made_effective_versions_uris, outdated_versions_uris)
+    ri.create_change_event_relation(g, change_uri, event_uri)
+
+    return created_entities
+
+def create_event_attribute_version(g:Graph, attribute_uri:URIRef, attribute_version_uri:URIRef, attribute_version_description:dict):
+    data_types = {"wkt_literal":np.GEO.wktLiteral, "geojson_literal":np.GEO.geoJSONLiteral, "gml_literal":np.GEO.gmlLiteral,
+                  "data_time_stamp":XSD.dateTimeStamp, "data_time":XSD.dateTime,
+                  "string":XSD.string, "integer":XSD.integer, "double":XSD.double, "bool":XSD.boolean}
+    
+    value = attribute_version_description.get("value")
+    lang = attribute_version_description.get("lang")
+    data_type = attribute_version_description.get("data_type")
+    data_type_url = data_types.get(data_type)
+
+    if lang is not None:
+        version_val = gr.get_literal_with_lang(value, lang)
+    elif data_type_url is not None:
+        version_val = gr.get_literal_with_datatype(value, data_type_url)
+    else:
+        version_val = gr.get_literal_without_option(value)
+
+    ri.create_attribute_version(g, attribute_version_uri, version_val)
+    ri.add_version_to_attribute(g, attribute_uri, attribute_version_uri)
+    
+def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_uri:URIRef, landmark_relation_description:dict, landmark_uris:dict):
+    change_types = {"appearance":np.CTYPE["LandmarkRelationAppearance"], "disappreance":np.CTYPE["LandmarkRelationDisappearance"]}
+
+    type = landmark_relation_description.get("type")
+    type_uri = np.LRTYPE[type]
+
+    locatum = landmark_relation_description.get("locatum")
+    locatum_uri = landmark_uris.get(locatum)
+    
+    relatums = landmark_relation_description.get("relatum")
+    if not isinstance(relatums, list):
+        relatums = [relatums]
+    relatum_uris = [landmark_uris.get(x) for x in relatums]
+    
+    ri.create_landmark_relation(g, landmark_relation_uri, type_uri, locatum_uri, relatum_uris)
+
+    change_type = landmark_relation_description.get("change")
+    change_type_uri = change_types.get(change_type)
+    if change_type_uri is not None:
+        change_uri = gr.generate_uri(np.FACTOIDS, "CG")
+        ri.create_landmark_relation_change(g, change_uri, change_type_uri, landmark_relation_uri)
+        ri.create_change_event_relation(g, change_uri, event_uri)
