@@ -41,16 +41,14 @@ function initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers
 
   if (Object.keys(tileLayers).length == 0){
     var xyzUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-    var tileLayer = initLeafletTileLayerForXyz(xyzUrl);
-    tileLayer.addTo(map);
+    var tileLayerToDisplay = initLeafletTileLayerForXyz(xyzUrl);
   } else if (Object.keys(tileLayers).length == 1){
-    var tileLayer = tileLayers[Object.keys(tileLayers)[0]];
-    tileLayer.addTo(map);
+    var tileLayerToDisplay = tileLayers[Object.keys(tileLayers)[0]];
   } else {
-    var tileLayer = tileLayers[Object.keys(tileLayers)[0]];
-    tileLayer.addTo(map);
+    var tileLayerToDisplay = tileLayers[Object.keys(tileLayers)[0]];
     layerControl.addTo(map);
   }
+  tileLayerToDisplay.addTo(map);
   
 }
 
@@ -112,7 +110,7 @@ function getGeojsonObj(id, geomWkt, properties={}){
 
   var geojsonGeom = wktToGeojsonGeom(geomWkt);
 
-  geojsonObj = {
+  var geojsonObj = {
       "type": "Feature",
       "id":id,
       "properties":properties,
@@ -123,17 +121,29 @@ function getGeojsonObj(id, geomWkt, properties={}){
 
 }
 
-function addGeometriesOfVersion(version, map, layersToRemove){
+function addGeometriesOfVersion(version, map, layersToRemove, styleSettings){
+  removeLayersFromList(layersToRemove, map) ;
+  layersToRemove = displayGeometriesOnMapFromList(version.values, map, layersToRemove, styleSettings) ;
+}
 
+function removeLayersFromList(layersToRemove, map){
   // Suppression de toutes les géométries
   layersToRemove.forEach(layer => {
     map.removeLayer(layer);
   });
+}
 
-
-  version.values.forEach(element => {
-    displayGeometryOnMap(element, map, layersToRemove);
+function displayGeometriesOnMapFromList(geomsToDisplay, map, layersToRemove, styleSettings){
+  var featuresList = [];
+  geomsToDisplay.forEach(element => {
+    var geojsonFeature = getGeoJsonForLandmark("", element, {}) ;
+    featuresList.push(geojsonFeature);
   });
+
+  var layerGroup = getLandmarkLayerGroup(featuresList, styleSettings, hasPopup=false);
+  layerGroup.getLayers().forEach(layer => {layersToRemove.push(layer)});
+  layerGroup.addTo(map);
+  fitBoundsToLayerGroups(map, [layerGroup]);
 }
 
 
@@ -147,15 +157,6 @@ function getCrsFromWkt(geomWkt){
       // console.log("CRS non trouvé");
       return null;
   }
-}
-
-function displayGeometryOnMap(element, map, layersToRemove=null, style=null, fitBounds=true){
-  var geoJsonGeom = getGeoJsonGeom(element);
-  if (geoJsonGeom != null) { 
-    var layer = L.geoJSON(geoJsonGeom, {style:style}).addTo(map);
-    if (fitBounds){map.fitBounds(layer.getBounds());}
-    if (layersToRemove != null) { layersToRemove.push(layer); }
-   }
 }
 
 function getGeoJsonGeom(element){
@@ -197,9 +198,10 @@ function initOverlayLayerGroups(map, layerControl, layerGroupNames){
   return overlayLayerGroups ;
 }
 
-function clearLayerGroups(layerGroups){
+function removeLayerGroups(layerGroups, map, layerControl){
   layerGroups.forEach(layerGroup => {
-    layerGroup.clearLayers();
+    layerControl.removeLayer(layerGroup);
+    map.removeLayer(layerGroup);
   });
 }
 
@@ -233,4 +235,65 @@ function getLayerGroupsBounds(layerGroups){
 function fitBoundsToLayerGroups(map, layerGroups) {
   var bounds = getLayerGroupsBounds(layerGroups);
   map.fitBounds(bounds);
+}
+
+function removeOverlayLayers(overlayLayers, map, layerControl){
+  var overlayLayersList = Object.values(overlayLayers);
+  removeLayerGroups(overlayLayersList, map, layerControl) ;
+}
+
+///////////////////////////////////////////////////////////////
+
+function getGeoJsonForLandmark(name, geom, properties){
+  var geoJsonForLandmark = {type:"Feature", name:name} ;
+  var geojsonGeom = getGeoJsonGeom(geom) ;
+  geoJsonForLandmark.geometry = geojsonGeom ;
+  geoJsonForLandmark.properties = properties ;
+  return geoJsonForLandmark ;
+}
+
+function initGeoJsonFeatureCollection(featuresList){
+  var ftCol = {type:"FeatureCollection", features:featuresList};
+  return ftCol;
+}
+
+function getLandmarkLayerGroup(featuresList, styleSettings, hasPopup=true){
+  var featureCollection = initGeoJsonFeatureCollection(featuresList);
+  var leafletGeom = L.geoJSON(featureCollection) ;
+  var layers = [];
+
+  leafletGeom.eachLayer(function (layer) { setLayer(layer, layers, styleSettings, hasPopup) });
+
+  var layerGroup = L.layerGroup(layers);
+  return layerGroup ;
+}
+
+function setLayer(layer, layers, styleSettings, hasPopup){
+  setLayerStyle(layer, styleSettings);
+  if(hasPopup){setPopup(layer);}
+  layers.push(layer);
+}
+
+function setLayerStyle(layer, styleSettings){
+  // styleSettings = {marker: iconSettings, polyline: polylineStyleSettings, polygon:polygonStyleSettings}
+  if (layer instanceof L.Marker) {
+      layer.setIcon(styleSettings.marker);
+  } else if (layer instanceof L.Polyline) {
+      layer.setStyle(styleSettings.polyline);
+  } else if (layer instanceof L.Polygon) {
+      layer.setStyle(styleSettings.polygon);
+  }
+}
+
+function setPopup(layer){
+  var featureName = layer.feature.name;
+  var popupContent = boldText(featureName);
+  layer.bindPopup(popupContent) ;
+}
+
+function displayLandmarkLayerGroup(landmarkLayerName, featuresList, styleSettings, map, layerControl){
+  var landmarkLayerGroup = getLandmarkLayerGroup(featuresList, styleSettings);
+  landmarkLayerGroup.addTo(map);
+  layerControl.addOverlay(landmarkLayerGroup, landmarkLayerName);
+  return landmarkLayerGroup;
 }

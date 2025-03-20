@@ -84,7 +84,11 @@ function createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSliderLabel, dat
     contentDiv.appendChild(mapDiv);
 }
 
-function setActionsForEvolution(graphDBRepositoryURI, namedGraphURI, mapLat, mapLon, mapZoom, landmarkNamesDivId, resizerClassName, tileLayerSettings){
+function setActionsForEvolution(
+    graphDBRepositoryURI, namedGraphURI,
+    mapLat, mapLon, mapZoom,
+    landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId,
+    resizerClassName, tileLayerSettings){
     
     var layersToRemove = [];
 
@@ -94,10 +98,12 @@ function setActionsForEvolution(graphDBRepositoryURI, namedGraphURI, mapLat, map
 
     // Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
     var dropDownMenu = document.getElementById(landmarkNamesDivId);
-    dropDownMenu.addEventListener("change", function(event) { changeSelectedLandmark(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu, map, layersToRemove) ;});
+    dropDownMenu.addEventListener("change", function() {
+        changeSelectedLandmark(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu, map, layersToRemove, timelineDivId, landmarkValidTimeDivId) ;
+    });
 
     // Afficher les landmarks dans un menu déroulant
-    getLandmarks(graphDBRepositoryURI, namedGraphURI, dropDownMenu) ;
+    displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu) ;
 }
 
 function setActionsForSnapshot(
@@ -112,7 +118,7 @@ function setActionsForSnapshot(
     var layerGroupNames = [certainLayerGroupName, uncertainLayerGroupName];
 
     var mapDiv = document.getElementById(mapDivId);
-    mapDiv.style.height = "800px";
+    mapDiv.style.height = "90%";
     mapDiv.style.width = "100%";
 
     // Appel aux fonctions d'initialisation

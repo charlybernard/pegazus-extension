@@ -68,7 +68,6 @@ function getQueryValidTimeForLandmark(landmarkURI, namedGraphURI){
 }
   
 function getQueryToInitTimeline(landmarkURI, namedGraphURI){
-    // Requête qui marche bien, ne pas y toucher !!!!
     var query = `PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
   PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
   
@@ -98,19 +97,20 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
 function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
     var query = `
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX wd: <http://www.wikidata.org/entity/>
     PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
   
-    SELECT DISTINCT ?lm ?existsForSure WHERE {
+    SELECT DISTINCT ?lm ?lmLabel ?existsForSure WHERE {
         BIND(<` + namedGraphURI + `> AS ?g)
         BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
         BIND(<` + timeCalendarURI + `> AS ?timeCalendar)
   
         GRAPH ?g {
             ?lm a addr:Landmark .
-            ?lm rdfs:label ?lmLabel .
+            OPTIONAL { ?lm rdfs:label ?lmLabel . }
             ?appCg addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?appEv .
             ?disCg addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?disEv .
         }
@@ -154,6 +154,7 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
         BIND(IF((BOUND(?appTimeBeforeExists) && !?appTimeBeforeExists) || (BOUND(?disTimeAfterExists) && !?disTimeAfterExists), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
     }
     `
+    console.log(query);
     return query ;
   }
   

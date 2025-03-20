@@ -21,7 +21,10 @@ def create_landmark(g:Graph, landmark_uri:URIRef, label:Literal, landmark_type:U
         g.add((landmark_uri, RDFS.label, label))
 
 def create_landmark_version(g:Graph, lm_uri:URIRef, lm_type_uri:URIRef, lm_label:str, attr_types_and_values:list[list], time_description:dict, provenance_uri:URIRef, factoids_namespace:Namespace, lang:str):
-    lm_label_lit = gr.get_name_literal(lm_label, lang)
+    if lm_label is not None:
+        lm_label_lit = gr.get_name_literal(lm_label, lang)
+    else:
+        lm_label_lit = None
     create_landmark(g, lm_uri, lm_label_lit, lm_type_uri)
 
     for attr in attr_types_and_values:

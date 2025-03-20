@@ -1,63 +1,63 @@
-var contentDivId = "content";
+const contentDivId = "content";
 
-var radioInputName = "visu_selection";
-var radioInputDivId = radioInputName ;
-var radioInputLabel = "Type de visualisation";
+const radioInputName = "visu_selection";
+const radioInputDivId = radioInputName ;
+const radioInputLabel = "Type de visualisation";
 
 //////////////////////////////// Variables //////////////////////////////////
 
-var graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
-var factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
+const graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
+const factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
 
-var validationButtonLabel = "Valider";
-var landmarkSelectionLabel = "Entité à sélectionner : " ;
-var dateSelectionLabel = "Sélectionner une date : ";
+const validationButtonLabel = "Valider";
+const landmarkSelectionLabel = "Entité à sélectionner : " ;
+const dateSelectionLabel = "Sélectionnez une date : ";
 
-var landmarkValidTimeDivId = "landmark-valid-time" ;
-var landmarkNamesDivId = "landmark-names" ;
-var landmarkNamesLabelDivId = "landmark-names-label" ;
-var mapTimelineDivId = "map-timeline";
-var timelineDivId = "timeline";
-var mapDivId = "leaflet-map";
-var mapTimelineResizerDivId = "map-timeline-resizer";
-var resizerClassName = "resizer";
+const landmarkValidTimeDivId = "landmark-valid-time" ;
+const landmarkNamesDivId = "landmark-names" ;
+const landmarkNamesLabelDivId = "landmark-names-label" ;
+const mapTimelineDivId = "map-timeline";
+const timelineDivId = "timeline";
+const mapDivId = "leaflet-map";
+const mapTimelineResizerDivId = "map-timeline-resizer";
+const resizerClassName = "resizer";
 
-var dateSliderDivId = "date-slider";
-var dateSliderSettings = {"min":0, "max":100, "value":0};
-var dateInputDivId = "date-input";
-var dateValidationButtonId = "date-validation-button";
+const dateSliderDivId = "date-slider";
+const dateSliderSettings = {"min":0, "max":100, "value":0};
+const dateInputDivId = "date-input";
+const dateValidationButtonId = "date-validation-button";
 
-var mapLat = 48.8566;
-var mapLon = 2.3522;
-var mapZoom = 13;
+const mapLat = 48.8566;
+const mapLon = 2.3522;
+const mapZoom = 13;
 
-var tileLayerSettings = [
+const tileLayerSettings = [
     {type:"xyz", url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", name:"OpenStreetMap"},
     {type:"wms", url:"http://geohistoricaldata.org/geoserver/paris-rasters/wms", layer:"paris-rasters:verniquet_1789", name:"Atlas de Verniquet"},
     {type:"wms", url:"http://geohistoricaldata.org/geoserver/paris-rasters/wms", layer:"paris-rasters:andriveau_1849", name:"Plan d'Andriveau"},
     {type:"xyz", url:"https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", name:"OpenStreetMap Hot"},
 ];
 
-var startTimeStampSlider = "1790-01-01";
-var endTimeStampSlider = "2026-01-01";
-var calendarURI = gregorianCalendarURI;
-var certainLayerGroupName = "Certains";
-var uncertainLayerGroupName = "Incertains";
-var layerGroupNames = [certainLayerGroupName, uncertainLayerGroupName] ;
+const startTimeStampSlider = "1790-01-01";
+const endTimeStampSlider = "2026-01-01";
+const calendarURI = gregorianCalendarURI;
+const certainLayerGroupName = "Certains";
+const uncertainLayerGroupName = "Incertains";
+const layerGroupNames = [certainLayerGroupName, uncertainLayerGroupName] ;
 
-var landmarkEvolutionName = "Évolution des repères"
-var snapshotName = "Snapshot"
+const landmarkEvolutionName = "Évolution des repères"
+const snapshotName = "Snapshot"
 
 // Object of LeafletObjects class which contains all markers and dots
-var lo = new LeafletObjects(L);
+const lo = new LeafletObjects(L);
 
-var radioInputs = {"name":radioInputName, "label":radioInputLabel, "id":radioInputName,
+const radioInputs = {"name":radioInputName, "label":radioInputLabel, "id":radioInputName,
                 "values":{"snapshot":{"label":snapshotName, "id":"snapshot-selection"}, "timeline":{"label":landmarkEvolutionName, "id":"timeline-selection"}}};
 
 createHTML(L, radioInputs, contentDivId);
 
-var inputRadioDiv = document.getElementById(radioInputDivId);
-var contentDiv = document.getElementById(contentDivId);
+const inputRadioDiv = document.getElementById(radioInputDivId);
+const contentDiv = document.getElementById(contentDivId);
 
 inputRadioDiv.addEventListener('change', function(){
     var querySelectorSetting = `input[name="${radioInputName}"]:checked`;
@@ -66,7 +66,7 @@ inputRadioDiv.addEventListener('change', function(){
     if (selectedValue == landmarkEvolutionName){
         createHTMLEvolution(L, contentDiv, landmarkNamesDivId, landmarkSelectionLabel, landmarkValidTimeDivId,
             mapTimelineDivId, timelineDivId, mapDivId, mapTimelineResizerDivId, resizerClassName, tileLayerSettings);
-        setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, landmarkNamesDivId, resizerClassName);
+        setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
     } else if (selectedValue == snapshotName){
         createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
         setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, certainLayerGroupName, uncertainLayerGroupName,
