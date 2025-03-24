@@ -1,17 +1,33 @@
-function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, namedGraphURI, map, layerControl, overlayLayers){
-    var queryValidLandmarksFromTime = getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI) ;
+function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers){
+  var [lowTimeStamp, highTimeStamp] = getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay) ;
+  var queryValidLandmarksFromTime = getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp, highTimeStamp) ;
 
-    $.ajax({
-      url: graphDBRepositoryURI,
-      Accept: "application/sparql-results+json",
-      contentType:"application/sparql-results+json",
-      dataType:"json",
-      data:{"query":queryValidLandmarksFromTime}
-    }).done((promise) => {
-      var landmarksDesc = getInitLandmarksDescriptions(promise.results.bindings);
-      displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, map, layerControl, overlayLayers);
-    }) ;  
+  $.ajax({
+    url: graphDBRepositoryURI,
+    Accept: "application/sparql-results+json",
+    contentType:"application/sparql-results+json",
+    dataType:"json",
+    data:{"query":queryValidLandmarksFromTime}
+  }).done((promise) => {
+    var landmarksDesc = getInitLandmarksDescriptions(promise.results.bindings);
+    displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, map, layerControl, overlayLayers);
+  }) ;  
+}
+
+function getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay){
+  var lowTimeStamp = null ;
+  var highTimeStamp = null ;
+  if (timeDelay){
+    var lowTime = new Date(timeStamp) ;
+    var highTime = new Date(timeStamp) ;
+    lowTime.setFullYear(lowTime.getFullYear() - timeDelay) ;
+    highTime.setFullYear(highTime.getFullYear() + timeDelay) ;
+    lowTimeStamp = lowTime.toISOString() ;
+    highTimeStamp = highTime.toISOString() ;
   }
+
+  return [lowTimeStamp, highTimeStamp] ;
+}
 
 function displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, map, layerControl, overlayLayers){
   var queryValidAttrVersFromTime = getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI) ;
@@ -55,7 +71,6 @@ function displayLandmarksFromDescriptions(bindings, landmarksDescriptions, map, 
 function getInitLandmarksDescriptions(bindings){
   var landmarksDesc = {};
   bindings.forEach(binding => {
-    console.log(binding);
     var lm = binding.lm ;
     var lmLabel = binding.lmLabel ;
     var existsForSure = binding.existsForSure ;
@@ -121,8 +136,8 @@ function initGeoJsonForLandmark(landmark, landmarkLayers){
   });
 }
 
-function displaySnapshotFromSelectedTime(graphDBRepositoryURI, timeStampDivId, timeCalendarURI, namedGraphURI, map, layerControl, overlayLayers){
+function displaySnapshotFromSelectedTime(graphDBRepositoryURI, timeStampDivId, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers){
     var timeStamp = document.getElementById(timeStampDivId).value;
     removeOverlayLayers(overlayLayers, map, layerControl);
-    getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, namedGraphURI, map, layerControl, overlayLayers) ;
+    getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers) ;
 }

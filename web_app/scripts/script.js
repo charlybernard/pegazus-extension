@@ -40,6 +40,9 @@ const tileLayerSettings = [
 
 const startTimeStampSlider = "1790-01-01";
 const endTimeStampSlider = "2026-01-01";
+// const timeDelay = 20 ; // Delay in years, not delay if null
+const timeDelay = null ; // Delay in years, not delay if null
+
 const calendarURI = gregorianCalendarURI;
 const certainLayerGroupName = "Certains";
 const uncertainLayerGroupName = "Incertains";
@@ -70,6 +73,6 @@ inputRadioDiv.addEventListener('change', function(){
     } else if (selectedValue == snapshotName){
         createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
         setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, certainLayerGroupName, uncertainLayerGroupName,
-            dateSliderDivId, dateInputDivId, dateValidationButtonId, startTimeStampSlider, endTimeStampSlider, calendarURI, tileLayerSettings);
+            dateSliderDivId, dateInputDivId, dateValidationButtonId, startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings);
     }
 });

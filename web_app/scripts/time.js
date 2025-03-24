@@ -161,7 +161,6 @@ function getDateObjectFromTimeStamp(timeStamp){
 function extractElementsFromTimeStamp(timeStamp){
   var time = getDateObjectFromTimeStamp(timeStamp);
   return extractElementsFromTime(time);
-
 }
 
 function extractElementsFromTime(time){

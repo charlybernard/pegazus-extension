@@ -94,7 +94,21 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
 }
 
 
-function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
+function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp=null, highTimeStamp=null){
+    
+    // var lowTimeStampFilter = `BIND(?disTimeAfterStamp > ?timeStamp AS ?disTimeAfterExists)`;
+    // var highTimeStampFilter = `BIND(?appTimeBeforeStamp <= ?timeStamp AS ?appTimeBeforeExists)`;
+    var lowTimeStampFilter = ``;
+    var highTimeStampFilter = ``;
+    if (lowTimeStamp){
+        var lowTimeStampFilter = `BIND("${lowTimeStamp}"^^xsd:dateTimeStamp AS ?lowTimeStamp)
+            BIND(?disTimeAfterStamp >= ?lowTimeStamp AS ?disTimeAfterExists)`;
+    }
+    if (highTimeStamp){
+        var highTimeStampFilter = `BIND("${highTimeStamp}"^^xsd:dateTimeStamp AS ?highTimeStamp)
+            BIND(?appTimeBeforeStamp <= ?highTimeStamp AS ?appTimeBeforeExists)`;;
+    }
+
     var query = `
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -128,7 +142,8 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
         OPTIONAL {
             ?appEv addr:hasTimeBefore ?appTimeBefore .
             ?appTimeBefore addr:timeStamp ?appTimeBeforeStamp ; addr:timeCalendar ?timeCalendar .
-            BIND(?appTimeBeforeStamp <= ?timeStamp AS ?appTimeBeforeExists)
+            `+ highTimeStampFilter + `
+            BIND(?appTimeBeforeStamp <= ?timeStamp AS ?appTimeBeforeExistsForSure)
         }
         OPTIONAL {
             ?disEv addr:hasTimeBefore ?disTimeBefore .
@@ -143,15 +158,18 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI){
         OPTIONAL {
             ?disEv addr:hasTimeAfter ?disTimeAfter .
             ?disTimeAfter addr:timeStamp ?disTimeAfterStamp ; addr:timeCalendar ?timeCalendar .
-            BIND(?disTimeAfterStamp > ?timeStamp AS ?disTimeAfterExists)
+            `+ lowTimeStampFilter + `
+            BIND(?disTimeAfterStamp > ?timeStamp AS ?disTimeAfterExistsForSure)
         }
   
         FILTER(!BOUND(?appTimeExists) || ?appTimeExists)
         FILTER(!BOUND(?disTimeExists) || ?disTimeExists)
         FILTER(BOUND(?appTimeExists) || !BOUND(?appTimeAfterExists) || ?appTimeAfterExists)
         FILTER(BOUND(?disTimeExists) || !BOUND(?disTimeBeforeExists) || ?disTimeBeforeExists)
+        FILTER(BOUND(?appTimeExists) || !BOUND(?appTimeBeforeExists) || ?appTimeBeforeExists)
+        FILTER(BOUND(?disTimeExists) || !BOUND(?disTimeAfterExists) || ?disTimeAfterExists)
 
-        BIND(IF((BOUND(?appTimeBeforeExists) && !?appTimeBeforeExists) || (BOUND(?disTimeAfterExists) && !?disTimeAfterExists), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
+        BIND(IF((BOUND(?appTimeBeforeExistsForSure) && !?appTimeBeforeExistsForSure) || (BOUND(?disTimeAfterExistsForSure) && !?disTimeAfterExistsForSure), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
     }
     `
     console.log(query);

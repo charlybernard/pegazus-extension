@@ -111,7 +111,7 @@ function setActionsForSnapshot(
     mapDivId, mapLat, mapLon, mapZoom,
     certainLayerGroupName, uncertainLayerGroupName,
     dateSliderDivId, dateInputDivId, dateValidatonButtonId,
-    startTimeStampSlider, endTimeStampSlider, calendarURI, tileLayerSettings){
+    startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings){
 
     //////////////////////////////////////////////////////////////////
 
@@ -130,7 +130,7 @@ function setActionsForSnapshot(
 
     // Après avoir sélectionné une date, afficher le snapshot correspondant
     document.getElementById(dateValidatonButtonId).addEventListener("click", function() {
-        displaySnapshotFromSelectedTime(graphDBRepositoryURI, dateInputDivId, calendarURI, namedGraphURI,
+        displaySnapshotFromSelectedTime(graphDBRepositoryURI, dateInputDivId, calendarURI, timeDelay, namedGraphURI,
             map, layerControl, overlayLayers);
     });
 

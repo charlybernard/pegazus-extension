@@ -160,7 +160,8 @@ function getCrsFromWkt(geomWkt){
 }
 
 function getGeoJsonGeom(element){
-  if (element.datatype !=  "http://www.opengis.net/ont/geosparql#wktLiteral"){return null} ;
+  var geoSparqlWktLiteral = "http://www.opengis.net/ont/geosparql#wktLiteral" ;
+  if (element.datatype !=  geoSparqlWktLiteral){return null} ;
   var wktWithCrs = element.value ;
   var crsCode = getCrsFromWkt(wktWithCrs);
   var geomWkt = wktWithCrs.replace(/<.*?>\s*/, "");
