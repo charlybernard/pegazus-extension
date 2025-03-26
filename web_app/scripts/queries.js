@@ -96,8 +96,6 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
 
 function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp=null, highTimeStamp=null){
     
-    // var lowTimeStampFilter = `BIND(?disTimeAfterStamp > ?timeStamp AS ?disTimeAfterExists)`;
-    // var highTimeStampFilter = `BIND(?appTimeBeforeStamp <= ?timeStamp AS ?appTimeBeforeExists)`;
     var lowTimeStampFilter = ``;
     var highTimeStampFilter = ``;
     if (lowTimeStamp){
@@ -116,6 +114,7 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
     PREFIX wd: <http://www.wikidata.org/entity/>
     PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
     PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
+    PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
   
     SELECT DISTINCT ?lm ?lmLabel ?existsForSure WHERE {
         BIND(<` + namedGraphURI + `> AS ?g)
@@ -123,8 +122,12 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
         BIND(<` + timeCalendarURI + `> AS ?timeCalendar)
   
         GRAPH ?g {
-            ?lm a addr:Landmark .
-            OPTIONAL { ?lm rdfs:label ?lmLabel . }
+            ?lm a addr:Landmark ; rdfs:label ?lmPartLabel .
+            OPTIONAL {
+                ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+                FILTER(LANG(?relatumLabel) IN ("fr", ""))
+            }
+            BIND(IF(BOUND(?relatumLabel), CONCAT(?lmPartLabel, " ", ?relatumLabel), ?lmPartLabel) AS ?lmLabel)
             ?appCg addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?appEv .
             ?disCg addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?disEv .
         }

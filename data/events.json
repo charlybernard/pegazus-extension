@@ -56,6 +56,120 @@
          "provenance":{
             "uri":"https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"
          }
+      },
+      {
+         "time":{
+            "stamp":"1893",
+            "calendar":"gregorian",
+            "precision":"year"
+         },
+         "label":"Elle fut construite en deux phases, d'abord en 1893 entre la place de Rungis et la rue de la Butte-aux-Cailles, [...]",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"rue Bobillot",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1896",
+            "calendar":"gregorian",
+            "precision":"year"
+         },
+         "label":"Elle fut construite en deux phases [...], puis en 1896 entre la rue de la Butte-aux-Cailles et la place d'Italie.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"rue Bobillot",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1931-06-09",
+            "calendar":"gregorian",
+            "precision":"day"
+         },
+         "label":"Ancien « passage Simonet », cette voie est classée dans la voirie de Paris sous le nom de « rue Simonet » par arrêté municipal du 9 juin 1931. ",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"passage Simonet",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"disappearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "outdates":[
+                        {
+                           "value":"passage Simonet",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "name":"rue Simonet",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "makes_effective":[
+                        {
+                           "value":"rue Simonet",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
       }
    ]
 }

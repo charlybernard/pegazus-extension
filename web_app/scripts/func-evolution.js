@@ -1,4 +1,4 @@
-function initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphURI, timelineDivId, map, layersToRemove){
+function initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphURI, timelineDivId, mapSettings){
 
     var query = getQueryToInitTimeline(landmarkURI, namedGraphURI) ;
     var versions = {} ;
@@ -15,12 +15,12 @@ function initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphU
         binding.values = []
         versions[uri] = binding ;
       });
-      configureTimelineFromLandmark(timelineDivId, versions, map, layersToRemove) ;   
+      configureTimelineFromLandmark(timelineDivId, versions, mapSettings) ;   
     });
   
   };
 
-function configureTimelineFromLandmark(timelineDivId, versions, map, layersToRemove){
+function configureTimelineFromLandmark(timelineDivId, versions, mapSettings){
   var valuesForQuery = getValuesForQuery("vers", versions) ;
   var query = getQueryForAttributeVersionValues(valuesForQuery);
 
@@ -31,11 +31,11 @@ function configureTimelineFromLandmark(timelineDivId, versions, map, layersToRem
     dataType:"json",
     data:{"query":query}
     }).done((promise) => {
-      configureTimeline(timelineDivId, versions, promise.results.bindings, map, layersToRemove);
+      configureTimeline(timelineDivId, versions, promise.results.bindings, mapSettings);
     });
 }
   
-function configureTimeline(timelineDivId, versions, bindings, map, layersToRemove){
+function configureTimeline(timelineDivId, versions, bindings, mapSettings){
   bindings.forEach(binding => {
     var uri = binding.vers.value ;
     versions[uri].values.push(binding.val) ;
@@ -52,15 +52,15 @@ function configureTimeline(timelineDivId, versions, bindings, map, layersToRemov
   var timelineHeadline = "Attributs de l'entité géographique" ;
   var timelineJson = getTimelineJson(versions, timelineHeadline)
   var timeline = new TL.Timeline(timelineDivId, timelineJson, timelineOptions) ;
-  timeline.on('change', function () { actionsOnTimelineChange(timeline, versions, map, layersToRemove) });
+  timeline.on('change', function () { actionsOnTimelineChange(timeline, versions, mapSettings) });
 }
 
-function actionsOnTimelineChange(timeline, versions, map, layersToRemove){
+function actionsOnTimelineChange(timeline, versions, mapSettings){
   var uri = timeline.current_id;
   var version = versions[uri];
   if (version){
     var geomStyle = {marker:lo.blueMarker, polyline:lo.blueDefaultLineStringStyle, polygon:lo.blueDefaultPolygonStyle}
-    addGeometriesOfVersion(version, map, layersToRemove, geomStyle);
+    addGeometriesOfVersion(version, mapSettings.map, mapSettings.layersToRemove, geomStyle);
   }
 }
 
@@ -147,10 +147,10 @@ function displayLandmarkValidTime(landmarkURI, namedGraphURI, landmarkValidTimeD
   return text ;
 }
 
-function changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, dropDownMenu, map, layersToRemove, timelineDivId, landmarkValidTimeDivId){
+function changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, dropDownMenu, mapSettings, timelineDivId, landmarkValidTimeDivId){
   var landmarkURI = dropDownMenu.value;
   displayLandmarkValidTime(landmarkURI, namedGraphURI, landmarkValidTimeDivId);
-  initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphURI, timelineDivId, map, layersToRemove);
+  initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphURI, timelineDivId, mapSettings);
 }
   
 function displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu){

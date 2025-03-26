@@ -16,17 +16,23 @@ proj4.defs([
 
 // Gestion du côté leaflet
 
-function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[]) {
-    // Initialisation de la carte
-    var map = L.map(id).setView([lat, lon], zoom);
-    var layerControl = L.control.layers();
-    var tileLayers = {};
-    var overlayLayers = {};
+function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[], messages={}){
+  var mapSettings = {};
 
-    // Ajout des couches de tuiles
-    initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers);
+  // Initialisation de la carte
+  mapSettings.map = L.map(id).setView([lat, lon], zoom);;
+  mapSettings.layerControl = L.control.layers()
+  mapSettings.tileLayers = {};
+  mapSettings.overlayLayers = {};
+  mapSettings.selectedTileLayer = null;
+  mapSettings.layersToRemove = [];
+  mapSettings.selectedFeature = null;
+  mapSettings.messages = messages;
 
-    return [map, layerControl, tileLayers, overlayLayers];
+  // Ajout des couches de tuiles
+  initLeafletTileLayers(tileLayersSettings, mapSettings.map, mapSettings.layerControl, mapSettings.tileLayers);
+
+  return mapSettings;
 }
 
 function initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers){
@@ -235,13 +241,60 @@ function getLayerGroupsBounds(layerGroups){
 
 function fitBoundsToLayerGroups(map, layerGroups) {
   var bounds = getLayerGroupsBounds(layerGroups);
-  map.fitBounds(bounds);
+  if (bounds.isValid()){
+    map.fitBounds(bounds);
+    return true;
+  } else {
+    return false;
+  }
+
 }
 
 function removeOverlayLayers(overlayLayers, map, layerControl){
   var overlayLayersList = Object.values(overlayLayers);
   removeLayerGroups(overlayLayersList, map, layerControl) ;
 }
+
+//////////////////////////////////////// Functions around popup management ////////////////////////////////////////////////////
+
+function initInfoControl(mapSettings){
+  var infoControl = L.control({ position: 'topleft' });
+  infoControl.onAdd = function(map) {
+    this._div = L.DomUtil.create('div', 'info-control');
+    // this.update(); // Initialise avec un contenu
+    this._div.innerHTML = mapSettings.messages.flyOverLandmark;
+
+    // Styles appliqués directement en JavaScript
+    Object.assign(this._div.style, {
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      color: '#000',
+      padding: '10px 15px',
+      borderRadius: '8px',
+      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.5)',
+      maxWidth: '300px',
+  });
+    return this._div;
+  };
+
+  infoControl.addTo(mapSettings.map);
+  mapSettings.infoControl = infoControl;
+}
+
+function reinitInfoControlContent(infoControl, content){
+  var italicsContent = `${getHTMLItalicsText(content)}`;
+  infoControl._div.innerHTML = italicsContent;
+}
+
+function updateInfoControlContent(infoControl, layer, nameTitle){
+  var content = `${getHTMLBoldText(nameTitle +  " :")} `;
+  if (layer.feature.name){
+    content += layer.feature.name;
+  } else {
+    content += "...";
+  }
+  infoControl._div.innerHTML = content;
+}
+
 
 ///////////////////////////////////////////////////////////////
 
@@ -258,42 +311,95 @@ function initGeoJsonFeatureCollection(featuresList){
   return ftCol;
 }
 
-function getLandmarkLayerGroup(featuresList, styleSettings, hasPopup=true){
+function getLandmarkLayerGroup(featuresList, mapSettings, styleSettings, selectedStyleSettings=null, hasPopup=true){
   var featureCollection = initGeoJsonFeatureCollection(featuresList);
   var leafletGeom = L.geoJSON(featureCollection) ;
   var layers = [];
 
-  leafletGeom.eachLayer(function (layer) { setLayer(layer, layers, styleSettings, hasPopup) });
+  leafletGeom.eachLayer(function (layer) { setLayer(layer, layers, mapSettings, styleSettings, selectedStyleSettings, hasPopup) ; });
 
   var layerGroup = L.layerGroup(layers);
   return layerGroup ;
 }
 
-function setLayer(layer, layers, styleSettings, hasPopup){
-  setLayerStyle(layer, styleSettings);
-  if(hasPopup){setPopup(layer);}
+function setLayer(layer, layers, mapSettings, styleSettings, selectedStyleSettings=null, hasPopup=false){
+  // Style initialisation
+  var multiStylesSettings = {default:styleSettings} ;
+
+  // Style settings for selected and hovered features (if they exist)
+  if (selectedStyleSettings){
+    multiStylesSettings.selected = selectedStyleSettings;
+    multiStylesSettings.hovered = selectedStyleSettings;
+  }
+  initLayerStyles(layer, multiStylesSettings);
+  setLayerStyle(layer);
+  
+  // if (hasPopup){setPopup(layer);}
+  if (selectedStyleSettings){
+    // actionsOnLayerSelection(layer, mapSettings);
+    actionsOnLayerHovered(layer, mapSettings);
+  }
   layers.push(layer);
 }
 
-function setLayerStyle(layer, styleSettings){
-  // styleSettings = {marker: iconSettings, polyline: polylineStyleSettings, polygon:polygonStyleSettings}
+function initLayerStyles(layer, multiStylesSettings){
+  // multiStylesSettings = {name1:styleSettings1, name2:styleSettings2}
+  layer.styles = multiStylesSettings;
+}
+
+function setLayerStyle(layer, styleKey="default"){
+  var styleSettings = layer.styles[styleKey];
   if (layer instanceof L.Marker) {
-      layer.setIcon(styleSettings.marker);
+    layer.setIcon(styleSettings.marker);
   } else if (layer instanceof L.Polyline) {
-      layer.setStyle(styleSettings.polyline);
-  } else if (layer instanceof L.Polygon) {
+    if (layer instanceof L.Polygon) {
       layer.setStyle(styleSettings.polygon);
+    } else {
+      layer.setStyle(styleSettings.polyline);
+    }
   }
+}
+
+function actionsOnLayerSelection(layer, mapSettings){
+  layer.on('click', function(e){
+    // Change the style of the selected feature before having clicked on this one
+    if (mapSettings.selectedFeature){ setLayerStyle(mapSettings.selectedFeature, "default") ; }
+
+    // Update the selected feature and change its style
+    mapSettings.selectedFeature = layer;
+    setLayerStyle(layer, "selected");
+  });
+}
+
+function actionsOnLayerHovered(layer, mapSettings){
+  
+  layer.on('mouseover', function(e){
+    updateInfoControlContent(mapSettings.infoControl, layer, mapSettings.messages.nameTitle);
+    if (mapSettings.selectedFeature != layer){
+      setLayerStyle(layer, "hovered"); 
+    }
+  });
+
+  layer.on('mouseout', function(e){
+    reinitInfoControlContent(mapSettings.infoControl, mapSettings.messages.flyOverLandmark);
+    if (mapSettings.selectedFeature != layer){
+      setLayerStyle(layer, "default"); 
+    }
+  });
 }
 
 function setPopup(layer){
   var featureName = layer.feature.name;
-  var popupContent = boldText(featureName);
+  var popupContent = getHTMLBoldText(featureName);
   layer.bindPopup(popupContent) ;
 }
 
-function displayLandmarkLayerGroup(landmarkLayerName, featuresList, styleSettings, map, layerControl){
-  var landmarkLayerGroup = getLandmarkLayerGroup(featuresList, styleSettings);
+function displayLandmarkLayerGroup(landmarkLayerName, featuresList, mapSettings, styleSettings){
+  var map = mapSettings.map ;
+  var layerControl = mapSettings.layerControl;
+  var defaultStyleSettings = styleSettings.default;
+  var selectedStyleSettings = styleSettings.selected;
+  var landmarkLayerGroup = getLandmarkLayerGroup(featuresList, mapSettings, defaultStyleSettings, selectedStyleSettings, hasPopup=true);
   landmarkLayerGroup.addTo(map);
   layerControl.addOverlay(landmarkLayerGroup, landmarkLayerName);
   return landmarkLayerGroup;

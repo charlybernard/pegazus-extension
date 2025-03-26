@@ -18,7 +18,7 @@ function createDiv(L, divType, attributes = {}, innerHTML = "", divClass = ""){
   
   function createLabel(L, labelFor, labelContent, labelClass, labelContentIsBold = false){
     if (labelContentIsBold){
-        var finalLabelContent = boldText(labelContent);
+        var finalLabelContent = getHTMLBoldText(labelContent);
     }else{
         var finalLabelContent = labelContent;
     }
@@ -34,11 +34,13 @@ function createDiv(L, divType, attributes = {}, innerHTML = "", divClass = ""){
     return createDiv(L, divType, attributes, "", inputClass);
   }
   
-  function boldText(textToBeBold){
+  function getHTMLBoldText(textToBeBold){
     return `<b>${textToBeBold}</b>`;
   }
   
-
+  function getHTMLItalicsText(textToBeItalics){
+    return `<i>${textToBeItalics}</i>`;
+  }
   
   function createInputText(L, name, value, inputId, inputClass, isRequired = true, isReadOnly = false){
     var divType = "input";

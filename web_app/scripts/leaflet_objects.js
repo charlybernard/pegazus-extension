@@ -91,18 +91,18 @@ class LeafletObjects{
         });
 
         // Variables to define style of features according events
-        this.greenSelectedPolygonStyle = {'color':'green', 'fillOpacity':'0.5', 'weight':'4'};
-        this.greenDefaultPolygonStyle = {'color':'green', 'fillOpacity':'0.2', 'weight':'2'};
-        this.blueSelectedPolygonStyle = {'color':'blue', 'fillOpacity':'0.5', 'weight':'4'};
-        this.blueDefaultPolygonStyle = {'color':'blue', 'fillOpacity':'0.2', 'weight':'2'};
-        this.redSelectedPolygonStyle = {'color':'red', 'fillOpacity':'0.5', 'weight':'4'};
-        this.redDefaultPolygonStyle = {'color':'red', 'fillOpacity':'0.2', 'weight':'2'};
-        this.greenSelectedLineStringStyle = {'color':'green', 'opacity':'0.8', 'weight':'8'};
-        this.greenDefaultLineStringStyle = {'color':'green', 'opacity':'0.5', 'weight':'4'};
-        this.redSelectedLineStringStyle = {'color':'red', 'opacity':'0.8', 'weight':'8'};
-        this.redDefaultLineStringStyle = {'color':'red', 'opacity':'0.5', 'weight':'4'};
-        this.blueSelectedLineStringStyle = {'color':'blue', 'opacity':'0.8', 'weight':'8'};
-        this.blueDefaultLineStringStyle = {'color':'blue', 'opacity':'0.5', 'weight':'4'};
+        this.greenSelectedPolygonStyle = {color:'green', fillOpacity:'0.5', weight:'4'};
+        this.greenDefaultPolygonStyle = {color:'green', fillOpacity:'0.2', weight:'2'};
+        this.blueSelectedPolygonStyle = {color:'blue', fillOpacity:'0.5', weight:'4'};
+        this.blueDefaultPolygonStyle = {color:'blue', fillOpacity:'0.2', weight:'2'};
+        this.redSelectedPolygonStyle = {color:'red', fillOpacity:'0.5', weight:'4'};
+        this.redDefaultPolygonStyle = {color:'red', fillOpacity:'0.2', weight:'2'};
+        this.greenSelectedLineStringStyle = {color:'green', opacity:'0.8', weight:'8'};
+        this.greenDefaultLineStringStyle = {color:'green', opacity:'0.5', weight:'4'};
+        this.redSelectedLineStringStyle = {color:'red', opacity:'0.8', weight:'8'};
+        this.redDefaultLineStringStyle = {color:'red', opacity:'0.5', weight:'4'};
+        this.blueSelectedLineStringStyle = {color:'blue', opacity:'0.8', weight:'8'};
+        this.blueDefaultLineStringStyle = {color:'blue', opacity:'0.5', weight:'4'};
 
     }
 }

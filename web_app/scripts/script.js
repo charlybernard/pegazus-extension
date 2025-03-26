@@ -1,13 +1,13 @@
+//////////////////////////////// Variables //////////////////////////////////
+
+const graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
+const factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
+
 const contentDivId = "content";
 
 const radioInputName = "visu_selection";
 const radioInputDivId = radioInputName ;
 const radioInputLabel = "Type de visualisation";
-
-//////////////////////////////// Variables //////////////////////////////////
-
-const graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
-const factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
 
 const validationButtonLabel = "Valider";
 const landmarkSelectionLabel = "Entité à sélectionner : " ;
@@ -30,6 +30,11 @@ const dateValidationButtonId = "date-validation-button";
 const mapLat = 48.8566;
 const mapLon = 2.3522;
 const mapZoom = 13;
+const mapMessages = {
+    noLandmarkToDisplay: "Aucun repère à afficher à cette date.",
+    nameTitle : "Nom",
+    flyOverLandmark : "Survolez un lieu",
+}
 
 const tileLayerSettings = [
     {type:"xyz", url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", name:"OpenStreetMap"},
@@ -40,8 +45,8 @@ const tileLayerSettings = [
 
 const startTimeStampSlider = "1790-01-01";
 const endTimeStampSlider = "2026-01-01";
-// const timeDelay = 20 ; // Delay in years, not delay if null
-const timeDelay = null ; // Delay in years, not delay if null
+const timeDelay = 20 ; // Delay in years, not delay if null
+// const timeDelay = null ; // Delay in years, not delay if null
 
 const calendarURI = gregorianCalendarURI;
 const certainLayerGroupName = "Certains";
@@ -56,6 +61,9 @@ const lo = new LeafletObjects(L);
 
 const radioInputs = {"name":radioInputName, "label":radioInputLabel, "id":radioInputName,
                 "values":{"snapshot":{"label":snapshotName, "id":"snapshot-selection"}, "timeline":{"label":landmarkEvolutionName, "id":"timeline-selection"}}};
+
+
+//////////////////////////////// Actions on the page //////////////////////////////////
 
 createHTML(L, radioInputs, contentDivId);
 
@@ -72,7 +80,7 @@ inputRadioDiv.addEventListener('change', function(){
         setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
     } else if (selectedValue == snapshotName){
         createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
-        setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, certainLayerGroupName, uncertainLayerGroupName,
+        setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, mapMessages, certainLayerGroupName, uncertainLayerGroupName,
             dateSliderDivId, dateInputDivId, dateValidationButtonId, startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings);
     }
 });

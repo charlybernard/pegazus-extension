@@ -1,4 +1,4 @@
-function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers){
+function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, mapSettings){
   var [lowTimeStamp, highTimeStamp] = getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay) ;
   var queryValidLandmarksFromTime = getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp, highTimeStamp) ;
 
@@ -10,7 +10,7 @@ function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarU
     data:{"query":queryValidLandmarksFromTime}
   }).done((promise) => {
     var landmarksDesc = getInitLandmarksDescriptions(promise.results.bindings);
-    displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, map, layerControl, overlayLayers);
+    displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, mapSettings);
   }) ;  
 }
 
@@ -29,9 +29,9 @@ function getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay){
   return [lowTimeStamp, highTimeStamp] ;
 }
 
-function displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, map, layerControl, overlayLayers){
+function displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, mapSettings){
   var queryValidAttrVersFromTime = getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI) ;
-
+  
   $.ajax({
     url: graphDBRepositoryURI,
     Accept: "application/sparql-results+json",
@@ -39,22 +39,43 @@ function displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI
     dataType:"json",
     data:{"query":queryValidAttrVersFromTime}
   }).done((promise) => {
-    displayLandmarksFromDescriptions(promise.results.bindings, landmarksDescriptions, map, layerControl, overlayLayers);
-    fitBoundsToLayerGroups(map, Object.values(overlayLayers));
+    displayLandmarksFromDescriptions(promise.results.bindings, landmarksDescriptions, mapSettings);
+    updateMapViewForSnapshotSelection(landmarksDescriptions, mapSettings, mapSettings.messages.noLandmarkToDisplay);
 });
 }
 
-function displayLandmarksFromDescriptions(bindings, landmarksDescriptions, map, layerControl, overlayLayers){
+function updateMapViewForSnapshotSelection(landmarksDescriptions, mapSettings, alertMessage){
+
+  // If no landmarks have been found at this date, display an alert
+  if (Object.keys(landmarksDescriptions).length === 0){
+    alert(alertMessage);
+  }
+  // Fit bounds to layer groups if enableFitBounds is not false (fit bounds only once)
+  if (mapSettings.enableFitBounds != false){
+    var hasFitBounds = fitBoundsToLayerGroups(mapSettings.map, Object.values(mapSettings.overlayLayers));
+    if (hasFitBounds){   
+      mapSettings.enableFitBounds = false;
+    }
+  }
+}
+function displayLandmarksFromDescriptions(bindings, landmarksDescriptions, mapSettings){
+  var overlayLayers = mapSettings.overlayLayers ;
   var landmarkLayers = {sure:[], unsure:[]};
   var landmarkLayersStyles = {
-    sure: {marker:lo.greenDot, polyline:lo.greenDefaultLineStringStyle, polygon:lo.greenDefaultPolygonStyle},
-    unsure: {marker:lo.redDot, polyline:lo.redDefaultLineStringStyle, polygon:lo.redDefaultPolygonStyle}
+    sure: {
+      default: {marker:lo.greenDot, polyline:lo.greenDefaultLineStringStyle, polygon:lo.greenDefaultPolygonStyle},
+      selected: {marker:lo.greenMarker, polyline:lo.greenSelectedLineStringStyle, polygon:lo.greenSelectedPolygonStyle}
+    },
+    unsure: {
+      default: {marker:lo.redDot, polyline:lo.redDefaultLineStringStyle, polygon:lo.redDefaultPolygonStyle},
+      selected: {marker:lo.redMarker, polyline:lo.redSelectedLineStringStyle, polygon:lo.redSelectedPolygonStyle}
+    }
   } ;
 
   bindings.forEach(binding => {
     updateLandmarksDescriptionsWithAttributeVersions(landmarksDescriptions, binding);
   });
-  
+
   for (var key in landmarksDescriptions){
     var landmark = landmarksDescriptions[key] ;
     initGeoJsonForLandmark(landmark, landmarkLayers) ;
@@ -63,7 +84,7 @@ function displayLandmarksFromDescriptions(bindings, landmarksDescriptions, map, 
   for (var key in landmarkLayers){
     var landmarkFeatures = landmarkLayers[key] ;
     var style = landmarkLayersStyles[key];
-    var landmarkLayerGroup = displayLandmarkLayerGroup(key, landmarkFeatures, style, map, layerControl);
+    var landmarkLayerGroup = displayLandmarkLayerGroup(key, landmarkFeatures, mapSettings, style);
     overlayLayers[key] = landmarkLayerGroup;
   }
 }
@@ -97,25 +118,26 @@ function getLandmarkDescription(lm, lmName){
 }
 
 function updateLandmarksDescriptionsWithAttributeVersions(landmarks, binding){
-    var versValue = binding.versValue.value;
-    var lm = binding.lm.value;
-    var attrType = binding.attrType.value;
-    var attrTypeName = attrType.replace("http://rdf.geohistoricaldata.org/id/codes/address/attributeType/", "") ;
+  // landmarks = {lm1: {lm:lm1, name:lmName1, properties:{attr1:[vers1, vers2], attr2:[vers3, vers4]}, geometries:[geom1, geom2]}, lm2: {...}} 
+  var attrTypeNamespace = "http://rdf.geohistoricaldata.org/id/codes/address/attributeType/" ;
+  var versValue = binding.versValue.value;
+  var lm = binding.lm.value;
+  var attrType = binding.attrType.value;
+  var attrTypeName = attrType.replace(attrTypeNamespace, "") ;
 
-    if (landmarks[lm] && landmarks[lm].properties[attrTypeName]){
-        landmarks[lm].properties[attrTypeName].push(versValue) ;
-    }else if (landmarks[lm]){
-        landmarks[lm].properties[attrTypeName] = [versValue] ;
-    }
+  if (landmarks[lm] && landmarks[lm].properties[attrTypeName]){
+      landmarks[lm].properties[attrTypeName].push(versValue) ;
+  }else if (landmarks[lm]){
+      landmarks[lm].properties[attrTypeName] = [versValue] ;
+  }
 
-    if (attrTypeName == "Geometry" && landmarks[lm]){
-        landmarks[lm].geometries.push(binding.versValue) ;
-        }
-    }
+  if (attrTypeName == "Geometry" && landmarks[lm]){
+      landmarks[lm].geometries.push(binding.versValue) ;
+      }
+}
 
 function initGeoJsonForLandmark(landmark, landmarkLayers){
   //  landmarkLayers = {sure: [...], unsure: [...]}
-
   if (landmark.existsForSure){
     var layer = landmarkLayers.sure;
   } else {
@@ -136,8 +158,8 @@ function initGeoJsonForLandmark(landmark, landmarkLayers){
   });
 }
 
-function displaySnapshotFromSelectedTime(graphDBRepositoryURI, timeStampDivId, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers){
+function displaySnapshotFromSelectedTime(graphDBRepositoryURI, timeStampDivId, timeCalendarURI, timeDelay, namedGraphURI, mapSettings){
     var timeStamp = document.getElementById(timeStampDivId).value;
-    removeOverlayLayers(overlayLayers, map, layerControl);
-    getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, map, layerControl, overlayLayers) ;
+    removeOverlayLayers(mapSettings.overlayLayers, mapSettings.map, mapSettings.layerControl);
+    getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, mapSettings) ;
 }

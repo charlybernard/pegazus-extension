@@ -1062,8 +1062,8 @@ def create_graph_from_event_description(event_description:dict):
     time_description = event_description.get("time")
     label = event_description.get("label")
     lang = event_description.get("lang")
-    landmark_descriptions = event_description.get("landmarks")
-    landmark_relation_descriptions = event_description.get("relations")
+    landmark_descriptions = event_description.get("landmarks") or []
+    landmark_relation_descriptions = event_description.get("relations") or []
     provenance_description = event_description.get("provenance")
 
     ev_label = gr.get_literal_with_lang(label, lang)
@@ -1151,20 +1151,18 @@ def create_event_change_on_landmark_attribute(g:Graph, event_uri:URIRef, landmar
     change_uri = gr.generate_uri(np.FACTOIDS, "CG")
 
     made_effective_versions = change_description.get("makes_effective") or []
-    outdates_versions = change_description.get("outdates") or []
+    outdated_versions = change_description.get("outdates") or []
 
     made_effective_versions_uris, outdated_versions_uris = [], []
-
     for vers in made_effective_versions:
         vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
         create_event_attribute_version(g, attribute_uri, vers_uri, vers)
         made_effective_versions_uris.append(vers_uri)
 
-    for vers in outdates_versions:
+    for vers in outdated_versions:
         vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
         create_event_attribute_version(g, attribute_uri, vers_uri, vers)
-        
-        outdates_versions.append(vers_uri)
+        outdated_versions_uris.append(vers_uri)
 
     created_entities = made_effective_versions_uris + outdated_versions_uris
 

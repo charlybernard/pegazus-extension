@@ -90,16 +90,14 @@ function setActionsForEvolution(
     landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId,
     resizerClassName, tileLayerSettings){
     
-    var layersToRemove = [];
-
     // Appel aux fonctions d'initialisation
-    var [map, layerControl, tileLayers, overlayLayers] = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings);
-    allowMapTimelineResize(resizerClassName, map) ;
+    var mapSettings = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings);
+    allowMapTimelineResize(resizerClassName, mapSettings.map) ;
 
     // Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
     var dropDownMenu = document.getElementById(landmarkNamesDivId);
     dropDownMenu.addEventListener("change", function() {
-        changeSelectedLandmark(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu, map, layersToRemove, timelineDivId, landmarkValidTimeDivId) ;
+        changeSelectedLandmark(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu, mapSettings, timelineDivId, landmarkValidTimeDivId) ;
     });
 
     // Afficher les landmarks dans un menu déroulant
@@ -108,7 +106,7 @@ function setActionsForEvolution(
 
 function setActionsForSnapshot(
     graphDBRepositoryURI, namedGraphURI,
-    mapDivId, mapLat, mapLon, mapZoom,
+    mapDivId, mapLat, mapLon, mapZoom, mapMessages,
     certainLayerGroupName, uncertainLayerGroupName,
     dateSliderDivId, dateInputDivId, dateValidatonButtonId,
     startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings){
@@ -122,16 +120,21 @@ function setActionsForSnapshot(
     mapDiv.style.width = "100%";
 
     // Appel aux fonctions d'initialisation
-    var [map, layerControl, tileLayers, overlayLayers] = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings);
-    // var overlayLayerGroups = initOverlayLayerGroups(map, layerControl, layerGroupNames);
+    var mapSettings = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings, mapMessages);
+    initInfoControl(mapSettings);
 
     // Initialiser la gestion du slider avec les IDs des éléments HTML
     manageTimeSlider(dateSliderDivId, dateInputDivId, startTimeStampSlider, endTimeStampSlider);
 
     // Après avoir sélectionné une date, afficher le snapshot correspondant
     document.getElementById(dateValidatonButtonId).addEventListener("click", function() {
-        displaySnapshotFromSelectedTime(graphDBRepositoryURI, dateInputDivId, calendarURI, timeDelay, namedGraphURI,
-            map, layerControl, overlayLayers);
+        displaySnapshotFromSelectedTime(graphDBRepositoryURI, dateInputDivId, calendarURI, timeDelay, namedGraphURI, mapSettings);
     });
 
 }
+
+function setDivStyle(div, style){
+    Object.entries(style).forEach(([key, value]) => {
+      div.style[key] = value;
+    });
+  }  
