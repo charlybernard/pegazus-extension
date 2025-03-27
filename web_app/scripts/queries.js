@@ -93,7 +93,6 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
     return query ;
 }
 
-
 function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp=null, highTimeStamp=null){
     
     var lowTimeStampFilter = ``;

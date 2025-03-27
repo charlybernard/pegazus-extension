@@ -170,6 +170,120 @@
          "provenance":{
             "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
          }
+      },
+      {
+         "time":{
+            "stamp":"1978",
+            "calendar":"gregorian",
+            "precision":"year"
+         },
+         "label":"Sa prolongation avant les escaliers menant au boulevard Auguste-Blanqui est devenue la rue Eugène-Atget en 1978.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"rue Eugène-Atget",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "makes_effective":[
+                        {
+                           "value":"rue Eugène-Atget",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "name":"rue Jonas",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Jonas"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1905-05-15",
+            "calendar":"gregorian",
+            "precision":"day"
+         },
+         "label":"Cette place est anciennement nommée « place du Puits-Artésien » en raison de la présence du puits artésien de la Butte-aux-Cailles foré à cet endroit, de 1863 à 1872. Elle prend son nom actuel le 15 mai 1905.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "name":"place du Puits-Artésien",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"disappearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "outdates":[
+                        {
+                           "value":"place du Puits-Artésien",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "name":"place Paul Verlaine",
+               "type":"Thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"Name",
+                     "outdates":[
+                        {
+                           "value":"place Paul Verlaine",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Place_Paul-Verlaine"
+         }
       }
    ]
 }

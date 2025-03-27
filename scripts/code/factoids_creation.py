@@ -1059,12 +1059,7 @@ def create_graph_from_event_description(event_description:dict):
     landmark_uris = {}
     created_entities = [event_uri]
 
-    time_description = event_description.get("time")
-    label = event_description.get("label")
-    lang = event_description.get("lang")
-    landmark_descriptions = event_description.get("landmarks") or []
-    landmark_relation_descriptions = event_description.get("relations") or []
-    provenance_description = event_description.get("provenance")
+    time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description = get_event_description_elements(event_description)
 
     ev_label = gr.get_literal_with_lang(label, lang)
     create_event_with_time(g, event_uri, time_description)
@@ -1088,6 +1083,47 @@ def create_graph_from_event_description(event_description:dict):
         ri.add_provenance_to_resource(g, entity, prov_uri)
 
     return g
+
+def get_event_description_elements(event_description:dict):
+    """
+    Extract the elements of an event description
+    """
+
+    time_description = event_description.get("time")
+    # Check if the time description is a dictionary and contains the keys 'stamp', 'calendar' and 'precision'
+    if not isinstance(time_description, dict) or not all(key in time_description for key in ["stamp", "calendar", "precision"]):
+        raise ValueError("The time description must contain the keys 'stamp', 'calendar' and 'precision'")
+
+    label = event_description.get("label")
+    # Check if the label is a string or not None
+    if not isinstance(label, str) and label is not None:
+        raise ValueError("The label must be a string")
+    
+    lang = event_description.get("lang")
+    # Check if the label is a string or not None
+    if not isinstance(lang, str) and lang is not None:
+        raise ValueError("The lang must be a string")
+    
+    landmark_descriptions = event_description.get("landmarks")
+    # Check if the landmarks are a list of dictionaries
+    if landmark_descriptions is None:
+        raise ValueError("`landmarks` value is not defined, it must be a list of dictionaries")
+    elif not isinstance(landmark_descriptions, list) or not all(isinstance(desc, dict) for desc in landmark_descriptions):
+        raise ValueError("The landmarks must be a list of dictionaries")
+    
+    landmark_relation_descriptions = event_description.get("relations") or []
+    # Check if the landmark relations are a list of dictionaries
+    if not isinstance(landmark_relation_descriptions, list) or not all(isinstance(desc, dict) for desc in landmark_relation_descriptions):
+        raise ValueError("The landmark relations must be a list of dictionaries")
+    
+    provenance_description = event_description.get("provenance")
+    # Check if the provenance description is a dictionary
+    if provenance_description is None:
+        raise ValueError("`provenance` value is not defined, it must be a dictionary")
+    elif not isinstance(provenance_description, dict):
+        raise ValueError("The provenance description must be a dictionary")
+
+    return time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description
 
 def get_event_provenance_uri(provenance_description:dict):
     prov_uri_str = provenance_description.get("uri")
