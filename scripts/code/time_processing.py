@@ -2,10 +2,11 @@ import re
 import datetime
 from rdflib import Namespace, Literal, URIRef
 from rdflib.namespace import XSD
-from namespaces import NameSpaces
+from namespaces import NameSpaces, OntologyMapping
 import graphdb as gd
 
 np = NameSpaces()
+om = OntologyMapping()
 
 def get_query_to_compare_time_instants(time_named_graph_uri:URIRef, time_instant_select_conditions:str):
     """"
@@ -541,24 +542,6 @@ def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_
         gd.update_query(query, graphdb_url, repository_name)
 
 def get_time_instant_elements(time_dict:dict):
-    time_namespace = Namespace("http://www.w3.org/2006/time#")
-    wd_namespace = Namespace("http://www.wikidata.org/entity/")
-
-    time_units = {
-        "day": time_namespace["unitDay"],
-        "month": time_namespace["unitMonth"],
-        "year": time_namespace["unitYear"],
-        "decade": time_namespace["unitDecade"],
-        "century": time_namespace["unitCentury"],
-        "millenium": time_namespace["unitMillenium"]
-    }
-
-    time_calendars = {
-        "gregorian": wd_namespace["Q1985727"],
-        "republican": wd_namespace["Q181974"],
-        "julian": wd_namespace["Q1985786"],
-    }
-
     if not isinstance(time_dict, dict):
         return [None, None, None]
     
@@ -570,8 +553,8 @@ def get_time_instant_elements(time_dict:dict):
         return [None, None, None]
     
     stamp = get_literal_time_stamp(time_stamp)
-    precision = time_units.get(time_prec)
-    calendar = time_calendars.get(time_cal)
+    precision = om.get_time_unit(time_prec)
+    calendar = om.get_time_calendar(time_cal)
 
     return [stamp, calendar, precision]
 
@@ -583,7 +566,7 @@ def get_current_timestamp():
 
 def get_valid_time_description(time_description:dict):
     stamp_key, calendar_key, precision_key = "stamp", "calendar", "precision"
-    start_time_key, end_time_key = "start_time", "end_time"
+    start_time_key, end_time_key = "start", "end"
     start_time = get_time_instant_elements(time_description.get(start_time_key))
     end_time = get_time_instant_elements(time_description.get(end_time_key))
 

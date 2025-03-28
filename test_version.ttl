@@ -1,0 +1,50 @@
+@prefix geo: <http://www.opengis.net/ont/geosparql#> .
+@prefix ns1: <http://rdf.geohistoricaldata.org/def/address#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/LM_8143042ccfc14cf7bba7cf5ac5336edc> a ns1:Landmark ;
+    rdfs:label "rue du Père Guérin"@fr ;
+    ns1:hasAttribute <http://rdf.geohistoricaldata.org/id/address/factoids/ATTR_d31924f7f5f4414e9219e02080f0a1fc>,
+        <http://rdf.geohistoricaldata.org/id/address/factoids/ATTR_e0284340050b4fbea1a60550715c0af3> ;
+    ns1:hasTime <http://rdf.geohistoricaldata.org/id/address/factoids/TI_4372754b8fcf4ee288d48b668b40f5e3> ;
+    ns1:isLandmarkType <http://rdf.geohistoricaldata.org/id/codes/address/landmarkType/Thoroughfare> ;
+    skos:hiddenLabel "eeeeginprrruu"@fr ;
+    skos:prefLabel "Rue du Père Guérin"@fr ;
+    prov:wasDerivedFrom <https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/ATTR_d31924f7f5f4414e9219e02080f0a1fc> a ns1:Attribute ;
+    ns1:hasAttributeVersion <http://rdf.geohistoricaldata.org/id/address/factoids/AV_13ea9044483348bf820150772ef93b9a> ;
+    ns1:isAttributeType <http://rdf.geohistoricaldata.org/id/codes/address/attributeType/Name> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/ATTR_e0284340050b4fbea1a60550715c0af3> a ns1:Attribute ;
+    ns1:hasAttributeVersion <http://rdf.geohistoricaldata.org/id/address/factoids/AV_79a1a914886b4858885eb24e5be77977> ;
+    ns1:isAttributeType <http://rdf.geohistoricaldata.org/id/codes/address/attributeType/Geometry> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/AV_13ea9044483348bf820150772ef93b9a> a ns1:AttributeVersion ;
+    ns1:versionValue "rue du Père Guérin"@fr ;
+    skos:hiddenLabel "eeeeginprrruu"@fr ;
+    skos:prefLabel "Rue du Père Guérin"@fr ;
+    prov:wasDerivedFrom <https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/AV_79a1a914886b4858885eb24e5be77977> a ns1:AttributeVersion ;
+    ns1:versionValue "POINT(2.3589 48.8394)"^^geo:wktLiteral ;
+    prov:wasDerivedFrom <https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin> .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/TI_00d81ed1c9714bfe8b55114957b9b876> a ns1:CrispTimeInstant ;
+    ns1:timeCalendar <http://www.wikidata.org/entity/Q1985727> ;
+    ns1:timePrecision time:unitDay ;
+    ns1:timeStamp "2023-10-03"^^xsd:dateTimeStamp .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/TI_1befa9ff9ead48e6bc24390da8d315de> a ns1:CrispTimeInstant ;
+    ns1:timeCalendar <http://www.wikidata.org/entity/Q1985727> ;
+    ns1:timePrecision time:unitDay ;
+    ns1:timeStamp "1851-02-18"^^xsd:dateTimeStamp .
+
+<http://rdf.geohistoricaldata.org/id/address/factoids/TI_4372754b8fcf4ee288d48b668b40f5e3> a ns1:CrispTimeInterval ;
+    ns1:hasBeginning <http://rdf.geohistoricaldata.org/id/address/factoids/TI_1befa9ff9ead48e6bc24390da8d315de> ;
+    ns1:hasEnd <http://rdf.geohistoricaldata.org/id/address/factoids/TI_00d81ed1c9714bfe8b55114957b9b876> .
+

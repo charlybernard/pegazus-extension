@@ -14,6 +14,7 @@ import graphrdf as gr
 import resource_transfert as rt
 import resource_initialisation as ri
 import factoids_cleaning as fc
+import states_events_json as sej
 
 
 np = NameSpaces()
@@ -359,7 +360,7 @@ def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str
                                                 arrdt_labels:list[str], district_labels:list[str], source_valid_time, vpa_ns:Namespace, lang:str):
     """
     `source_valid_time` : dictionary describing the source's validity start and end dates
-    `source_valid_time = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
+    `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
     """
 
     # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
@@ -438,7 +439,7 @@ def create_data_value_from_ville_paris_actuelles(g:Graph, th_id:str, th_label:st
                                                  arrdt_labels:list[str], district_labels:list[str], source_valid_time:dict, vpa_ns:Namespace, lang:str):
     """
     `source_valid_time` : dictionary describing the source's validity start and end dates
-    `source_valid_time = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
+    `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
     """
 
     # Converting geometry (which is a string geojson) to a WKT
@@ -730,7 +731,7 @@ def create_graph_from_wikidata_paris(wdp_land_file, wdp_loc_file, source_valid_t
 def create_data_value_from_wikidata_landmark(g, lm_id, lm_label, lm_type, lm_prov_id, lm_prov_id_type, start_time:list, end_time:list, source_valid_time:dict, lang):
     """
     `source_valid_time` : dictionary describing the source's validity start and end dates
-    `source_valid_time = {"start_time":{"stamp":..., "precision":..., "calendar":...}, "end_time":{} }`
+    `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
     """
 
     name_attr_version_value = gr.get_name_literal(lm_label, lang)
@@ -997,8 +998,7 @@ def clean_repository_geojson_states(graphdb_url:URIRef, repository_name:str, geo
     geojson_source_prov_uri = URIRef(gr.generate_uri(np.FACTS, "PROV"))
     create_source_provenances_geojson(graphdb_url, repository_name, geojson_source_uri, geojson_source_prov_uri, factoids_named_graph_uri, permanent_named_graph_uri)
 
-
-########################################### Events ##########################################""
+################################################################ Events ###########################################################
 
 def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
                                       events_json_file, events_kg_file,
@@ -1011,7 +1011,7 @@ def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
     event_descriptions = json_data.get("events")
 
     # Creation of a basic graph with rdflib
-    g = create_graph_from_event_descriptions(event_descriptions)
+    g = sej.create_graph_from_event_descriptions(event_descriptions)
 
     # Export the graph and import it into the repository
     msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, events_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
@@ -1019,234 +1019,125 @@ def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
     # Transfer all provenance descriptions to the permanent named graph
     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
 
-def create_graph_from_event_descriptions(event_descriptions:list[dict]):
-    g = Graph()
-    for desc in event_descriptions:
-        g += create_graph_from_event_description(desc)
+
+##################################################### BAN ##########################################################
+
+def create_graph_from_paris_ban(ban_file:str, source_valid_time:dict, lang:str):
+    """
+    Creation of a graph from the BAN file
+    """
+
+    ban_pref, ban_ns = "ban", Namespace("https://adresse.data.gouv.fr/base-adresse-nationale/")
+    
+    ban_description = create_state_description_for_ban(ban_file, source_valid_time, lang, ban_ns)    
+    g = sej.create_graph_from_states_descriptions(ban_description)
+    g.bind(ban_pref, ban_ns)
 
     return g
+    
 
-def create_graph_from_event_description(event_description:dict):
+def create_state_description_for_ban(ban_file:str, source_valid_time:dict, lang:str, ban_ns:Namespace):
+    landmarks_desc = []
+    relations_desc = []
+    thoroughfares = {} # {"Rue Gérard":"12345678-1234-5678-1234-567812345678"}
+    arrdts = {} # {"Paris 1er Arrondissement":"12345678-1234-5678-1234-567812345678"}
+    cp = {} # {"75001":"12345678-1234-5678-1234-567812345678"}
+    
+    ## BAN file columns
+    hn_id_col, hn_number_col, hn_rep_col, hn_lon_col, hn_lat_col = "id", "numero", "rep", "lon", "lat"
+    th_name_col, th_fantoir_col = "nom_voie",  "id_fantoir"
+    cp_number_col = "code_postal"
+    arrdt_name_col, arrdt_insee_col = "nom_commune", "code_insee"
+
+    content = fm.read_csv_file_as_dict(ban_file, id_col=hn_id_col, delimiter=";", encoding='utf-8-sig')
+    for value in content.values():
+        hn_id = value.get(hn_id_col)
+        hn_label = value.get(hn_number_col) + value.get(hn_rep_col)
+        hn_geom = "POINT (" + value.get(hn_lon_col) + " " + value.get(hn_lat_col) + ")"        
+            
+        th_label = value.get(th_name_col)
+        th_id = value.get(th_fantoir_col)
+        th_uuid = thoroughfares.get(th_label)
+        if th_uuid is None:
+            th_uuid = gr.generate_uuid()
+            th_type = "thoroughfare"
+            thoroughfares[th_label] = th_uuid
+            th_attrs = {"name":{"value":th_label, "lang":lang}}
+            th_provenance = {"uri":ban_ns[th_id]}
+            th_desc = create_landmark_version_description(th_uuid, th_label, th_type, lang, th_attrs, th_provenance, source_valid_time)
+            landmarks_desc.append(th_desc)
+            thoroughfares[th_label] = th_uuid
+
+        arrdt_label = value.get(arrdt_name_col)
+        arrdt_id = value.get(arrdt_insee_col)
+        arrdt_uuid = arrdts.get(arrdt_label)
+        if arrdt_uuid is None:
+            arrdt_uuid = gr.generate_uuid()
+            arrdt_type = "district"
+            arrdts[arrdt_label] = arrdt_uuid
+            arrdt_attrs = {"name":{"value":arrdt_label, "lang":lang}, "insee_code":{"value":arrdt_id}}
+            arrdt_provenance = {"uri":ban_ns[arrdt_id]}
+            arrdt_desc = create_landmark_version_description(arrdt_uuid, arrdt_label, arrdt_type, lang, arrdt_attrs, arrdt_provenance, source_valid_time)
+            landmarks_desc.append(arrdt_desc)
+            arrdts[arrdt_label] = arrdt_uuid
+
+        cp_label = value.get(cp_number_col)
+        cp_uuid = cp.get(cp_label)
+        if cp_uuid is None:
+            cp_uuid = gr.generate_uuid()
+            cp_type = "postal_code_area"
+            cp[cp_label] = cp_uuid
+            cp_attrs = {"name":{"value":cp_label}}
+            cp_provenance = {"uri":ban_ns[cp_label]}
+            cp_desc = create_landmark_version_description(cp_uuid, cp_label, cp_type, lang, cp_attrs, cp_provenance, source_valid_time)
+            landmarks_desc.append(cp_desc)
+            cp[cp_label] = cp_uuid
+
+        hn_uuid = gr.generate_uuid()
+        hn_type = "street_number"
+        hn_attrs = {"name":{"value":hn_label}, "geometry": {"value":hn_geom, "datatype":"wkt_literal"}}
+        hn_provenance = {"uri":ban_ns[hn_id]}
+        hn_desc = create_landmark_version_description(hn_uuid, hn_label, hn_type, lang, hn_attrs, hn_provenance, source_valid_time)
+        landmarks_desc.append(hn_desc)
+
+        lr_uuid_1, lr_uuid_2, lr_uuid_3 = gr.generate_uuid(), gr.generate_uuid(), gr.generate_uuid()
+        lr_desc_1 = create_landmark_relation_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
+        lr_desc_2 = create_landmark_relation_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
+        lr_desc_3 = create_landmark_relation_description(lr_uuid_3, "within", hn_uuid, [cp_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
+        relations_desc.append(lr_desc_1)
+        relations_desc.append(lr_desc_2)
+        relations_desc.append(lr_desc_3)
+
+    return {"landmarks":landmarks_desc, "relations":relations_desc}
+
+def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, lm_attributes:dict, lm_provenance:dict, time_description:dict):
     """
-    Generate a graph describing an event from a description which is a dictionary
-    Example of event_description
+    Create a landmark version description
+    """
 
-    ```
-    event_description = {
-        "time": {"stamp":"1851-02-18", "calendar":"gregorian", "precision":"day"},
-        "label":"Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
-        "lang":"fr",
-        "landmarks":[
-            {"id":1, "name":"rue du Père Guérin", "type":"Thoroughfare", "changes":[
-                {"on":"landmark", "type":"appearance"},
-                {"on":"attribute", "attribute":"Geometry"},
-                {"on":"attribute", "attribute":"Name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
-            ]},
-            {"id":2, "name":"rue Gérard", "type":"Thoroughfare", "changes":[
-                {"on":"attribute", "attribute":"Geometry"},
-            ]}
-        ],
-        "relations":[
-            {"type":"Touches", "locatum":1, "relatum":2}
-        ], 
-        "provenance": {"uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"}
+    description = {
+        "id": lm_id,
+        "label": lm_label,
+        "type": lm_type,
+        "lang": lang,
+        "attributes": lm_attributes,
+        "provenance": lm_provenance,
+        "time": time_description
     }
-    ```
+
+    return description
+
+def create_landmark_relation_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict, time_description:dict):
     """
-
-    g = Graph()
-    event_uri = gr.generate_uri(np.FACTOIDS, "EV")
-    landmark_uris = {}
-    created_entities = [event_uri]
-
-    time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description = get_event_description_elements(event_description)
-
-    ev_label = gr.get_literal_with_lang(label, lang)
-    create_event_with_time(g, event_uri, time_description)
-    g.add((event_uri, RDFS.comment, ev_label))
-
-    prov_uri = get_event_provenance_uri(provenance_description)
-    create_event_provenance(g, prov_uri, provenance_description)
-
-    for desc in landmark_descriptions:
-        lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")
-        landmark_uris[lm_id] = lm_uri
-        new_entities = create_event_landmark(g, event_uri, lm_uri, desc, lang)
-        created_entities += new_entities
-
-    for desc in landmark_relation_descriptions:
-        lr_uri = gr.generate_uri(np.FACTOIDS, "LR")
-        create_event_landmark_relation(g, event_uri, lr_uri, desc, landmark_uris)
-        created_entities.append(lr_uri)
-
-    for entity in created_entities:
-        ri.add_provenance_to_resource(g, entity, prov_uri)
-
-    return g
-
-def get_event_description_elements(event_description:dict):
+    Create a landmark relation description
     """
-    Extract the elements of an event description
-    """
+    description = {
+        "id": lr_id,
+        "type": lr_type,
+        "locatum": locatum_id,
+        "relatum": relatum_ids,
+        "provenance": lm_provenance,
+        "time": time_description
+    }
 
-    time_description = event_description.get("time")
-    # Check if the time description is a dictionary and contains the keys 'stamp', 'calendar' and 'precision'
-    if not isinstance(time_description, dict) or not all(key in time_description for key in ["stamp", "calendar", "precision"]):
-        raise ValueError("The time description must contain the keys 'stamp', 'calendar' and 'precision'")
-
-    label = event_description.get("label")
-    # Check if the label is a string or not None
-    if not isinstance(label, str) and label is not None:
-        raise ValueError("The label must be a string")
-    
-    lang = event_description.get("lang")
-    # Check if the label is a string or not None
-    if not isinstance(lang, str) and lang is not None:
-        raise ValueError("The lang must be a string")
-    
-    landmark_descriptions = event_description.get("landmarks")
-    # Check if the landmarks are a list of dictionaries
-    if landmark_descriptions is None:
-        raise ValueError("`landmarks` value is not defined, it must be a list of dictionaries")
-    elif not isinstance(landmark_descriptions, list) or not all(isinstance(desc, dict) for desc in landmark_descriptions):
-        raise ValueError("The landmarks must be a list of dictionaries")
-    
-    landmark_relation_descriptions = event_description.get("relations") or []
-    # Check if the landmark relations are a list of dictionaries
-    if not isinstance(landmark_relation_descriptions, list) or not all(isinstance(desc, dict) for desc in landmark_relation_descriptions):
-        raise ValueError("The landmark relations must be a list of dictionaries")
-    
-    provenance_description = event_description.get("provenance")
-    # Check if the provenance description is a dictionary
-    if provenance_description is None:
-        raise ValueError("`provenance` value is not defined, it must be a dictionary")
-    elif not isinstance(provenance_description, dict):
-        raise ValueError("The provenance description must be a dictionary")
-
-    return time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description
-
-def get_event_provenance_uri(provenance_description:dict):
-    prov_uri_str = provenance_description.get("uri")
-    prov_uri = URIRef(prov_uri_str)
-    return prov_uri
-
-def create_event_provenance(g, prov_uri:URIRef, provenance_description:dict):
-    ri.create_prov_entity(g, prov_uri)
-
-def create_event_with_time(g:Graph, event_uri:URIRef, time_description:dict):
-    time_uri = gr.generate_uri(np.FACTOIDS, "TI")
-    ri.create_event_with_time(g, event_uri, time_uri)
-    create_event_time_instant(g, time_uri, time_description)
-
-def create_event_time_instant(g:Graph, time_uri:URIRef, time_description:dict):
-    stamp, calendar, precision = tp.get_time_instant_elements(time_description)
-    ri.create_crisp_time_instant(g, time_uri, stamp, calendar, precision)
-
-def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict, lang:str=None):
-    created_entities = [landmark_uri]
-    label = landmark_description.get("name")
-    label_lit = gr.get_name_literal(label, lang)
-    type = landmark_description.get("type")
-    type_uri = np.LTYPE[type]
-    ri.create_landmark(g, landmark_uri, label_lit, type_uri)
-    
-    changes = landmark_description.get("changes")
-    for change in changes:
-        created_entities_from_change = create_event_change(g, event_uri, landmark_uri, change)
-        created_entities += created_entities_from_change
-        
-    return created_entities
-
-def create_event_change(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
-    created_entities = []
-    on = change_description.get("on")
-    if on == "landmark":
-        create_event_change_on_landmark(g, event_uri, landmark_uri, change_description)
-    elif on == "attribute":
-        created_versions = create_event_change_on_landmark_attribute(g, event_uri, landmark_uri, change_description)
-        created_entities += created_versions
-
-    return created_entities
-
-def create_event_change_on_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
-    change_types = {"appearance":np.CTYPE["LandmarkAppearance"], "disappearance":np.CTYPE["LandmarkDisappearance"]}
-    
-    change_uri = gr.generate_uri(np.FACTOIDS, "CG")
-    change_type = change_description.get("type")
-    change_type_uri = change_types.get(change_type)
-
-    ri.create_landmark_change(g, change_uri, change_type_uri, landmark_uri)
-    ri.create_change_event_relation(g, change_uri, event_uri)
-    
-def create_event_change_on_landmark_attribute(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
-    change_type_uri = np.CTYPE["AttributeVersionTransition"]
-    attribute_type = change_description.get("attribute")
-    attribute_type_uri = np.ATYPE[attribute_type]
-
-    attribute_uri = gr.generate_uri(np.FACTOIDS, "ATTR")
-    change_uri = gr.generate_uri(np.FACTOIDS, "CG")
-
-    made_effective_versions = change_description.get("makes_effective") or []
-    outdated_versions = change_description.get("outdates") or []
-
-    made_effective_versions_uris, outdated_versions_uris = [], []
-    for vers in made_effective_versions:
-        vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
-        create_event_attribute_version(g, attribute_uri, vers_uri, vers)
-        made_effective_versions_uris.append(vers_uri)
-
-    for vers in outdated_versions:
-        vers_uri = gr.generate_uri(np.FACTOIDS, "AV")
-        create_event_attribute_version(g, attribute_uri, vers_uri, vers)
-        outdated_versions_uris.append(vers_uri)
-
-    created_entities = made_effective_versions_uris + outdated_versions_uris
-
-    ri.create_landmark_attribute(g, attribute_uri, attribute_type_uri, landmark_uri)
-    ri.create_attribute_change(g, change_uri, change_type_uri, attribute_uri, made_effective_versions_uris, outdated_versions_uris)
-    ri.create_change_event_relation(g, change_uri, event_uri)
-
-    return created_entities
-
-def create_event_attribute_version(g:Graph, attribute_uri:URIRef, attribute_version_uri:URIRef, attribute_version_description:dict):
-    data_types = {"wkt_literal":np.GEO.wktLiteral, "geojson_literal":np.GEO.geoJSONLiteral, "gml_literal":np.GEO.gmlLiteral,
-                  "data_time_stamp":XSD.dateTimeStamp, "data_time":XSD.dateTime,
-                  "string":XSD.string, "integer":XSD.integer, "double":XSD.double, "bool":XSD.boolean}
-    
-    value = attribute_version_description.get("value")
-    lang = attribute_version_description.get("lang")
-    data_type = attribute_version_description.get("data_type")
-    data_type_url = data_types.get(data_type)
-
-    if lang is not None:
-        version_val = gr.get_literal_with_lang(value, lang)
-    elif data_type_url is not None:
-        version_val = gr.get_literal_with_datatype(value, data_type_url)
-    else:
-        version_val = gr.get_literal_without_option(value)
-
-    ri.create_attribute_version(g, attribute_version_uri, version_val)
-    ri.add_version_to_attribute(g, attribute_uri, attribute_version_uri)
-    
-def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_uri:URIRef, landmark_relation_description:dict, landmark_uris:dict):
-    change_types = {"appearance":np.CTYPE["LandmarkRelationAppearance"], "disappreance":np.CTYPE["LandmarkRelationDisappearance"]}
-
-    type = landmark_relation_description.get("type")
-    type_uri = np.LRTYPE[type]
-
-    locatum = landmark_relation_description.get("locatum")
-    locatum_uri = landmark_uris.get(locatum)
-    
-    relatums = landmark_relation_description.get("relatum")
-    if not isinstance(relatums, list):
-        relatums = [relatums]
-    relatum_uris = [landmark_uris.get(x) for x in relatums]
-    
-    ri.create_landmark_relation(g, landmark_relation_uri, type_uri, locatum_uri, relatum_uris)
-
-    change_type = landmark_relation_description.get("change")
-    change_type_uri = change_types.get(change_type)
-    if change_type_uri is not None:
-        change_uri = gr.generate_uri(np.FACTOIDS, "CG")
-        ri.create_landmark_relation_change(g, change_uri, change_type_uri, landmark_relation_uri)
-        ri.create_change_event_relation(g, change_uri, event_uri)
+    return description
