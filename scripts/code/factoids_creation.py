@@ -15,7 +15,7 @@ import resource_transfert as rt
 import resource_initialisation as ri
 import factoids_cleaning as fc
 import states_events_json as sej
-
+import create_factoids_descriptions as cfd
 
 np = NameSpaces()
 
@@ -163,47 +163,47 @@ def create_factoids_repository_osm(graphdb_url:URIRef, osm_repository_name:str, 
     # Adapting data with the ontology, merging duplicates, etc.
     clean_repository_osm(graphdb_url, osm_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
 
-def create_graph_from_osm(osm_file:str, osm_hn_file:str, osm_valid_time:dict, lang:str):
-    osm_pref, osm_ns = "osm", Namespace("http://www.openstreetmap.org/")
-    osm_rel_pref, osm_rel_ns = "osmRel", Namespace("http://www.openstreetmap.org/relation/")
+# def create_graph_from_osm(osm_file:str, osm_hn_file:str, osm_valid_time:dict, lang:str):
+#     osm_pref, osm_ns = "osm", Namespace("http://www.openstreetmap.org/")
+#     osm_rel_pref, osm_rel_ns = "osmRel", Namespace("http://www.openstreetmap.org/relation/")
 
-    ## OSM file columns
-    hn_id_col, hn_number_col, hn_geom_col = "houseNumberId", "houseNumberLabel", "houseNumberGeomWKT"
-    th_id_col, th_name_col = "streetId",  "streetName"
-    arrdt_id_col, arrdt_name_col, arrdt_insee_col = "arrdtId", "arrdtName", "arrdtInsee"
+#     ## OSM file columns
+#     hn_id_col, hn_number_col, hn_geom_col = "houseNumberId", "houseNumberLabel", "houseNumberGeomWKT"
+#     th_id_col, th_name_col = "streetId",  "streetName"
+#     arrdt_id_col, arrdt_name_col, arrdt_insee_col = "arrdtId", "arrdtName", "arrdtInsee"
 
-    # Read the two files
-    content = fm.read_csv_file_as_dict(osm_file, id_col=hn_id_col, delimiter=",", encoding='utf-8-sig')
-    content_hn = fm.read_csv_file_as_dict(osm_hn_file, id_col=hn_id_col, delimiter=",", encoding='utf-8-sig')
+#     # Read the two files
+#     content = fm.read_csv_file_as_dict(osm_file, id_col=hn_id_col, delimiter=",", encoding='utf-8-sig')
+#     content_hn = fm.read_csv_file_as_dict(osm_hn_file, id_col=hn_id_col, delimiter=",", encoding='utf-8-sig')
 
-    g = Graph()
-    gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
-    g.bind(osm_pref, osm_ns)
-    g.bind(osm_rel_pref, osm_rel_ns)
+#     g = Graph()
+#     gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
+#     g.bind(osm_pref, osm_ns)
+#     g.bind(osm_rel_pref, osm_rel_ns)
 
-    osm_valid_time = tp.get_valid_time_description(osm_valid_time)
+#     osm_valid_time = tp.get_valid_time_description(osm_valid_time)
 
-    for value in content.values():
+#     for value in content.values():
 
-        hn_id = value.get(hn_id_col)
-        try:
-            hn_label = content_hn.get(hn_id).get(hn_number_col)
-        except:
-            hn_label = None
+#         hn_id = value.get(hn_id_col)
+#         try:
+#             hn_label = content_hn.get(hn_id).get(hn_number_col)
+#         except:
+#             hn_label = None
 
-        try:
-            hn_geom = content_hn.get(hn_id).get(hn_geom_col)
-        except:
-            hn_geom = None
+#         try:
+#             hn_geom = content_hn.get(hn_id).get(hn_geom_col)
+#         except:
+#             hn_geom = None
 
-        th_label = value.get(th_name_col)
-        th_id = value.get(th_id_col)
-        arrdt_id = value.get(arrdt_id_col)
-        arrdt_label = value.get(arrdt_name_col)
-        arrdt_insee = value.get(arrdt_insee_col)
-        create_data_value_from_osm(g, hn_id, hn_label, hn_geom, th_id, th_label, arrdt_id, arrdt_label, arrdt_insee, osm_valid_time, lang)
+#         th_label = value.get(th_name_col)
+#         th_id = value.get(th_id_col)
+#         arrdt_id = value.get(arrdt_id_col)
+#         arrdt_label = value.get(arrdt_name_col)
+#         arrdt_insee = value.get(arrdt_insee_col)
+#         create_data_value_from_osm(g, hn_id, hn_label, hn_geom, th_id, th_label, arrdt_id, arrdt_label, arrdt_insee, osm_valid_time, lang)
 
-    return g
+#     return g
 
 def create_data_value_from_osm(g:Graph, hn_id:str, hn_label:str, hn_geom:str, th_id:str, th_label:str,
                                arrdt_id:str, arrdt_label:str, arrdt_insee:str, source_valid_time:dict, lang:str):
@@ -1022,122 +1022,48 @@ def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
 
 ##################################################### BAN ##########################################################
 
-def create_graph_from_paris_ban(ban_file:str, source_valid_time:dict, lang:str):
+def create_graph_from_paris_ban(ban_file:str, valid_time:dict, lang:str):
     """
     Creation of a graph from the BAN file
     """
 
     ban_pref, ban_ns = "ban", Namespace("https://adresse.data.gouv.fr/base-adresse-nationale/")
     
-    ban_description = create_state_description_for_ban(ban_file, source_valid_time, lang, ban_ns)    
+    ban_description = cfd.create_state_description_for_ban(ban_file, valid_time, lang, ban_ns)    
     g = sej.create_graph_from_states_descriptions(ban_description)
     g.bind(ban_pref, ban_ns)
+    np.bind_namespaces(g)
 
     return g
-    
 
-def create_state_description_for_ban(ban_file:str, source_valid_time:dict, lang:str, ban_ns:Namespace):
-    landmarks_desc = []
-    relations_desc = []
-    thoroughfares = {} # {"Rue Gérard":"12345678-1234-5678-1234-567812345678"}
-    arrdts = {} # {"Paris 1er Arrondissement":"12345678-1234-5678-1234-567812345678"}
-    cp = {} # {"75001":"12345678-1234-5678-1234-567812345678"}
-    
-    ## BAN file columns
-    hn_id_col, hn_number_col, hn_rep_col, hn_lon_col, hn_lat_col = "id", "numero", "rep", "lon", "lat"
-    th_name_col, th_fantoir_col = "nom_voie",  "id_fantoir"
-    cp_number_col = "code_postal"
-    arrdt_name_col, arrdt_insee_col = "nom_commune", "code_insee"
+##################################################### OSM ##########################################################
 
-    content = fm.read_csv_file_as_dict(ban_file, id_col=hn_id_col, delimiter=";", encoding='utf-8-sig')
-    for value in content.values():
-        hn_id = value.get(hn_id_col)
-        hn_label = value.get(hn_number_col) + value.get(hn_rep_col)
-        hn_geom = "POINT (" + value.get(hn_lon_col) + " " + value.get(hn_lat_col) + ")"        
-            
-        th_label = value.get(th_name_col)
-        th_id = value.get(th_fantoir_col)
-        th_uuid = thoroughfares.get(th_label)
-        if th_uuid is None:
-            th_uuid = gr.generate_uuid()
-            th_type = "thoroughfare"
-            thoroughfares[th_label] = th_uuid
-            th_attrs = {"name":{"value":th_label, "lang":lang}}
-            th_provenance = {"uri":ban_ns[th_id]}
-            th_desc = create_landmark_version_description(th_uuid, th_label, th_type, lang, th_attrs, th_provenance, source_valid_time)
-            landmarks_desc.append(th_desc)
-            thoroughfares[th_label] = th_uuid
+def create_graph_from_osm(osm_file:str, osm_hn_file:str, valid_time:dict, lang:str):
+    osm_pref, osm_ns = "osm", Namespace("https://www.openstreetmap.org/")
+    osm_rel_pref, osm_rel_ns = "osmRel", Namespace("https://www.openstreetmap.org/relation/")
 
-        arrdt_label = value.get(arrdt_name_col)
-        arrdt_id = value.get(arrdt_insee_col)
-        arrdt_uuid = arrdts.get(arrdt_label)
-        if arrdt_uuid is None:
-            arrdt_uuid = gr.generate_uuid()
-            arrdt_type = "district"
-            arrdts[arrdt_label] = arrdt_uuid
-            arrdt_attrs = {"name":{"value":arrdt_label, "lang":lang}, "insee_code":{"value":arrdt_id}}
-            arrdt_provenance = {"uri":ban_ns[arrdt_id]}
-            arrdt_desc = create_landmark_version_description(arrdt_uuid, arrdt_label, arrdt_type, lang, arrdt_attrs, arrdt_provenance, source_valid_time)
-            landmarks_desc.append(arrdt_desc)
-            arrdts[arrdt_label] = arrdt_uuid
+    osm_description = cfd.create_state_description_for_osm(osm_file, osm_hn_file, valid_time, lang, osm_ns)
+    g = sej.create_graph_from_states_descriptions(osm_description)
+    g.bind(osm_pref, osm_ns)
+    g.bind(osm_rel_pref, osm_rel_ns)
+    np.bind_namespaces(g)
 
-        cp_label = value.get(cp_number_col)
-        cp_uuid = cp.get(cp_label)
-        if cp_uuid is None:
-            cp_uuid = gr.generate_uuid()
-            cp_type = "postal_code_area"
-            cp[cp_label] = cp_uuid
-            cp_attrs = {"name":{"value":cp_label}}
-            cp_provenance = {"uri":ban_ns[cp_label]}
-            cp_desc = create_landmark_version_description(cp_uuid, cp_label, cp_type, lang, cp_attrs, cp_provenance, source_valid_time)
-            landmarks_desc.append(cp_desc)
-            cp[cp_label] = cp_uuid
+    return g
 
-        hn_uuid = gr.generate_uuid()
-        hn_type = "street_number"
-        hn_attrs = {"name":{"value":hn_label}, "geometry": {"value":hn_geom, "datatype":"wkt_literal"}}
-        hn_provenance = {"uri":ban_ns[hn_id]}
-        hn_desc = create_landmark_version_description(hn_uuid, hn_label, hn_type, lang, hn_attrs, hn_provenance, source_valid_time)
-        landmarks_desc.append(hn_desc)
+##################################################### Ville de Paris ##########################################################
 
-        lr_uuid_1, lr_uuid_2, lr_uuid_3 = gr.generate_uuid(), gr.generate_uuid(), gr.generate_uuid()
-        lr_desc_1 = create_landmark_relation_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
-        lr_desc_2 = create_landmark_relation_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
-        lr_desc_3 = create_landmark_relation_description(lr_uuid_3, "within", hn_uuid, [cp_uuid], {"uri":ban_ns[hn_id]}, source_valid_time)
-        relations_desc.append(lr_desc_1)
-        relations_desc.append(lr_desc_2)
-        relations_desc.append(lr_desc_3)
+def create_graph_from_ville_paris(vpa_file:str, vpc_file:str, valid_time:dict, lang:str):
+    vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
+    vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
-    return {"landmarks":landmarks_desc, "relations":relations_desc}
+    vpa_description = cfd.create_state_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns)
+    # vpc_description = cfd.create_state_description_for_ville_paris_caduques(vpc_file, valid_time, lang, vpc_ns)
 
-def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, lm_attributes:dict, lm_provenance:dict, time_description:dict):
-    """
-    Create a landmark version description
-    """
+    # Creation of a basic graph with rdflib
+    g = sej.create_graph_from_states_descriptions(vpa_description)
+    # g += sej.create_graph_from_states_descriptions(vpc_description)
+    g.bind(vpa_pref, vpa_ns)
+    g.bind(vpc_pref, vpc_ns)
+    np.bind_namespaces(g)
 
-    description = {
-        "id": lm_id,
-        "label": lm_label,
-        "type": lm_type,
-        "lang": lang,
-        "attributes": lm_attributes,
-        "provenance": lm_provenance,
-        "time": time_description
-    }
-
-    return description
-
-def create_landmark_relation_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict, time_description:dict):
-    """
-    Create a landmark relation description
-    """
-    description = {
-        "id": lr_id,
-        "type": lr_type,
-        "locatum": locatum_id,
-        "relatum": relatum_ids,
-        "provenance": lm_provenance,
-        "time": time_description
-    }
-
-    return description
+    return g

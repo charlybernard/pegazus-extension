@@ -1,4 +1,4 @@
-from rdflib import Namespace
+from rdflib import Graph, Namespace
 
 class NameSpaces():
     def __init__(self) -> None:
@@ -44,6 +44,11 @@ class NameSpaces():
         for prefix, uri in self.namespaces_with_prefixes.items():
             str_uri = uri[""].n3()
             self.query_prefixes += f"PREFIX {prefix}: {str_uri}\n"
+
+    def bind_namespaces(self, graph:Graph):
+        for key, value in self.__dict__.items():
+            if isinstance(value, Namespace):
+                graph.bind(key.lower(), value)
         
 
 class OntologyMapping():

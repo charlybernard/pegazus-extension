@@ -254,16 +254,22 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
 
 def create_graph_from_states_descriptions(states_descriptions:dict):
     g = Graph()
-    landmarks = {}
-    lm_states_descriptions = states_descriptions.get("landmarks")
-    lm_relations_states_descriptions = states_descriptions.get("relations")
+    landmarks, relations = {}, {}
+
+    lm_states_descriptions = states_descriptions.get("landmarks") or []
+    lm_relations_states_descriptions = states_descriptions.get("relations") or []
+    addr_states_descriptions = states_descriptions.get("addresses") or []
 
     for desc in lm_states_descriptions:
         lm_id, lm_uri = create_landmark_version_from_description(g, desc)
         landmarks[lm_id] = lm_uri
 
     for desc in lm_relations_states_descriptions:
-        create_landmark_relation_version_from_description(g, desc, landmarks)
+        lr_id, lr_uri = create_landmark_relation_version_from_description(g, desc, landmarks)
+        relations[lr_id] = lr_uri
+
+    for desc in addr_states_descriptions:
+        create_address_version_from_description(g, desc, landmarks, relations)
 
     return g
 
@@ -326,6 +332,7 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
     ```
     lr_state_description = {
         "type": "belongs",
+        "id": 1, 
         "locatum": 1,
         "relatum": [3],
         "time": {
@@ -356,6 +363,7 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
     """
 
     lr_uri = gr.generate_uri(np.FACTOIDS, "LR") # Generate a unique URI for the landmark relation
+    lr_id = lr_state_description.get("id") # Extract the landmark relation ID from the version description
     lr_type = lr_state_description.get("type") # Extract the landmark relation type from the version description
     lr_locatum = lr_state_description.get("locatum") # Extract the landmark relation locatum from the version description
     lr_relatums = lr_state_description.get("relatum") # Extract the landmark relation relatum from the version description
@@ -373,6 +381,8 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
 
     ri.create_landmark_relation_version(g, lr_uri, lr_type_uri, lr_locatum_uri, lr_relatums_uris, time_description, lr_provenance_uri)
 
+    return lr_id, lr_uri
+
 def create_version_attribute_version(lm_attributes:dict):
     attr_types_and_values = []
     for attr_type, attr_value in lm_attributes.items():
@@ -382,4 +392,57 @@ def create_version_attribute_version(lm_attributes:dict):
 
     return attr_types_and_values
 
+def create_address_version_from_description(g:Graph, addr_state_description:list[dict], landmark_uris:dict, segment_uris:dict):
+    """
+    ```
+    addr_state_description = {
+        "label": "23 rue du Père Guérin, 75013 Paris",
+        "lang": "fr",
+        "target": 1,
+        "segments": [1, 2, 3, 4],
+        "provenance": {
+            "uri": "https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin"
+        }
+    }
+    ```
+
+    ```
+    landmark_uris = {
+        "1": "http://example.org/landmark/23RuePereGuerin",
+        "2": "http://example.org/landmark/43RuePereGuerin"
+        "3": "http://example.org/landmark/RuePereGuerin",
+        "4": "http://example.org/landmark/Paris",
+        "5": "http://example.org/landmark/75013",
+    }
+    ```
+
+    ```
+    segment_uris = {
+        "1": "http://example.org/landmark/123IsSimilarTo123",
+        "2": "http://example.org/landmark/123BelongsToRuePereGuerin"
+        "3": "http://example.org/landmark/123WithinParis",
+        "4": "http://example.org/landmark/123Within75013"
+    }
+    ```
+    """
+
+    addr_uri = gr.generate_uri(np.FACTOIDS, "ADDR") # Generate a unique URI for the address
+    addr_label = addr_state_description.get("label") # Extract the address label from the version description
+    addr_lang = addr_state_description.get("lang") # Extract the language from the version description
+    addr_target = addr_state_description.get("target") # Extract the target (it is a landmark) from the version description
+    addr_segments = addr_state_description.get("segments") # Extract the segments from the version description
+
+    addr_segments_uris = [segment_uris.get(key) for key in addr_segments]
+
+    addr_target_uri = landmark_uris.get(addr_target) # Get the URI for the address target
+    # Case when the target is not defined, create it (undefined landmark)
+    if addr_target_uri is None:
+        lm_uri = gr.generate_uri(np.FACTOIDS, "LM") # Generate a unique URI for the landmark
+        lm_type_uri = om.get_landmark_relation_type("undefined")
+        ri.create_landmark(g, lm_uri, None, lm_type_uri)
+
+    addr_label_lit = gr.get_literal_with_lang(addr_label, addr_lang) # Create a literal for the address label
+    ri.create_address(g, addr_uri, addr_label_lit, addr_segments_uris, addr_target_uri)
+    
+    return addr_uri
 

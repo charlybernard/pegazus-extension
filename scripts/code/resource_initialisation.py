@@ -186,10 +186,9 @@ def create_attribute_version_with_changes(g:Graph, attribute_uri:URIRef, value:L
 ######### Address management #########
 # Function to manage with addresses 
 
-def create_address(g:Graph, address_uri:URIRef, address_label:str, address_lang:str, address_segments_list:list[URIRef], target_uri:URIRef):
-    label_lit = Literal(address_label, lang=address_lang)
+def create_address(g:Graph, address_uri:URIRef, address_label:Literal, address_segments_list:list[URIRef], target_uri:URIRef):
     g.add((address_uri, RDF.type, np.ADDR["Address"]))
-    g.add((address_uri, RDFS.label, label_lit))
+    g.add((address_uri, RDFS.label, address_label))
     g.add((address_uri, np.ADDR["targets"], target_uri))
     g.add((address_uri, np.ADDR["firstStep"], address_segments_list[0]))
 
