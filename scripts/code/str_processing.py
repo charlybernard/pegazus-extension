@@ -261,3 +261,11 @@ def normalize_and_simplify_name_version(name_version:str, name_type:str, name_la
     simplified_name = simplify_name_version(normalized_name, name_type, name_lang)
 
     return normalized_name, simplified_name
+
+def split_french_address(address):
+    # Regex améliorée pour capturer le numéro avec ses variantes
+    match = re.match(r"^(\d+\s*(?:[A-Za-z]|bis|ter|quater)?)\s+(.*)", address, re.IGNORECASE)
+    if match:
+        return match.group(1).strip(), match.group(2).strip()  # (numéro, nom de la voie)
+    return None, address.strip()  # Si pas de numéro, renvoyer None et l'adresse complète
+ 

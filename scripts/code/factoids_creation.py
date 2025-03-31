@@ -282,49 +282,48 @@ def clean_repository_osm(graphdb_url:URIRef, repository_name:str, factoids_named
 
 ## Ville de Paris data
 
-def create_factoids_repository_ville_paris(graphdb_url:URIRef, vdp_repository_name:str, tmp_folder:str,
-                                  ont_file:str, ontology_named_graph_name:str,
-                                  factoids_named_graph_name:str, permanent_named_graph_name:str,
-                                  vdpa_csv_file:str, vdpc_csv_file:str, vdp_kg_file:str, vdp_valid_time:dict={}, lang:str=None):
+# def create_factoids_repository_ville_paris(graphdb_url:URIRef, vdp_repository_name:str, tmp_folder:str,
+#                                   ont_file:str, ontology_named_graph_name:str,
+#                                   factoids_named_graph_name:str, permanent_named_graph_name:str,
+#                                   vdpa_csv_file:str, vdpc_csv_file:str, vdp_kg_file:str, vdp_valid_time:dict={}, lang:str=None):
 
-    # Creation of a basic graph with rdflib and export to the `vpt_kg_file` file
-    g = create_graph_from_ville_paris_actuelles(vdpa_csv_file, vdp_valid_time, lang)
-    g += create_graph_from_ville_paris_caduques(vdpc_csv_file, vdp_valid_time, lang)
+#     # Creation of a basic graph with rdflib and export to the `vpt_kg_file` file
+#     g = create_graph_from_ville_paris(vdpa_csv_file, vdpc_csv_file, vdp_valid_time, lang)
 
-    # Export the graph and import it into the repository
-    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, vdp_repository_name, factoids_named_graph_name, g, vdp_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+#     # Export the graph and import it into the repository
+#     msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, vdp_repository_name, factoids_named_graph_name, g, vdp_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
 
-    # Adapting data with the ontology, merging duplicates, etc.
-    clean_repository_ville_paris(graphdb_url, vdp_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
+#     # Adapting data with the ontology, merging duplicates, etc.
+#     clean_repository_ville_paris(graphdb_url, vdp_repository_name, factoids_named_graph_name, permanent_named_graph_name, lang)
 
 
-def create_graph_from_ville_paris_caduques(vpc_file:str, source_valid_time:dict, lang:str):
-    vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
+# def create_graph_from_ville_paris_caduques(vpc_file:str, source_valid_time:dict, lang:str):
+#     vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
-    # File columns
-    id_col = "Identifiant"
-    name_col = "Dénomination complète minuscule"
-    start_time_col = "Date de l'arrêté"
-    end_time_col = "Date de caducité"
-    arrdt_col = "Arrondissement"
-    district_col = "Quartier"
+#     # File columns
+#     id_col = "Identifiant"
+#     name_col = "Dénomination complète minuscule"
+#     start_time_col = "Date de l'arrêté"
+#     end_time_col = "Date de caducité"
+#     arrdt_col = "Arrondissement"
+#     district_col = "Quartier"
 
-    vpc_content = fm.read_csv_file_as_dict(vpc_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
-    g = Graph()
-    gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
-    g.bind(vpc_pref, vpc_ns)
+#     vpc_content = fm.read_csv_file_as_dict(vpc_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+#     g = Graph()
+#     gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
+#     g.bind(vpc_pref, vpc_ns)
 
-    for value in vpc_content.values():
-        th_id = value.get(id_col)
-        th_label = value.get(name_col)
-        th_start_time = value.get(start_time_col)
-        th_end_time = value.get(end_time_col)
-        th_arrdt_names = sp.split_cell_content(value.get(arrdt_col), sep=",")
-        th_district_names = sp.split_cell_content(value.get(district_col), sep=",")
+#     for value in vpc_content.values():
+#         th_id = value.get(id_col)
+#         th_label = value.get(name_col)
+#         th_start_time = value.get(start_time_col)
+#         th_end_time = value.get(end_time_col)
+#         th_arrdt_names = sp.split_cell_content(value.get(arrdt_col), sep=",")
+#         th_district_names = sp.split_cell_content(value.get(district_col), sep=",")
 
-        create_data_value_from_ville_paris_caduques(g, th_id, th_label, th_start_time, th_end_time, th_arrdt_names, th_district_names, source_valid_time, vpc_ns, lang)
+#         create_data_value_from_ville_paris_caduques(g, th_id, th_label, th_start_time, th_end_time, th_arrdt_names, th_district_names, source_valid_time, vpc_ns, lang)
 
-    return g
+#     return g
 
 def create_landmark_change_and_event(g:Graph, lm_label:str, lm_type:URIRef, lm_prov_uri:URIRef, appeareance:bool, time_list:list, lang:str):
         # Creating URIs
@@ -356,156 +355,152 @@ def create_landmark_change_and_event(g:Graph, lm_label:str, lm_type:URIRef, lm_p
         for uri in uris:
             ri.add_provenance_to_resource(g, uri, lm_prov_uri)
 
-def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str, start_time_stamp:str, end_time_stamp:str,
-                                                arrdt_labels:list[str], district_labels:list[str], source_valid_time, vpa_ns:Namespace, lang:str):
-    """
-    `source_valid_time` : dictionary describing the source's validity start and end dates
-    `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
-    """
+# def create_data_value_from_ville_paris_caduques(g:Graph, th_id:str, th_label:str, start_time_stamp:str, end_time_stamp:str,
+#                                                 arrdt_labels:list[str], district_labels:list[str], source_valid_time, vpa_ns:Namespace, lang:str):
+#     """
+#     `source_valid_time` : dictionary describing the source's validity start and end dates
+#     `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
+#     """
 
-    # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
-    th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
-    name_attr_uri, name_attr_type_uri, name_attr_version_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
-    name_attr_version_value = gr.get_name_literal(th_label, lang)
-
-
-    ri.create_landmark(g, th_uri, name_attr_version_value, th_type_uri)
-    ri.create_landmark_attribute_and_version(g, th_uri, name_attr_uri, name_attr_type_uri, name_attr_version_uri, name_attr_version_value)
-    ri.add_validity_time_interval_to_landmark(g, th_uri, source_valid_time)
-
-    # Provenances creation
-    th_prov_uri = vpa_ns[th_id]
-    ri.create_prov_entity(g, th_prov_uri)
-    ri.add_provenance_to_resource(g, th_uri, th_prov_uri)
-    ri.add_provenance_to_resource(g, name_attr_version_uri, th_prov_uri)
-
-    start_time_stamp, start_time_calendar, start_time_precision = tp.get_gregorian_date_from_timestamp(start_time_stamp)
-    end_time_stamp, end_time_calendar, end_time_precision = tp.get_gregorian_date_from_timestamp(end_time_stamp)
-
-    # Add an event describing the appearance of the lane and its name (if indicated by a date)
-    if start_time_stamp is not None:
-        create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, True, [start_time_stamp, start_time_calendar, start_time_precision], lang)
-
-    # Add an event describing the disappearance of the lane and its name (if indicated by a date)
-    if end_time_stamp is not None:
-        create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, False, [end_time_stamp, end_time_calendar, end_time_precision], lang)
-
-    # List of zones to be created (borough and district), each element is a list whose 1st value is the label and the second is its type
-    # Example : areas = [["3e arrondissement de Paris", "District"], ["Maison Blanche", "District"]]
-    areas = [[re.sub("^0", "", x.replace("01e", "01er")) + " arrondissement de Paris", "District"] for x in arrdt_labels] + [[x, "District"] for x in district_labels]
-    for area in areas:
-        area_label, area_type = area
-        create_area_location_of_landmark(g, area_label, area_type, th_uri, th_prov_uri, source_valid_time, lang)
-
-def create_graph_from_ville_paris_actuelles(vpa_file:str, source_valid_time:dict, lang:str):
-    vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
-
-    # File columns
-    id_col = "Identifiant"
-    name_col = "Dénomination complète minuscule"
-    start_time_col = "Date de l'arrété"
-    arrdt_col = "Arrondissement"
-    district_col = "Quartier"
-    geom_col = "geo_shape"
-
-    content = fm.read_csv_file_as_dict(vpa_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
-    g = Graph()
-    gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
-    g.bind(vpa_pref, vpa_ns)
-
-    source_valid_time = tp.get_valid_time_description(source_valid_time)
-
-    for value in content.values():
-        th_id = value.get(id_col)
-        th_label = value.get(name_col)
-        th_geom = value.get(geom_col)
-        th_start_time = value.get(start_time_col)
-        th_arrdt_labels = sp.split_cell_content(value.get(arrdt_col), sep=",")
-        th_district_labels = sp.split_cell_content(value.get(district_col), sep=",")
-
-        create_data_value_from_ville_paris_actuelles(g, th_id, th_label, th_geom, th_start_time, th_arrdt_labels, th_district_labels, source_valid_time, vpa_ns, lang)
-
-    return g
+#     # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
+#     th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
+#     name_attr_uri, name_attr_type_uri, name_attr_version_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
+#     name_attr_version_value = gr.get_name_literal(th_label, lang)
 
 
-def get_attr_uri_and_attr_version_uri(g:Graph, lm_uri:URIRef, attr_type_uri:URIRef):
-    for lm_uri, pred, attr_uri in g.triples((lm_uri, np.ADDR["hasAttribute"], None)):
-        if g.value(attr_uri, np.ADDR["isAttributeType"]) == attr_type_uri:
-            attr_version_uri = g.value(attr_uri, np.ADDR["hasAttributeVersion"])
-            return [attr_uri, attr_version_uri]
-    return [None, None]
+#     ri.create_landmark(g, th_uri, name_attr_version_value, th_type_uri)
+#     ri.create_landmark_attribute_and_version(g, th_uri, name_attr_uri, name_attr_type_uri, name_attr_version_uri, name_attr_version_value)
+#     ri.add_validity_time_interval_to_landmark(g, th_uri, source_valid_time)
 
-def create_data_value_from_ville_paris_actuelles(g:Graph, th_id:str, th_label:str, th_geom:str, start_time_stamp:str,
-                                                 arrdt_labels:list[str], district_labels:list[str], source_valid_time:dict, vpa_ns:Namespace, lang:str):
-    """
-    `source_valid_time` : dictionary describing the source's validity start and end dates
-    `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
-    """
+#     # Provenances creation
+#     th_prov_uri = vpa_ns[th_id]
+#     ri.create_prov_entity(g, th_prov_uri)
+#     ri.add_provenance_to_resource(g, th_uri, th_prov_uri)
+#     ri.add_provenance_to_resource(g, name_attr_version_uri, th_prov_uri)
 
-    # Converting geometry (which is a string geojson) to a WKT
-    wkt_geom = gp.from_geojson_to_wkt(json.loads(th_geom))
-    geom_attr_version_value = gr.get_geometry_wkt_literal(wkt_geom)
-    name_attr_version_value = gr.get_name_literal(th_label, lang)
+#     start_time_stamp, start_time_calendar, start_time_precision = tp.get_gregorian_date_from_timestamp(start_time_stamp)
+#     end_time_stamp, end_time_calendar, end_time_precision = tp.get_gregorian_date_from_timestamp(end_time_stamp)
 
-    # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
-    th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
+#     # Add an event describing the appearance of the lane and its name (if indicated by a date)
+#     if start_time_stamp is not None:
+#         create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, True, [start_time_stamp, start_time_calendar, start_time_precision], lang)
 
-    # Provenances creation
-    th_prov_uri = vpa_ns[th_id]
-    ri.create_prov_entity(g, th_prov_uri)
+#     # Add an event describing the disappearance of the lane and its name (if indicated by a date)
+#     if end_time_stamp is not None:
+#         create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, False, [end_time_stamp, end_time_calendar, end_time_precision], lang)
 
-    th_attr_types_and_values = [[np.ATYPE["Name"], name_attr_version_value], [np.ATYPE["Geometry"], geom_attr_version_value]]
+#     # List of zones to be created (borough and district), each element is a list whose 1st value is the label and the second is its type
+#     # Example : areas = [["3e arrondissement de Paris", "District"], ["Maison Blanche", "District"]]
+#     areas = [[re.sub("^0", "", x.replace("01e", "01er")) + " arrondissement de Paris", "District"] for x in arrdt_labels] + [[x, "District"] for x in district_labels]
+#     for area in areas:
+#         area_label, area_type = area
+#         create_area_location_of_landmark(g, area_label, area_type, th_uri, th_prov_uri, source_valid_time, lang)
 
-    ri.create_landmark_version(g, th_uri, th_type_uri, th_label, th_attr_types_and_values, source_valid_time, th_prov_uri, np.FACTOIDS, lang)
+# def create_graph_from_ville_paris_actuelles(vpa_file:str, source_valid_time:dict, lang:str):
+#     vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
 
-    start_time_stamp, start_time_calendar, start_time_precision = tp.get_gregorian_date_from_timestamp(start_time_stamp)
+#     # File columns
+#     id_col = "Identifiant"
+#     name_col = "Dénomination complète minuscule"
+#     start_time_col = "Date de l'arrété"
+#     arrdt_col = "Arrondissement"
+#     district_col = "Quartier"
+#     geom_col = "geo_shape"
 
-    # List of zones to be created (borough and district), each element is a list whose 1st value is the label and the second is its type
-    # Example : areas = [["3e arrondissement de Paris", "District"], ["Maison Blanche", "District"]]
-    areas = [[re.sub("^0", "", x.replace("01e", "01er")) + " arrondissement de Paris", "District"] for x in arrdt_labels] + [[x, "District"] for x in district_labels]
-    for area in areas:
-        area_label, area_type = area
-        create_area_location_of_landmark(g, area_label, area_type, th_uri, th_prov_uri, source_valid_time, lang)
+#     content = fm.read_csv_file_as_dict(vpa_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+#     g = Graph()
+#     gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
+#     g.bind(vpa_pref, vpa_ns)
 
-    # Add an event describing the appearance of the lane and its name (if indicated by a date)
-    if start_time_stamp is not None:
-        create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, True, [start_time_stamp, start_time_calendar, start_time_precision], lang)
+#     source_valid_time = tp.get_valid_time_description(source_valid_time)
 
-def create_area_location_of_landmark(g, area_label, area_type, lm_uri, lm_prov_uri, source_valid_time, lang):
-    """
-    Creation of a zone whose landmark defined by `lm_uri` is located inside this area
-    """
+#     for value in content.values():
+#         th_id = value.get(id_col)
+#         th_label = value.get(name_col)
+#         th_geom = value.get(geom_col)
+#         th_start_time = value.get(start_time_col)
+#         th_arrdt_labels = sp.split_cell_content(value.get(arrdt_col), sep=",")
+#         th_district_labels = sp.split_cell_content(value.get(district_col), sep=",")
 
-    area_type_uri = np.LTYPE[area_type]
+#         create_data_value_from_ville_paris_actuelles(g, th_id, th_label, th_geom, th_start_time, th_arrdt_labels, th_district_labels, source_valid_time, vpa_ns, lang)
 
-    # URI of the area and the relationship between the thoroughfare and the area
-    area_uri, lr_uri = gr.generate_uri(np.FACTOIDS, "LM"), gr.generate_uri(np.FACTOIDS, "LR")
+#     return g
 
-    # URIs of resources linked to an attribute of type `name`
-    name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
-    name_attr_version_area_value = gr.get_name_literal(area_label, lang)
 
-    ri.create_landmark(g, area_uri, name_attr_version_area_value, area_type_uri)
-    ri.create_landmark_attribute_and_version(g, area_uri, name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri, name_attr_version_area_value)
-    ri.create_landmark_relation(g, lr_uri, np.LRTYPE["Within"], lm_uri, [area_uri])
-    ri.add_other_labels_for_resource(g, area_uri, area_label, lang, area_type_uri)
-    ri.add_other_labels_for_resource(g, name_attr_version_area_uri, area_label, lang, area_type_uri)
-    ri.add_validity_time_interval_to_landmark(g, area_uri, source_valid_time)
+# def get_attr_uri_and_attr_version_uri(g:Graph, lm_uri:URIRef, attr_type_uri:URIRef):
+#     for lm_uri, pred, attr_uri in g.triples((lm_uri, np.ADDR["hasAttribute"], None)):
+#         if g.value(attr_uri, np.ADDR["isAttributeType"]) == attr_type_uri:
+#             attr_version_uri = g.value(attr_uri, np.ADDR["hasAttributeVersion"])
+#             return [attr_uri, attr_version_uri]
+#     return [None, None]
 
-    # Add provenances
-    uris = [area_uri, lr_uri, name_attr_version_area_uri]
-    for uri in uris:
-        ri.add_provenance_to_resource(g, uri, lm_prov_uri)
+# def create_data_value_from_ville_paris_actuelles(g:Graph, th_id:str, th_label:str, th_geom:str, start_time_stamp:str,
+#                                                  arrdt_labels:list[str], district_labels:list[str], source_valid_time:dict, vpa_ns:Namespace, lang:str):
+#     """
+#     `source_valid_time` : dictionary describing the source's validity start and end dates
+#     `source_valid_time = {"start":{"stamp":..., "precision":..., "calendar":...}, "end":{} }`
+#     """
+
+#     # Converting geometry (which is a string geojson) to a WKT
+#     wkt_geom = gp.from_geojson_to_wkt(json.loads(th_geom))
+#     geom_attr_version_value = gr.get_geometry_wkt_literal(wkt_geom)
+#     name_attr_version_value = gr.get_name_literal(th_label, lang)
+
+#     # URI of the thoroughfare, creation of the thoroughfare, addition of geometry and alternative labels
+#     th_uri, th_type_uri = gr.generate_uri(np.FACTOIDS, "TH"), np.LTYPE["Thoroughfare"]
+
+#     # Provenances creation
+#     th_prov_uri = vpa_ns[th_id]
+#     ri.create_prov_entity(g, th_prov_uri)
+
+#     th_attr_types_and_values = [[np.ATYPE["Name"], name_attr_version_value], [np.ATYPE["Geometry"], geom_attr_version_value]]
+
+#     ri.create_landmark_version(g, th_uri, th_type_uri, th_label, th_attr_types_and_values, source_valid_time, th_prov_uri, np.FACTOIDS, lang)
+
+#     start_time_stamp, start_time_calendar, start_time_precision = tp.get_gregorian_date_from_timestamp(start_time_stamp)
+
+#     # List of zones to be created (borough and district), each element is a list whose 1st value is the label and the second is its type
+#     # Example : areas = [["3e arrondissement de Paris", "District"], ["Maison Blanche", "District"]]
+#     areas = [[re.sub("^0", "", x.replace("01e", "01er")) + " arrondissement de Paris", "District"] for x in arrdt_labels] + [[x, "District"] for x in district_labels]
+#     for area in areas:
+#         area_label, area_type = area
+#         create_area_location_of_landmark(g, area_label, area_type, th_uri, th_prov_uri, source_valid_time, lang)
+
+#     # Add an event describing the appearance of the lane and its name (if indicated by a date)
+#     if start_time_stamp is not None:
+#         create_landmark_change_and_event(g, th_label, th_type_uri, th_prov_uri, True, [start_time_stamp, start_time_calendar, start_time_precision], lang)
+
+# def create_area_location_of_landmark(g, area_label, area_type, lm_uri, lm_prov_uri, source_valid_time, lang):
+#     """
+#     Creation of a zone whose landmark defined by `lm_uri` is located inside this area
+#     """
+
+#     area_type_uri = np.LTYPE[area_type]
+
+#     # URI of the area and the relationship between the thoroughfare and the area
+#     area_uri, lr_uri = gr.generate_uri(np.FACTOIDS, "LM"), gr.generate_uri(np.FACTOIDS, "LR")
+
+#     # URIs of resources linked to an attribute of type `name`
+#     name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri = gr.generate_uri(np.FACTOIDS, "ATTR"), np.ATYPE["Name"], gr.generate_uri(np.FACTOIDS, "AV")
+#     name_attr_version_area_value = gr.get_name_literal(area_label, lang)
+
+#     ri.create_landmark(g, area_uri, name_attr_version_area_value, area_type_uri)
+#     ri.create_landmark_attribute_and_version(g, area_uri, name_attr_area_uri, name_attr_type_area_uri, name_attr_version_area_uri, name_attr_version_area_value)
+#     ri.create_landmark_relation(g, lr_uri, np.LRTYPE["Within"], lm_uri, [area_uri])
+#     ri.add_other_labels_for_resource(g, area_uri, area_label, lang, area_type_uri)
+#     ri.add_other_labels_for_resource(g, name_attr_version_area_uri, area_label, lang, area_type_uri)
+#     ri.add_validity_time_interval_to_landmark(g, area_uri, source_valid_time)
+
+#     # Add provenances
+#     uris = [area_uri, lr_uri, name_attr_version_area_uri]
+#     for uri in uris:
+#         ri.add_provenance_to_resource(g, uri, lm_prov_uri)
 
 def clean_repository_ville_paris(graphdb_url:str, repository_name:str, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str):
     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 
-    # Merge similar landmarks (only applies to districts and boroughs)
-    landmark_types = [np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
-    for landmark_type in landmark_types:
-        fc.merge_similar_landmark_versions_with_hidden_labels(graphdb_url, repository_name, landmark_type, factoids_named_graph_uri)
-    fc.merge_similar_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri)
+    # Detection of similar temporal entities
     fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
 
     # Transfer all provenance descriptions to the permanent named graph
@@ -861,34 +856,34 @@ def clean_repository_wikidata_paris(graphdb_url:str, repository_name:str, source
 
 ##################################################################
 
-# Data from Geojson files
+# # Data from Geojson files
 
-def create_factoids_repository_geojson_states(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
-                                              ont_file:str, ontology_named_graph_name:str,
-                                              factoids_named_graph_name:str, permanent_named_graph_name:str,
-                                              geojson_content, geojson_join_property, kg_file:str, tmp_kg_file:str, landmark_type, lang:str=None):
+# def create_factoids_repository_geojson_states(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
+#                                               ont_file:str, ontology_named_graph_name:str,
+#                                               factoids_named_graph_name:str, permanent_named_graph_name:str,
+#                                               geojson_content, geojson_join_property, kg_file:str, tmp_kg_file:str, landmark_type, lang:str=None):
 
-    """
-    Function to carry out all the processes relating to the creation of factoids for data from a Geojson file describing the states of a territory.
-    """
+#     """
+#     Function to carry out all the processes relating to the creation of factoids for data from a Geojson file describing the states of a territory.
+#     """
 
-    # Read the geojson file and merge the elements according to `geojson_join_property`. For example, if `geojson_join_property=‘name’`,
-    # the function merges all features with the same name.
-    geojson_features = gp.merge_geojson_features_from_one_property(geojson_content, geojson_join_property)
-    geojson_features = geojson_content
-    geojson_time = geojson_content.get("time")
-    geojson_source = geojson_content.get("source")
+#     # Read the geojson file and merge the elements according to `geojson_join_property`. For example, if `geojson_join_property=‘name’`,
+#     # the function merges all features with the same name.
+#     geojson_features = gp.merge_geojson_features_from_one_property(geojson_content, geojson_join_property)
+#     geojson_features = geojson_content
+#     geojson_time = geojson_content.get("time")
+#     geojson_source = geojson_content.get("source")
 
-    time_description = tp.get_valid_time_description(geojson_time)
+#     time_description = tp.get_valid_time_description(geojson_time)
 
-    # From the geojson file describing the landmarks (which are all of the same type), convert it into a knowledge graph according to the ontology
-    g = create_graph_from_geojson_states(geojson_features, landmark_type, lang, time_description)
+#     # From the geojson file describing the landmarks (which are all of the same type), convert it into a knowledge graph according to the ontology
+#     g = create_graph_from_geojson_states(geojson_features, landmark_type, lang, time_description)
 
-    # Export the graph and import it into the directory
-    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+#     # Export the graph and import it into the directory
+#     msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
 
-    # Repository update
-    clean_repository_geojson_states(graphdb_url, repository_name, geojson_source, factoids_named_graph_name, permanent_named_graph_name, lang, tmp_kg_file)
+#     # Repository update
+#     clean_repository_geojson_states(graphdb_url, repository_name, geojson_source, factoids_named_graph_name, permanent_named_graph_name, lang, tmp_kg_file)
 
 def create_landmark_from_geojson_feature(feature:dict, landmark_type:str, g:Graph, srs_uri:URIRef=None, lang:str=None, time_description:dict={}):
     label = feature.get("properties").get("name")
@@ -971,53 +966,69 @@ def create_source_provenances_geojson(graphdb_url:URIRef, repository_name:str, s
 
     gd.update_query(query, graphdb_url, repository_name)
 
-def clean_repository_geojson_states(graphdb_url:URIRef, repository_name:str, geojson_source:dict, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str, geom_kg_file:str):
-    factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
-    permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
+# def clean_repository_geojson_states(graphdb_url:URIRef, repository_name:str, geojson_source:dict, factoids_named_graph_name:str, permanent_named_graph_name:str, lang:str, geom_kg_file:str):
+#     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
+#     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
 
-    # Detection of boroughs and districts with a similar hiddenLabel
-    # Do the same with postcodes and roads
-    landmark_types = [np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
-    for ltype in landmark_types:
-        fc.merge_similar_landmarks_with_hidden_labels(graphdb_url, repository_name, ltype, factoids_named_graph_uri)
+#     # Detection of boroughs and districts with a similar hiddenLabel
+#     # Do the same with postcodes and roads
+#     landmark_types = [np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
+#     for ltype in landmark_types:
+#         fc.merge_similar_landmarks_with_hidden_labels(graphdb_url, repository_name, ltype, factoids_named_graph_uri)
 
-    fc.merge_similar_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri)
-    fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
+#     fc.merge_similar_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri)
+#     fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
 
-    # Merge geometries (union) for landmarks with several geometries
-    fc.merge_landmark_multiple_geometries(graphdb_url, repository_name, factoids_named_graph_uri, geom_kg_file)
+#     # Merge geometries (union) for landmarks with several geometries
+#     fc.merge_landmark_multiple_geometries(graphdb_url, repository_name, factoids_named_graph_uri, geom_kg_file)
 
-    # The URI below defines the source linked to the file
-    geojson_source_uri = URIRef(gr.generate_uri(np.FACTS, "SRC"))
-    create_source_geojson_states(graphdb_url, repository_name, geojson_source_uri, permanent_named_graph_uri, geojson_source, np.FACTS)
+#     # The URI below defines the source linked to the file
+#     geojson_source_uri = URIRef(gr.generate_uri(np.FACTS, "SRC"))
+#     create_source_geojson_states(graphdb_url, repository_name, geojson_source_uri, permanent_named_graph_uri, geojson_source, np.FACTS)
 
-    # Transferring non-modifiable triples to the permanent named graph
-    rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+#     # Transferring non-modifiable triples to the permanent named graph
+#     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
 
-    # Adding links between benchmark resources and the source
-    geojson_source_prov_uri = URIRef(gr.generate_uri(np.FACTS, "PROV"))
-    create_source_provenances_geojson(graphdb_url, repository_name, geojson_source_uri, geojson_source_prov_uri, factoids_named_graph_uri, permanent_named_graph_uri)
+#     # Adding links between benchmark resources and the source
+#     geojson_source_prov_uri = URIRef(gr.generate_uri(np.FACTS, "PROV"))
+#     create_source_provenances_geojson(graphdb_url, repository_name, geojson_source_uri, geojson_source_prov_uri, factoids_named_graph_uri, permanent_named_graph_uri)
 
 ################################################################ Events ###########################################################
 
-def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
-                                      events_json_file, events_kg_file,
-                                      ont_file, ontology_named_graph_name,
-                                      factoids_named_graph_name, permanent_named_graph_name):
-    factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
-    permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
+# def create_factoids_repository_events(graphdb_url, repository_name, tmp_folder,
+#                                       events_json_file, events_kg_file,
+#                                       ont_file, ontology_named_graph_name,
+#                                       factoids_named_graph_name, permanent_named_graph_name):
+#     factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
+#     permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
     
+#     json_data = fm.read_json_file(events_json_file)
+#     event_descriptions = json_data.get("events")
+
+#     # Creation of a basic graph with rdflib
+#     g = sej.create_graph_from_event_descriptions(event_descriptions)
+
+#     # Export the graph and import it into the repository
+#     msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, events_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+    
+#     # Transfer all provenance descriptions to the permanent named graph
+#     rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+
+
+def create_graph_from_events(events_json_file:str):
+    """
+    Creation of a graph from the events JSON file
+    """
+
+    # Creation of a basic graph with rdflib
     json_data = fm.read_json_file(events_json_file)
     event_descriptions = json_data.get("events")
 
     # Creation of a basic graph with rdflib
     g = sej.create_graph_from_event_descriptions(event_descriptions)
+    np.bind_namespaces(g)
 
-    # Export the graph and import it into the repository
-    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, events_kg_file, tmp_folder, ont_file, ontology_named_graph_name)
-    
-    # Transfer all provenance descriptions to the permanent named graph
-    rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+    return g
 
 
 ##################################################### BAN ##########################################################
@@ -1057,14 +1068,66 @@ def create_graph_from_ville_paris(vpa_file:str, vpc_file:str, valid_time:dict, l
     vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
     state_vpa_description, event_vpa_description = cfd.create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns)
-    # vpc_description = cfd.create_state_description_for_ville_paris_caduques(vpc_file, valid_time, lang, vpc_ns)
+    event_vpc_description = cfd.create_event_description_for_ville_paris_caduques(vpc_file, lang, vpc_ns)
 
     # Creation of a basic graph with rdflib
     g = sej.create_graph_from_states_descriptions(state_vpa_description)
-    g += sej.create_graph_from_event_descriptions(event_vpa_description.get("events"))
-    # g += sej.create_graph_from_states_descriptions(vpc_description)
+    g += sej.create_graph_from_event_descriptions(event_vpa_description)
+    g += sej.create_graph_from_event_descriptions(event_vpc_description)
     g.bind(vpa_pref, vpa_ns)
     g.bind(vpc_pref, vpc_ns)
     np.bind_namespaces(g)
 
     return g
+
+##################################################### Geojson ##########################################################
+
+def create_graph_from_geojson_states_of_thoroughfares(geojson_file:str, lang, valid_time:dict, identity_property:str, name_attribute:str):
+    
+    state_description = cfd.create_state_description_for_geojson_states(geojson_file, "thoroughfare", identity_property, name_attribute, lang, valid_time)
+    # Creation of a basic graph with rdflib
+    g = sej.create_graph_from_states_descriptions(state_description)
+    np.bind_namespaces(g)
+
+    return g
+
+def create_graph_from_geojson_states_of_streetnumbers(geojson_file:str, lang, valid_time:dict, identity_property:str, name_attribute:str):
+    
+    state_description = cfd.create_state_description_for_geojson_states_of_streetnumbers(geojson_file, identity_property, name_attribute, lang, valid_time)
+    # Creation of a basic graph with rdflib
+    g = sej.create_graph_from_states_descriptions(state_description)
+    np.bind_namespaces(g)
+
+    return g
+
+##################################################### Generic ##########################################################
+
+
+def clean_imported_repository(graphdb_url:URIRef, repository_name:str, source_description:dict,
+                              factoids_named_graph_name:str, permanent_named_graph_name:str):
+    factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
+    permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
+
+    # Merge similar temporal entities
+    fc.merge_similar_temporal_entities(graphdb_url, repository_name, factoids_named_graph_uri)
+
+    # # The URI below defines the source linked to the file
+    source_uri = URIRef(gr.generate_uri(np.FACTS, "SRC"))
+    # ri.create_source_re(graphdb_url, repository_name, geojson_source_uri, permanent_named_graph_uri, geojson_source, np.FACTS)
+
+    # Transferring non-modifiable triples to the permanent named graph
+    rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+
+    # Adding links between benchmark resources and the source
+    source_prov_uri = URIRef(gr.generate_uri(np.FACTS, "PROV"))
+    # create_source_provenances(graphdb_url, repository_name, source_uri, source_prov_uri, factoids_named_graph_uri, permanent_named_graph_uri)
+
+def create_factoids_repository(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
+                               ont_file:str, ontology_named_graph_name:str, kg_file:str,
+                               factoids_named_graph_name:str, permanent_named_graph_name:str,
+                               g:Graph, source_description:dict):
+    # Export the graph and import it into the repository
+    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+
+    # Adapting data with the ontology, merging duplicates, etc.
+    clean_imported_repository(graphdb_url, repository_name, source_description, factoids_named_graph_name, permanent_named_graph_name)

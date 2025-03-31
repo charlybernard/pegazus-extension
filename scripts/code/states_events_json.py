@@ -16,7 +16,10 @@ om = OntologyMapping()
 
 def get_provenance_uri(provenance_description:dict):
     prov_uri_str = provenance_description.get("uri")
-    prov_uri = URIRef(prov_uri_str)
+    if prov_uri_str is not None:
+        prov_uri = URIRef(prov_uri_str)
+    else:
+        prov_uri = None
     return prov_uri
 
 def create_provenance(g, prov_uri:URIRef, provenance_description:dict):
@@ -30,13 +33,13 @@ def get_attribute_version_value(attribute_version_description:dict):
     
     value = attribute_version_description.get("value")
     lang = attribute_version_description.get("lang")
-    data_type = attribute_version_description.get("data_type")
-    data_type_url = om.get_datatype(data_type)
+    datatype = attribute_version_description.get("datatype")
+    datatype_url = om.get_datatype(datatype)
 
     if lang is not None:
         version_val = gr.get_literal_with_lang(value, lang)
-    elif data_type_url is not None:
-        version_val = gr.get_literal_with_datatype(value, data_type_url)
+    elif datatype_url is not None:
+        version_val = gr.get_literal_with_datatype(value, datatype_url)
     else:
         version_val = gr.get_literal_without_option(value)
 
@@ -62,17 +65,17 @@ def create_graph_from_event_description(event_description:dict):
         "label": "Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
         "lang": "fr",
         "landmarks": [
-            {"id":1, "label":"rue du Père Guérin", "type":"Thoroughfare", "changes":[
+            {"id":1, "label":"rue du Père Guérin", "type":"thoroughfare", "changes":[
                 {"on":"landmark", "type":"appearance"},
-                {"on":"attribute", "attribute":"Geometry"},
-                {"on":"attribute", "attribute":"Name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
+                {"on":"attribute", "attribute":"geometry"},
+                {"on":"attribute", "attribute":"name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
             ]},
-            {"id":2, "name":"rue Gérard", "type":"Thoroughfare", "changes":[
+            {"id":2, "label":"rue Gérard", "type":"thoroughfare", "changes":[
                 {"on":"attribute", "attribute":"Geometry"},
             ]}
         ],
         "relations": [
-            {"type":"Touches", "locatum":1, "relatum":2}
+            {"type":"touches", "locatum":1, "relatum":2}
         ], 
         "provenance": {"uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"}
     }
@@ -94,7 +97,8 @@ def create_graph_from_event_description(event_description:dict):
         g.add((event_uri, RDFS.comment, ev_label))
 
     prov_uri = get_provenance_uri(provenance_description)
-    create_provenance(g, prov_uri, provenance_description)
+    if prov_uri is not None:
+        create_provenance(g, prov_uri, provenance_description)
 
     for desc in landmark_descriptions:
         lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")
@@ -160,7 +164,7 @@ def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landma
     label = landmark_description.get("label")
     label_lit = gr.get_name_literal(label, lang)
     type = landmark_description.get("type")
-    type_uri = np.LTYPE[type]
+    type_uri = om.get_landmark_type(type)
     ri.create_landmark(g, landmark_uri, label_lit, type_uri)
     
     changes = landmark_description.get("changes")
@@ -194,7 +198,7 @@ def create_event_change_on_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIR
 def create_event_change_on_landmark_attribute(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
     change_type_uri = om.get_change_type("attribute_version_transition")
     attribute_type = change_description.get("attribute")
-    attribute_type_uri = np.ATYPE[attribute_type]
+    attribute_type_uri = om.get_attribute_type(attribute_type)
 
     attribute_uri = gr.generate_uri(np.FACTOIDS, "ATTR")
     change_uri = gr.generate_uri(np.FACTOIDS, "CG")
@@ -284,7 +288,7 @@ def create_landmark_version_from_description(g:Graph, lm_state_description:dict)
         "attributes": {
             "geometry": {
                 "value": "POINT(2.3589 48.8394)",
-                "data_type": "wkt_literal"
+                "datatype": "wkt_literal"
             },
             "name": {
                 "value": "rue du Père Guérin",
@@ -323,7 +327,6 @@ def create_landmark_version_from_description(g:Graph, lm_state_description:dict)
     time_description = tp.get_valid_time_description(lm_valid_time) # Create a time description for the landmark
     attr_types_and_values = create_version_attribute_version(lm_attributes) # Create a dictionary of attribute types and values
     lm_provenance_uri = get_provenance_uri(lm_provenance) # Get the URI for the provenance
-
     ri.create_landmark_version(g, lm_uri, lm_type_uri, lm_label, attr_types_and_values, time_description, lm_provenance_uri, np.FACTOIDS, lm_lang)
     return lm_id, lm_uri
 

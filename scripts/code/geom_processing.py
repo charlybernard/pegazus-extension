@@ -9,6 +9,24 @@ from shapely.ops import transform
 from uuid import uuid4
 from rdflib import URIRef, Literal, Namespace
 
+def get_crs_dict():
+    crs_dict = {
+    "EPSG:4326" : URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
+    "EPSG:2154" : URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
+    "urn:ogc:def:crs:OGC:1.3:CRS84" : URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
+    "urn:ogc:def:crs:EPSG::2154" :  URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
+    }
+
+    return crs_dict
+
+def get_srs_iri_from_geojson_feature_collection(geojson_crs:dict):
+    crs_dict = get_crs_dict()
+    try:
+        crs_name = geojson_crs.get("properties").get("name")
+        srs_iri = crs_dict.get(crs_name)
+        return srs_iri
+    except:
+        return None
 
 def from_geojson_to_wkt(geojson_obj:dict):
     a = json.dumps(geojson_obj)
@@ -80,6 +98,24 @@ def get_union_of_geosparql_wktliterals(wkt_literal_list:list[Literal]):
     wkt_literal_union = Literal(f"{wkt_geom_srid.n3()} {geom_union_wkt}", datatype=GEO.wktLiteral)
 
     return wkt_literal_union
+
+def get_union_of_geojson_geometries(geojson_geoms_list:list[dict]):
+    geom_list = []
+    for geojson_geom in geojson_geoms_list:
+        geom = shape(geojson_geom)
+        geom_list.append(geom)
+
+    geom_union = shapely.union_all(geom_list)
+    
+    return geom_union
+
+def get_wkt_union_of_geojson_geometries(geojson_geoms_list:list[dict], wkt_geom_srid:URIRef):
+    GEO = Namespace("http://www.opengis.net/ont/geosparql#")
+    geom_union = get_union_of_geojson_geometries(geojson_geoms_list)
+    geom_union_wkt = shapely.to_wkt(geom_union)
+    wkt_union = f"{wkt_geom_srid.n3()} {geom_union_wkt}"
+
+    return wkt_union
 
 def get_wkt_geom_from_geosparql_wktliteral(wktliteral:str):
     """
