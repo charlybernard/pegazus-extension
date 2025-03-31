@@ -11,15 +11,27 @@ def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, 
     Create a landmark version description
     """
 
-    description = {
-        "id": lm_id,
-        "label": lm_label,
-        "type": lm_type,
-        "lang": lang,
-        "attributes": lm_attributes,
-        "provenance": lm_provenance,
-        "time": time_description
-    }
+    description = {}
+
+    if lm_id is not None:
+        description["id"] = lm_id
+    
+    if lm_label is not None:
+        description["label"] = lm_label
+        if lang is not None:
+            description["lang"] = lang
+
+    if lm_type is not None:
+        description["type"] = lm_type
+
+    if isinstance(lm_attributes, dict):
+        description["attributes"] = lm_attributes
+        
+    if isinstance(lm_provenance, dict):
+        description["provenance"] = lm_provenance
+
+    if isinstance(time_description, dict):
+        description["time"] = time_description
 
     return description
 
@@ -36,6 +48,17 @@ def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:
         "time": time_description
     }
 
+    return description
+
+def create_landmark_attribute_version_description(value:str, lang:str=None, datatype:str=None):
+    description = None
+    if value is not None:
+        description = {"value":value}
+        if lang is not None:
+            description["lang"] = lang
+        if datatype is not None:
+            description["datatype"] = datatype
+    
     return description
 
 def create_address_description(addr_uuid:str, addr_label:str, lang:str, target_uuid:str, segment_uuids:list[str], lm_provenance:dict):

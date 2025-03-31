@@ -234,7 +234,7 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
     change_types = {"appearance":"landmark_relation_appearance", "disappearance":"landmark_relation_disappearance"}
 
     type = landmark_relation_description.get("type")
-    type_uri = np.LRTYPE[type]
+    type_uri = om.get_landmark_relation_type(type)
 
     locatum = landmark_relation_description.get("locatum")
     locatum_uri = landmark_uris.get(locatum)

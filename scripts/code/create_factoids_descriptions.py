@@ -363,10 +363,10 @@ def create_landmark_relations_descriptions_for_ville_paris_line(th_uuid, distric
 
 def create_thoroughfare_description_for_ville_paris(th_label:str, th_id:str, th_geom:str, lang:str, valid_time:dict, vp_ns:Namespace):
     th_type = "thoroughfare"
-    th_attrs = {"name":{"value":th_label, "lang":lang}}
+    th_attrs = {"name":di.create_landmark_attribute_version_description(th_label, lang=lang)}
     if th_geom is not None:
         th_wkt_geom = gp.from_geojson_to_wkt(json.loads(th_geom))
-        th_attrs["geometry"] = {"value":th_wkt_geom, "datatype":"wkt_literal"}
+        th_attrs["geometry"] = di.create_landmark_attribute_version_description(th_wkt_geom, datatype="wkt_literal")
     th_provenance = {"uri":str(vp_ns[th_id])}
     th_desc = di.create_landmark_version_description(th_id, th_label, th_type, lang, th_attrs, th_provenance, valid_time)
     return th_desc
@@ -374,7 +374,7 @@ def create_thoroughfare_description_for_ville_paris(th_label:str, th_id:str, th_
 def create_district_description_for_ville_paris(district_label:str, lang:str, valid_time:dict, vp_ns:Namespace):
     district_uuid = gr.generate_uuid()
     district_type = "district"
-    district_attrs = {"name":{"value":district_label, "lang":lang}}
+    district_attrs = {"name":di.create_landmark_attribute_version_description(district_label, lang=lang)}
     district_provenance = {"uri":str(vp_ns)}
     district_desc = di.create_landmark_version_description(district_uuid, district_label, district_type, lang, district_attrs, district_provenance, valid_time)
     return district_uuid, district_desc
@@ -383,14 +383,14 @@ def create_arrondissement_description_for_ville_paris(arrdt_label:str, lang:str,
     arrdt_uuid = gr.generate_uuid()
     arrdt_type = "district"
     arrdt_label = re.sub("^0", "", arrdt_label.replace("01e", "01er")) + " arrondissement de Paris"
-    arrdt_attrs = {"name":{"value":arrdt_label, "lang":lang}}
+    arrdt_attrs = {"name":di.create_landmark_attribute_version_description(arrdt_label, lang=lang)}
     arrdt_provenance = {"uri":str(vp_ns)}
     arrdt_desc = di.create_landmark_version_description(arrdt_uuid, arrdt_label, arrdt_type, lang, arrdt_attrs, arrdt_provenance, valid_time)
     return arrdt_uuid, arrdt_desc
 
 def create_landmark_appearance_event_for_ville_paris(lm_label:str, lm_lang:str, provenance:dict, time_stamp:str):
     time_description = {"stamp":time_stamp, "calendar":"gregorian", "precision":"day"}
-    makes_effective = [{"value":lm_label, "lang":lm_lang}]
+    makes_effective = [di.create_landmark_attribute_version_description(lm_label, lang=lm_lang)]
     name_attr_cg = di.create_landmark_attribute_change_event_description("name", makes_effective=makes_effective)
     lm_cg = di.create_landmark_change_event_description("appearance")
     lm = di.create_landmark_event_description(1, "thoroughfare", lm_label, lm_lang, changes=[lm_cg, name_attr_cg])
@@ -399,7 +399,7 @@ def create_landmark_appearance_event_for_ville_paris(lm_label:str, lm_lang:str, 
 
 def create_landmark_disappearance_event_for_ville_paris(lm_label:str, lm_lang:str, provenance:dict, time_stamp:str):
     time_description = {"stamp":time_stamp, "calendar":"gregorian", "precision":"day"}
-    outdates = [{"value":lm_label, "lang":lm_lang}]
+    outdates = [di.create_landmark_attribute_version_description(lm_label, lang=lm_lang)]
     name_attr_cg = di.create_landmark_attribute_change_event_description("name", outdates=outdates)
     lm_cg = di.create_landmark_change_event_description("disappearance")
     lm = di.create_landmark_event_description(1, "thoroughfare", lm_label, lm_lang, changes=[lm_cg, name_attr_cg])
@@ -467,10 +467,13 @@ def create_landmarks_descriptions_for_geojson_states_line(landmarks:list, landma
         geometry = landmark.get("geometry")
 
         # Create the attributes of the landmark description
-        attributes = {
-            "name": {"value": lm_label, "lang": lang},
-            "geometry": {"value": geometry, "datatype":"wkt_literal"}
-            }
+        name_attr_desc = di.create_landmark_attribute_version_description(lm_label, lang=lang)
+        geom_attr_desc = di.create_landmark_attribute_version_description(geometry, datatype="wkt_literal")
+        attributes = {}
+        if name_attr_desc is not None:
+            attributes["name"] = name_attr_desc
+        if geom_attr_desc is not None:
+            attributes["geometry"] = geom_attr_desc
 
         # Create the landmark description
         lm_desc = di.create_landmark_version_description(lm_uuid, lm_label, landmark_type, lang, attributes, {}, time_description)
@@ -499,10 +502,14 @@ def create_state_description_for_geojson_states_of_streetnumbers(geojson_file:st
             geometries = [feature["geometry"]]
             geometry_value = gp.get_wkt_union_of_geojson_geometries(geometries, srs_iri)
 
-            attributes = {
-                "name": {"value": hn_label},
-                "geometry": {"value": geometry_value, "datatype":"wkt_literal"}
-            }
+            name_attr_desc = di.create_landmark_attribute_version_description(hn_label)
+            geom_attr_desc = di.create_landmark_attribute_version_description(geometry_value, datatype="wkt_literal")
+            attributes = {}
+            if name_attr_desc is not None:
+                attributes["name"] = name_attr_desc
+            if geom_attr_desc is not None:
+                attributes["geometry"] = geom_attr_desc
+
             hn_uuid = gr.generate_uuid()
             hn_desc = di.create_landmark_version_description(hn_uuid, hn_label, "street_number", None, attributes, {}, time_description)
             lm_descs.append(hn_desc)

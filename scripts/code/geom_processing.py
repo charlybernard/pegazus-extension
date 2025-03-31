@@ -11,10 +11,10 @@ from rdflib import URIRef, Literal, Namespace
 
 def get_crs_dict():
     crs_dict = {
-    "EPSG:4326" : URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
-    "EPSG:2154" : URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
-    "urn:ogc:def:crs:OGC:1.3:CRS84" : URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
-    "urn:ogc:def:crs:EPSG::2154" :  URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
+    "EPSG:4326": URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
+    "EPSG:2154": URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
+    "urn:ogc:def:crs:OGC:1.3:CRS84": URIRef("http://www.opengis.net/def/crs/EPSG/0/4326"),
+    "urn:ogc:def:crs:EPSG::2154": URIRef("http://www.opengis.net/def/crs/EPSG/0/2154"),
     }
 
     return crs_dict
@@ -110,10 +110,13 @@ def get_union_of_geojson_geometries(geojson_geoms_list:list[dict]):
     return geom_union
 
 def get_wkt_union_of_geojson_geometries(geojson_geoms_list:list[dict], wkt_geom_srid:URIRef):
-    GEO = Namespace("http://www.opengis.net/ont/geosparql#")
+    # GEO = Namespace("http://www.opengis.net/ont/geosparql#")
     geom_union = get_union_of_geojson_geometries(geojson_geoms_list)
     geom_union_wkt = shapely.to_wkt(geom_union)
-    wkt_union = f"{wkt_geom_srid.n3()} {geom_union_wkt}"
+    if wkt_geom_srid is not None:
+        wkt_union = f"{wkt_geom_srid.n3()} {geom_union_wkt}"
+    else:
+        wkt_union = geom_union_wkt
 
     return wkt_union
 

@@ -2,16 +2,16 @@
    "events":[
       {
          "time":{
-            "stamp":"1864-08-19",
+            "stamp":"1978-08-30",
             "calendar":"gregorian",
             "precision":"day"
          },
-         "label":"Le 19 août 1864, la partie située à l'est de la rue Mouffetard (actuelle avenue des Gobelins) conserve son nom (boulevard Saint-Marcel), alors que la partie à l'ouest devient le boulevard de Port-Royal.",
+         "label":"Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
          "lang":"fr",
          "landmarks":[
             {
                "id":1,
-               "label":"boulevard de Port-Royal",
+               "label":"rue du Père Guérin",
                "type":"thoroughfare",
                "changes":[
                   {
@@ -27,7 +27,7 @@
                      "attribute":"name",
                      "makes_effective":[
                         {
-                           "value":"boulevard de Port-Royal",
+                           "value":"rue du Père Guérin",
                            "lang":"fr"
                         }
                      ]
@@ -36,7 +36,7 @@
             },
             {
                "id":2,
-               "label":"boulevard Saint-Marcel",
+               "label":"rue Gérard",
                "type":"thoroughfare",
                "changes":[
                   {
@@ -48,32 +48,82 @@
          ],
          "relations":[
             {
-               "type":"touches",
+               "type":"Touches",
                "locatum":1,
                "relatum":2
             }
          ],
          "provenance":{
-            "uri":"https://fr.wikipedia.org/wiki/Boulevard_de_Port-Royal"
+            "uri":"https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"
          }
       },
       {
          "time":{
-            "stamp":"1858",
+            "stamp":"1893",
             "calendar":"gregorian",
             "precision":"year"
          },
-         "label":"La rue subit ensuite de nombreuses modifications et tracés avec notamment le changement de désignation en 1858 de la plus grande portion de 150 m située entre la rue de la Collégiale et la rue Scipion, devenue la rue Vésale. ",
+         "label":"Elle fut construite en deux phases, d'abord en 1893 entre la place de Rungis et la rue de la Butte-aux-Cailles, [...]",
          "lang":"fr",
          "landmarks":[
             {
                "id":1,
-               "label":"rue Vésale",
+               "label":"rue Bobillot",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1896",
+            "calendar":"gregorian",
+            "precision":"year"
+         },
+         "label":"Elle fut construite en deux phases [...], puis en 1896 entre la rue de la Butte-aux-Cailles et la place d'Italie.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "label":"rue Bobillot",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1931-06-09",
+            "calendar":"gregorian",
+            "precision":"day"
+         },
+         "label":"Ancien « passage Simonet », cette voie est classée dans la voirie de Paris sous le nom de « rue Simonet » par arrêté municipal du 9 juin 1931. ",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "label":"passage Simonet",
                "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
-                     "type":"appearance"
+                     "type":"disappearance"
                   },
                   {
                      "on":"attribute",
@@ -82,9 +132,9 @@
                   {
                      "on":"attribute",
                      "attribute":"name",
-                     "makes_effective":[
+                     "outdates":[
                         {
-                           "value":"rue Vésale",
+                           "value":"passage Simonet",
                            "lang":"fr"
                         }
                      ]
@@ -93,32 +143,7 @@
             },
             {
                "id":2,
-               "label":"Rue du Petit-Moine",
-               "type":"thoroughfare",
-               "changes":[
-                  {
-                     "on":"attribute",
-                     "attribute":"geometry"
-                  }
-               ]
-            }
-         ],
-         "provenance":{
-            "uri":"https://fr.wikipedia.org/wiki/Rue_du_Petit-Moine"
-         }
-      },
-      {
-         "time":{
-            "stamp":"1864",
-            "calendar":"gregorian",
-            "precision":"year"
-         },
-         "label":"Cette voie a été ouverte en 1858 au travers de l'ancienne église Saint-Martin qui se trouvait approximativement au niveau des nos 1 et 3 et du no 4. Elle a pris son nom actuel en 1864.",
-         "lang":"fr",
-         "landmarks":[
-            {
-               "id":1,
-               "label":"rue de la Collégiale",
+               "label":"rue Simonet",
                "type":"thoroughfare",
                "changes":[
                   {
@@ -134,7 +159,7 @@
                      "attribute":"name",
                      "makes_effective":[
                         {
-                           "value":"rue de la Collégiale",
+                           "value":"rue Simonet",
                            "lang":"fr"
                         }
                      ]
@@ -143,7 +168,121 @@
             }
          ],
          "provenance":{
-            "uri":"https://fr.wikipedia.org/wiki/Rue_de_la_Coll%C3%A9giale_(Paris)"
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Bobillot"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1978",
+            "calendar":"gregorian",
+            "precision":"year"
+         },
+         "label":"Sa prolongation avant les escaliers menant au boulevard Auguste-Blanqui est devenue la rue Eugène-Atget en 1978.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "label":"rue Eugène-Atget",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"name",
+                     "makes_effective":[
+                        {
+                           "value":"rue Eugène-Atget",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "label":"rue Jonas",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Jonas"
+         }
+      },
+      {
+         "time":{
+            "stamp":"1905-05-15",
+            "calendar":"gregorian",
+            "precision":"day"
+         },
+         "label":"Cette place est anciennement nommée « place du Puits-Artésien » en raison de la présence du puits artésien de la Butte-aux-Cailles foré à cet endroit, de 1863 à 1872. Elle prend son nom actuel le 15 mai 1905.",
+         "lang":"fr",
+         "landmarks":[
+            {
+               "id":1,
+               "label":"place du Puits-Artésien",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"disappearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"name",
+                     "outdates":[
+                        {
+                           "value":"place du Puits-Artésien",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            },
+            {
+               "id":2,
+               "label":"place Paul Verlaine",
+               "type":"thoroughfare",
+               "changes":[
+                  {
+                     "on":"landmark",
+                     "type":"appearance"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"geometry"
+                  },
+                  {
+                     "on":"attribute",
+                     "attribute":"name",
+                     "outdates":[
+                        {
+                           "value":"place Paul Verlaine",
+                           "lang":"fr"
+                        }
+                     ]
+                  }
+               ]
+            }
+         ],
+         "provenance":{
+            "uri":"https://fr.wikipedia.org/wiki/Place_Paul-Verlaine"
          }
       }
    ]
