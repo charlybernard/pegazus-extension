@@ -59,10 +59,10 @@ def create_graph_from_event_description(event_description:dict):
     ```
     event_description = {
         "time": {"stamp":"1851-02-18", "calendar":"gregorian", "precision":"day"},
-        "label":"Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
-        "lang":"fr",
-        "landmarks":[
-            {"id":1, "name":"rue du Père Guérin", "type":"Thoroughfare", "changes":[
+        "label": "Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
+        "lang": "fr",
+        "landmarks": [
+            {"id":1, "label":"rue du Père Guérin", "type":"Thoroughfare", "changes":[
                 {"on":"landmark", "type":"appearance"},
                 {"on":"attribute", "attribute":"Geometry"},
                 {"on":"attribute", "attribute":"Name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
@@ -71,7 +71,7 @@ def create_graph_from_event_description(event_description:dict):
                 {"on":"attribute", "attribute":"Geometry"},
             ]}
         ],
-        "relations":[
+        "relations": [
             {"type":"Touches", "locatum":1, "relatum":2}
         ], 
         "provenance": {"uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"}
@@ -86,9 +86,12 @@ def create_graph_from_event_description(event_description:dict):
 
     time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description = get_event_description_elements(event_description)
 
-    ev_label = gr.get_literal_with_lang(label, lang)
     create_event_with_time(g, event_uri, time_description)
-    g.add((event_uri, RDFS.comment, ev_label))
+
+    # Create a label for the event if it exists
+    if label is not None:
+        ev_label = gr.get_literal_with_lang(label, lang)
+        g.add((event_uri, RDFS.comment, ev_label))
 
     prov_uri = get_provenance_uri(provenance_description)
     create_provenance(g, prov_uri, provenance_description)
@@ -119,10 +122,7 @@ def get_event_description_elements(event_description:dict):
     if not isinstance(time_description, dict) or not all(key in time_description for key in ["stamp", "calendar", "precision"]):
         raise ValueError("The time description must contain the keys 'stamp', 'calendar' and 'precision'")
 
-    label = event_description.get("label")
-    # Check if the label is a string or not None
-    if not isinstance(label, str) and label is not None:
-        raise ValueError("The label must be a string")
+    label = event_description.get("label") or None
     
     lang = event_description.get("lang")
     # Check if the label is a string or not None
@@ -157,7 +157,7 @@ def create_event_with_time(g:Graph, event_uri:URIRef, time_description:dict):
 
 def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict, lang:str=None):
     created_entities = [landmark_uri]
-    label = landmark_description.get("name")
+    label = landmark_description.get("label")
     label_lit = gr.get_name_literal(label, lang)
     type = landmark_description.get("type")
     type_uri = np.LTYPE[type]

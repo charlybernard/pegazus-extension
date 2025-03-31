@@ -29,7 +29,7 @@ def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, 
 
     return description
 
-def create_landmark_relation_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict, time_description:dict):
+def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict, time_description:dict):
     """
     Create a landmark relation description
     """
@@ -56,6 +56,82 @@ def create_address_description(addr_uuid:str, addr_label:str, lang:str, target_u
         "segments": segment_uuids,
         "provenance": lm_provenance,
     }
+
+    return description
+
+def create_event_description(label:str, lang:str, landmarks:list, relations:list, provenance:dict, time_description:dict):
+    """
+    Create an event description
+    """
+
+    description = {
+        "time": time_description, 
+        "lang": lang,
+        "landmarks": landmarks,
+        "relations": relations,
+        "provenance": provenance
+    }
+    if label is not None:
+        description["label"] = label
+
+    return description
+
+def create_landmark_event_description(lm_id:str, lm_type:str, lm_label:str, lm_lang:str, changes:list=None):
+    """
+    Create a landmark event description
+    """
+
+    description = {
+        "id": lm_id, 
+        "label": lm_label,
+        "lang": lm_lang,
+        "type": lm_type,
+    }
+
+    if isinstance(changes, list) and len(changes) != 0:
+        description["changes"] = changes
+
+    return description
+
+def create_landmark_change_event_description(cg_type:str):
+    """
+    Create a landmark change event description
+    """
+
+    description = {
+        "on": "landmark", 
+        "type": cg_type
+    }
+
+    return description
+
+def create_landmark_relation_change_event_description(cg_type:str):
+    """
+    Create a landmark relation change event description
+    """
+
+    description = {
+        "on": "landmark_relation", 
+        "type": cg_type
+    }
+
+    return description
+
+def create_landmark_attribute_change_event_description(attr_type:str, makes_effective:list=None, outdates:list=None):
+    """
+    Create a landmark attribute change event description
+    """
+
+    description = {
+        "on": "attribute", 
+        "attribute": attr_type
+    }
+
+    if isinstance(makes_effective, list) and len(makes_effective) != 0:
+        description["makes_effective"] = makes_effective
+
+    if isinstance(outdates, list) and len(outdates) != 0:
+        description["outdates"] = outdates
 
     return description
 
@@ -153,9 +229,9 @@ def create_landmarks_descriptions_from_ban_line(value, valid_time, lang, ban_ns,
 
 def create_landmark_relations_descriptions_from_ban_line(hn_uuid, th_uuid, arrdt_uuid, cp_uuid, provenance_uri, valid_time:dict):
     lr_uuid_1, lr_uuid_2, lr_uuid_3 = gr.generate_uuid(), gr.generate_uuid(), gr.generate_uuid()
-    lr_desc_1 = create_landmark_relation_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":provenance_uri}, valid_time)
-    lr_desc_2 = create_landmark_relation_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":provenance_uri}, valid_time)
-    lr_desc_3 = create_landmark_relation_description(lr_uuid_3, "within", hn_uuid, [cp_uuid], {"uri":provenance_uri}, valid_time)
+    lr_desc_1 = create_landmark_relation_version_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":provenance_uri}, valid_time)
+    lr_desc_2 = create_landmark_relation_version_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":provenance_uri}, valid_time)
+    lr_desc_3 = create_landmark_relation_version_description(lr_uuid_3, "within", hn_uuid, [cp_uuid], {"uri":provenance_uri}, valid_time)
     return [lr_desc_1, lr_desc_2, lr_desc_3], [lr_uuid_1, lr_uuid_2, lr_uuid_3]
 
 
@@ -273,8 +349,8 @@ def create_landmarks_descriptions_from_osm_line(value, valid_time, lang, osm_ns,
 
 def create_landmark_relations_descriptions_from_osm_line(hn_uuid, th_uuid, arrdt_uuid, valid_time:dict):
     lr_uuid_1, lr_uuid_2 = gr.generate_uuid(), gr.generate_uuid()
-    lr_desc_1 = create_landmark_relation_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":th_uuid}, valid_time)
-    lr_desc_2 = create_landmark_relation_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":arrdt_uuid}, valid_time)
+    lr_desc_1 = create_landmark_relation_version_description(lr_uuid_1, "belongs", hn_uuid, [th_uuid], {"uri":th_uuid}, valid_time)
+    lr_desc_2 = create_landmark_relation_version_description(lr_uuid_2, "within", hn_uuid, [arrdt_uuid], {"uri":arrdt_uuid}, valid_time)
     return [lr_desc_1, lr_desc_2]
 
 def create_house_number_description_for_osm(hn_label:str, hn_geom:str, hn_id:str, lang:str, valid_time:dict):
@@ -300,7 +376,7 @@ def create_arrondissement_description_for_osm(arrdt_label:str, arrdt_id:str, arr
 
 ##################################################### Ville de Paris ##########################################################
 
-def create_state_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns):
+def create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns):
     events_desc = []
     landmarks_desc = []
     relations_desc = []
@@ -321,13 +397,19 @@ def create_state_description_for_ville_paris_actuelles(vpa_file, valid_time, lan
         th, th_districts, th_arrdts = create_landmarks_descriptions_for_ville_paris_actuelles_line(value, valid_time, lang, vpa_ns,
                                                                                                    id_col, name_col, arrdt_col, district_col, geom_col,
                                                                                                    districts, arrdts)
- 
+        start_time_stamp = value.get(start_time_col)
+        if start_time_stamp is not None and start_time_stamp != "":
+            th_label = value.get(name_col)
+            provenance = {"uri":str(vpa_ns[value.get(id_col)])}
+            ev = create_landmark_appearance_event_for_ville_paris(th_label, lang, provenance, start_time_stamp)
+            events_desc.append(ev)
+    
         add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(landmarks_desc, th, th_districts, th_arrdts, districts, arrdts)
         district_and_arrdt_uris = [x[1] for x in th_districts + th_arrdts]
-        lr_descs = create_landmark_relations_descriptions_for_ville_paris_actuelles_line(th[1], district_and_arrdt_uris, valid_time)
+        lr_descs = create_landmark_relations_descriptions_for_ville_paris_actuelles_line(th[1], district_and_arrdt_uris, valid_time, vpa_ns)
         relations_desc += lr_descs
 
-    return {"landmarks":landmarks_desc, "relations":relations_desc}
+    return {"landmarks":landmarks_desc, "relations":relations_desc}, {"events":events_desc}
 
 def add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(landmarks_desc, th, th_districts, th_arrdts, districts, arrdts):
     landmarks_desc.append(th[0])
@@ -356,23 +438,23 @@ def create_landmarks_descriptions_for_ville_paris_actuelles_line(value, valid_ti
 
     for lab in th_district_labels:
         district_uuid, district_desc = districts.get(lab), None
-        if lab is not None:
+        if district_uuid is None:
             district_uuid, district_desc = create_district_description_for_ville_paris_actuelles(lab, lang, valid_time, vpa_ns)
-            th_districts.append([district_desc, district_uuid, lab])
+        th_districts.append([district_desc, district_uuid, lab])
 
     for lab in th_arrdt_labels:
         arrdt_uuid, arrdt_desc = arrdts.get(lab), None
-        if lab is not None:
+        if arrdt_uuid is None:
             arrdt_uuid, arrdt_desc = create_arrondissement_description_for_ville_paris_actuelles(lab, lang, valid_time, vpa_ns)
-            th_arrdts.append([arrdt_desc, arrdt_uuid, lab])
+        th_arrdts.append([arrdt_desc, arrdt_uuid, lab])
 
     return [th_desc, th_id], th_districts, th_arrdts
 
-def create_landmark_relations_descriptions_for_ville_paris_actuelles_line(th_uuid, district_and_arrdt_uuids, valid_time:dict):
+def create_landmark_relations_descriptions_for_ville_paris_actuelles_line(th_uuid, district_and_arrdt_uuids, valid_time:dict, vpa_ns:Namespace):
     lr_descs = []
     for uuid in district_and_arrdt_uuids:
         lr_uuid = gr.generate_uuid()
-        lr_desc = create_landmark_relation_description(lr_uuid, "within", th_uuid, [uuid], {"uri":th_uuid}, valid_time)
+        lr_desc = create_landmark_relation_version_description(lr_uuid, "within", th_uuid, [uuid], {"uri":str(vpa_ns[th_uuid])}, valid_time)
         lr_descs.append(lr_desc)
 
     return lr_descs
@@ -401,3 +483,21 @@ def create_arrondissement_description_for_ville_paris_actuelles(arrdt_label:str,
     arrdt_provenance = {"uri":str(vpa_ns)}
     arrdt_desc = create_landmark_version_description(arrdt_uuid, arrdt_label, arrdt_type, lang, arrdt_attrs, arrdt_provenance, valid_time)
     return arrdt_uuid, arrdt_desc
+
+def create_landmark_appearance_event_for_ville_paris(lm_label:str, lm_lang:str, provenance:dict, time_stamp:str):
+    time_description = {"stamp":time_stamp, "calendar":"gregorian", "precision":"day"}
+    makes_effective = [{"value":lm_label, "lang":lm_lang}]
+    name_attr_cg = create_landmark_attribute_change_event_description("name", makes_effective=makes_effective)
+    lm_cg = create_landmark_change_event_description("appearance")
+    lm = create_landmark_event_description(1, "thoroughfare", lm_label, lm_lang, changes=[lm_cg, name_attr_cg])
+    ev_desc = create_event_description(None, lm_lang, [lm], [], provenance, time_description)
+    return ev_desc
+
+def create_landmark_disappearance_event_for_ville_paris(lm_label:str, lm_lang:str, provenance:dict, time_stamp:str):
+    time_description = {"stamp":time_stamp, "calendar":"gregorian", "precision":"day"}
+    outdates = [{"value":lm_label, "lang":lm_lang}]
+    name_attr_cg = create_landmark_attribute_change_event_description("name", outdates=outdates)
+    lm_cg = create_landmark_change_event_description("disappearance")
+    lm = create_landmark_event_description(1, "thoroughfare", lm_label, lm_lang, changes=[lm_cg, name_attr_cg])
+    ev_desc = create_event_description(None, lm_lang, [lm], [], provenance, time_description)
+    return ev_desc

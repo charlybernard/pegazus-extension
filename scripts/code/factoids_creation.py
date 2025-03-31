@@ -1056,11 +1056,12 @@ def create_graph_from_ville_paris(vpa_file:str, vpc_file:str, valid_time:dict, l
     vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
     vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
-    vpa_description = cfd.create_state_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns)
+    state_vpa_description, event_vpa_description = cfd.create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid_time, lang, vpa_ns)
     # vpc_description = cfd.create_state_description_for_ville_paris_caduques(vpc_file, valid_time, lang, vpc_ns)
 
     # Creation of a basic graph with rdflib
-    g = sej.create_graph_from_states_descriptions(vpa_description)
+    g = sej.create_graph_from_states_descriptions(state_vpa_description)
+    g += sej.create_graph_from_event_descriptions(event_vpa_description.get("events"))
     # g += sej.create_graph_from_states_descriptions(vpc_description)
     g.bind(vpa_pref, vpa_ns)
     g.bind(vpc_pref, vpc_ns)
