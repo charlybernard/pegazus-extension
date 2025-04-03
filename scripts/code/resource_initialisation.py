@@ -1,11 +1,12 @@
 from rdflib import Graph, Namespace, URIRef, Literal
 from rdflib.namespace import RDF, RDFS, SKOS
-from namespaces import NameSpaces
+from namespaces import NameSpaces, OntologyMapping
 import graphrdf as gr
 import str_processing as sp
 import time_processing as tp
 
 np = NameSpaces()
+om = OntologyMapping()
 
 ############################################## Resource creation ##########################################################
 
@@ -39,13 +40,34 @@ def create_landmark_version(g:Graph, lm_uri:URIRef, lm_type_uri:URIRef, lm_label
             add_provenance_to_resource(g, attr_version_uri, provenance_uri)
 
         # If the attribute is of type `Name`, we add alternative labels to its versions.
-        if attr_type_uri in [np.ATYPE["Name"]]:
+        if attr_type_uri == om.get_attribute_type("name"):
             attr_value_lit_label, attr_value_lit_lang = attr_value_lit.value, attr_value_lit.language
             add_other_labels_for_resource(g, attr_version_uri, attr_value_lit_label, attr_value_lit_lang, lm_type_uri)
 
     # Adding alternative labels for the landmark
     add_other_labels_for_resource(g, lm_uri, lm_label, lang, lm_type_uri)
-    add_validity_time_interval_to_resource(g, lm_uri, time_description)
+    add_valid_time_interval_to_resource(g, lm_uri, time_description)
+
+    if provenance_uri is not None:
+        add_provenance_to_resource(g, lm_uri, provenance_uri)
+
+def create_landmark_with_attributes(g:Graph, lm_uri:URIRef, lm_type_uri:URIRef, lm_label:str,
+                                    attr_types_and_values:list[list], provenance_uri:URIRef,
+                                    lm_namespace:Namespace, lang:str):
+    if lm_label is not None:
+        lm_label_lit = gr.get_name_literal(lm_label, lang)
+    else:
+        lm_label_lit = None
+    create_landmark(g, lm_uri, lm_label_lit, lm_type_uri)
+
+    for attr in attr_types_and_values:
+        attr_type_uri, attr_value_lit = attr
+        attr_uri, attr_version_uri = gr.generate_uri(lm_namespace, "ATTR"), gr.generate_uri(lm_namespace, "AV")
+        create_landmark_attribute_and_version(g, lm_uri, attr_uri, attr_type_uri, attr_version_uri, attr_value_lit)
+
+        # Add provenance (if supplied)
+        if provenance_uri is not None:
+            add_provenance_to_resource(g, attr_version_uri, provenance_uri)
 
     if provenance_uri is not None:
         add_provenance_to_resource(g, lm_uri, provenance_uri)
@@ -77,7 +99,7 @@ def create_landmark_relation_version(g:Graph, landmark_relation_uri:URIRef, land
     create_landmark_relation(g, landmark_relation_uri, landmark_relation_type, locatum_uri, relatum_uris, is_address_segment, is_final_address_segment)
 
     # Add time to the landmark relation
-    add_validity_time_interval_to_resource(g, landmark_relation_uri, time_description)
+    add_valid_time_interval_to_resource(g, landmark_relation_uri, time_description)
 
     # Add provenance to the landmark relation
     if provenance_uri is not None:
@@ -215,7 +237,7 @@ def create_crisp_time_interval(g:Graph, time_uri:URIRef, start_time_uri:URIRef, 
 def add_time_to_resource(g:Graph, resource_uri:URIRef, time_uri):
     g.add((resource_uri, np.ADDR["hasTime"], time_uri))
 
-def add_validity_time_interval_to_resource(g:Graph, lm_uri:URIRef, time_description:dict):
+def add_valid_time_interval_to_resource(g:Graph, lm_uri:URIRef, time_description:dict):
     start_time_stamp, start_time_calendar, start_time_precision = tp.get_time_instant_elements(time_description.get("start"))
     end_time_stamp, end_time_calendar, end_time_precision = tp.get_time_instant_elements(time_description.get("end"))
     time_interval_uri, start_time_uri, end_time_uri = gr.generate_uri(np.FACTOIDS, "TI"), gr.generate_uri(np.FACTOIDS, "TI"), gr.generate_uri(np.FACTOIDS, "TI")
@@ -234,6 +256,30 @@ def create_prov_entity(g:Graph, prov_uri:URIRef):
 
 def add_provenance_to_resource(g:Graph, resource_uri:URIRef, prov_uri:URIRef):
     g.add((resource_uri, np.PROV.wasDerivedFrom, prov_uri))
+
+def create_source(g:Graph, source_uri:URIRef, source_label:Literal=None, source_comment:Literal=None):
+    g.add((source_uri, RDF.type, np.RICO.Record))
+    
+    if isinstance(source_label, Literal):
+        g.add((source_uri, RDFS.label, source_label))
+    
+    if isinstance(source_comment, Literal):
+        g.add((source_uri, RDFS.comment, source_comment))
+
+def add_publisher_to_source(g:Graph, source_uri:URIRef, source_publisher_uri:URIRef):
+    g.add((source_uri, np.RICO.hasPublisher, source_publisher_uri))
+
+def create_publisher(g:Graph, publisher_uri:URIRef, publisher_label:Literal=None, publisher_comment:Literal=None):
+    g.add((publisher_uri, RDF.type, np.RICO.Publisher))
+
+    if isinstance(publisher_label, Literal):
+        g.add((publisher_uri, RDFS.label, publisher_label))
+    
+    if isinstance(publisher_comment, Literal):
+        g.add((publisher_uri, RDFS.comment, publisher_comment))
+
+def add_source_to_provenance(g:Graph, prov_uri:URIRef, source_uri:URIRef):
+    g.add((prov_uri, np.RICO.isOrWasDescribedBy, source_uri))
 
 ########################################## Refine data ##########################################
 

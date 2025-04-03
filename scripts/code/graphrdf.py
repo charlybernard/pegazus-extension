@@ -21,6 +21,8 @@ def get_literal_without_option(value:str):
     literal = get_literal_without_option("Hello World")
     ```
     """
+    if value is None:
+        return None
     return Literal(value)
 
 def get_literal_with_lang(value:str, lang:str):
@@ -39,6 +41,8 @@ def get_literal_with_lang(value:str, lang:str):
     literal = get_literal_with_lang("Bonjour", "fr")
     ```
     """
+    if value is None:
+        return None
     return Literal(value, lang=lang)
 
 def get_literal_with_datatype(value:str, datatype:URIRef):

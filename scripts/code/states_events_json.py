@@ -19,15 +19,32 @@ def get_provenance_uri(provenance_description:dict):
     if prov_uri_str is not None:
         prov_uri = URIRef(prov_uri_str)
     else:
-        prov_uri = None
+        prov_uri = gr.generate_uri(np.FACTS, "PROV")
     return prov_uri
 
-def create_provenance(g, prov_uri:URIRef, provenance_description:dict):
+def create_provenance(g, provenance_description:dict):
+    prov_uri = get_provenance_uri(provenance_description)
     ri.create_prov_entity(g, prov_uri)
+
+    prov_label = provenance_description.get("label")
+    prov_lang = provenance_description.get("lang")
+    if prov_label is not None:
+        prov_label_lit = gr.get_literal_with_lang(prov_label, prov_lang)
+        g.add((prov_uri, RDFS.label, prov_label_lit))
+
+    return prov_uri
 
 def create_time_instant(g:Graph, time_uri:URIRef, time_description:dict):
     stamp, calendar, precision = tp.get_time_instant_elements(time_description)
     ri.create_crisp_time_instant(g, time_uri, stamp, calendar, precision)
+
+def create_time_interval(g:Graph, time_uri:URIRef, time_description:dict):
+    start_time, end_time = time_description.get("start"), time_description.get("end")
+    start_time_uri, end_time_uri = gr.generate_uri(np.FACTOIDS, "TI"), gr.generate_uri(np.FACTOIDS, "TI")
+
+    create_time_instant(g, start_time_uri, start_time)
+    create_time_instant(g, end_time_uri, end_time)
+    ri.create_crisp_time_interval(g, time_uri, start_time_uri, end_time_uri)
 
 def get_attribute_version_value(attribute_version_description:dict):
     
@@ -45,16 +62,67 @@ def get_attribute_version_value(attribute_version_description:dict):
 
     return version_val
 
+############################################################## Source creation ############################################################
+
+def create_source_from_description(g:Graph, description:dict):
+    """
+    Creating source from a description which is a dictionary
+    """
+
+    # Get the source URI 
+    source_uri_str = description.get("uri")
+    source_uri = URIRef(source_uri_str) if source_uri_str is not None else gr.generate_uri(np.FACTOIDS, "SRC")
+
+    # Get the source label and language
+    lang, label, comment = description.get("lang"), description.get("label"), description.get("comment")
+    label_lit = gr.get_literal_with_lang(label, lang)
+    comment_lit = gr.get_literal_with_lang(comment, lang)
+
+    # Initialise the source
+    ri.create_source(g, source_uri, label_lit, comment_lit)
+    
+    # Add the publisher to the source (if exists)
+    publisher_desc = description.get("publisher")
+    if isinstance(publisher_desc, dict):
+        publisher_uri = create_publisher_from_description(g, publisher_desc, lang)
+        ri.add_publisher_to_source(g, source_uri, publisher_uri)
+
+    return source_uri
+
+def create_publisher_from_description(g:Graph, description:dict, lang:str=None):
+    """
+    Creating publisher from a description which is a dictionary
+    """
+
+    # Get the publisher URI
+    publisher_uri_str = description.get("uri")
+    publisher_uri = URIRef(publisher_uri_str) if publisher_uri_str is not None else gr.generate_uri(np.FACTOIDS, "PUB")
+    publisher_label = description.get("label")
+    publisher_lang = description.get("lang") if description.get("lang") is not None else lang
+    publisher_label_lit = gr.get_literal_with_lang(publisher_label, publisher_lang)
+
+    # Create the publisher
+    ri.create_publisher(g, publisher_uri, publisher_label_lit)
+
+    return publisher_uri
+
 ############################################################ Event creation ####################################################################
 
-def create_graph_from_event_descriptions(event_descriptions:list[dict]):
+def create_graph_from_event_descriptions(descriptions:list[dict]):
+    events_desc = descriptions.get("events")
+    source_desc = descriptions.get("source")
     g = Graph()
-    for desc in event_descriptions:
-        g += create_graph_from_event_description(desc)
+
+    source_uri = None
+    if isinstance(source_desc, dict):
+        source_uri = create_source_from_description(g, source_desc)
+
+    for desc in events_desc:
+        create_graph_from_event_description(g, desc, source_uri)
 
     return g
 
-def create_graph_from_event_description(event_description:dict):
+def create_graph_from_event_description(g:Graph, event_description:dict, source_uri:URIRef=None):
     """
     Generate a graph describing an event from a description which is a dictionary
     Example of event_description
@@ -82,7 +150,6 @@ def create_graph_from_event_description(event_description:dict):
     ```
     """
 
-    g = Graph()
     event_uri = gr.generate_uri(np.FACTOIDS, "EV")
     landmark_uris = {}
     created_entities = [event_uri]
@@ -96,10 +163,6 @@ def create_graph_from_event_description(event_description:dict):
         ev_label = gr.get_literal_with_lang(label, lang)
         g.add((event_uri, RDFS.comment, ev_label))
 
-    prov_uri = get_provenance_uri(provenance_description)
-    if prov_uri is not None:
-        create_provenance(g, prov_uri, provenance_description)
-
     for desc in landmark_descriptions:
         lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")
         landmark_uris[lm_id] = lm_uri
@@ -111,10 +174,13 @@ def create_graph_from_event_description(event_description:dict):
         create_event_landmark_relation(g, event_uri, lr_uri, desc, landmark_uris)
         created_entities.append(lr_uri)
 
-    for entity in created_entities:
-        ri.add_provenance_to_resource(g, entity, prov_uri)
-
-    return g
+    prov_uri = create_provenance(g, provenance_description)
+    if isinstance(prov_uri, URIRef):
+        for entity in created_entities:
+            ri.add_provenance_to_resource(g, entity, prov_uri)
+            if isinstance(source_uri, URIRef):
+                ri.add_source_to_provenance(g, prov_uri, source_uri)
+                
 
 def get_event_description_elements(event_description:dict):
     """
@@ -243,7 +309,7 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
     if not isinstance(relatums, list):
         relatums = [relatums]
     relatum_uris = [landmark_uris.get(x) for x in relatums]
-    
+
     ri.create_landmark_relation(g, landmark_relation_uri, type_uri, locatum_uri, relatum_uris)
 
     change_type = landmark_relation_description.get("change")
@@ -257,19 +323,147 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
 ####################################################### States creation ####################################################################
 
 def create_graph_from_states_descriptions(states_descriptions:dict):
+    """
+    Generate a graph describing a set of states from a description which is a dictionary
+    Example of states_descriptions
+    ```
+    states_descriptions = {
+        "landmarks": [
+            {
+                "id": 1,
+                "label": "23",
+                "type": "street_number",
+                "attributes": {
+                    "geometry": {
+                        "value": "POINT(2.3589 48.8394)",
+                        "datatype": "wkt_literal"
+                    },
+                    "name": {
+                        "value": "rue du Père Guérin",
+                        "lang": "fr",
+                    }
+                },
+                "provenance": {
+                    "uri": "https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin"
+                }
+            },
+            {
+                "id": 2,
+                "label": "rue du Père Guérin",
+                "lang": "fr",
+                "type": "thoroughfare",
+                "attributes": {
+                    "geometry": {
+                        "value": "POINT(2.3589 48.8394)",
+                        "datatype": "wkt_literal"
+                    },
+                    "name": {
+                        "value": "rue du Père Guérin",
+                        "lang": "fr",
+                    }
+                },
+                "provenance": {
+                    "uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"
+                }
+            },
+            {
+                "id": 3,
+                "label": "Paris",
+                "lang": "fr",
+                "type": "city",
+                "attributes": {
+                    "geometry": {
+                        "value": "POINT(2.3589 48.8394)",
+                        "datatype": "wkt_literal"
+                    },
+                    "name": {
+                        "value": "Paris",
+                        "lang": "fr",
+                    }
+                },
+                "provenance": {
+                    "uri": "https://fr.wikipedia.org/wiki/Paris"
+                }
+            }
+        ],
+        "relations": [
+            {
+                "type": "belongs",
+                "id": 1,
+                "locatum": 1,
+                "relatum": [2],
+                "provenance": {
+                    "uri": "https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin"
+                }
+            },
+            {
+                "type": "within",
+                "id": 2,
+                "locatum": 1,
+                "relatum": [3],
+                "provenance": {
+                    "uri": "https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin"
+                }
+            },
+        ],
+        "addresses": [
+            {
+                "label": "23 rue du Père Guérin, Paris",
+                "lang": "fr",
+                "target": 1,
+                "segments": [1, 2],
+            }
+        ],
+        "time": {
+            "start": {
+                "stamp": "1851-02-18",
+                "calendar": "gregorian",
+                "precision": "day"
+            },
+            "end": {
+                "stamp": "1853-02-18",
+                "calendar": "gregorian",
+                "precision": "day"
+            }
+        },
+        "source": {
+            "uri": "https://fr.wikipedia.org/wiki/",
+            "label": "Wikipedia",
+            "lang": "fr",
+            "comment": "Encyclopédie libre, universelle et collaborative",
+            "publisher": {
+                "uri": "https://fr.wikipedia.org/wiki/Wikipedia:À_propos",
+                "label": "Contributeurs de Wikipedia"
+            }
+    }
+    ```
+    """
+
     g = Graph()
     landmarks, relations = {}, {}
 
     lm_states_descriptions = states_descriptions.get("landmarks") or []
     lm_relations_states_descriptions = states_descriptions.get("relations") or []
     addr_states_descriptions = states_descriptions.get("addresses") or []
+    time_description = states_descriptions.get("time")
+    source_description = states_descriptions.get("source")
+
+    valid_time_uri = None
+    # Check if the time description is a dictionary and contains the keys 'start' and 'end'
+    if isinstance(time_description, dict) and {"start", "end"}.issubset(time_description.keys()):
+        valid_time_uri = gr.generate_uri(np.FACTOIDS, "TI")
+        create_time_interval(g, valid_time_uri, time_description)
+
+    source_uri = None
+    if isinstance(source_description, dict):
+        source_uri = create_source_from_description(g, source_description)
 
     for desc in lm_states_descriptions:
-        lm_id, lm_uri = create_landmark_version_from_description(g, desc)
+        lm_id, lm_uri = create_landmark_version_from_description(g, desc, valid_time_uri, source_uri)
         landmarks[lm_id] = lm_uri
 
     for desc in lm_relations_states_descriptions:
-        lr_id, lr_uri = create_landmark_relation_version_from_description(g, desc, landmarks)
+        lr_id, lr_uri = create_landmark_relation_version_from_description(g, desc, landmarks, valid_time_uri, source_uri)
         relations[lr_id] = lr_uri
 
     for desc in addr_states_descriptions:
@@ -277,7 +471,7 @@ def create_graph_from_states_descriptions(states_descriptions:dict):
 
     return g
 
-def create_landmark_version_from_description(g:Graph, lm_state_description:dict):
+def create_landmark_version_from_description(g:Graph, lm_state_description:dict, valid_time_uri:URIRef=None, source_uri:URIRef=None):
     """
     ```
     lm_state_description = {
@@ -302,7 +496,7 @@ def create_landmark_version_from_description(g:Graph, lm_state_description:dict)
                 "precision": "day"
             },
             "end": {
-                "stamp": "2023-10-03",
+                "stamp": "1853-02-18",
                 "calendar": "gregorian",
                 "precision": "day"
             }
@@ -320,17 +514,33 @@ def create_landmark_version_from_description(g:Graph, lm_state_description:dict)
     lm_lang = lm_state_description.get("lang") # Extract the language from the version description
     lm_type = lm_state_description.get("type") # Extract the landmark type from the version description
     lm_attributes = lm_state_description.get("attributes") # Extract the properties from the version description
-    lm_valid_time = lm_state_description.get("time") # Extract the valid time from the version description
-    lm_provenance = lm_state_description.get("provenance") # Extract the provenance from the version description
+    lm_provenance = lm_state_description.get("provenance") or {} # Extract the provenance from the version description
+    lm_valid_time = lm_state_description.get("time") # Extract the valid time from the version description (optional)
+
+    # Add valid time to the landmark, if it exists
+    # If it does not exist, use the valid time URI if it is provided
+    if lm_valid_time is not None:
+        time_description = tp.get_valid_time_description(lm_valid_time) # Create a time description for the landmark
+        lm_valid_time_uri = gr.generate_uri(np.FACTOIDS, "TI")
+        create_time_interval(g, lm_valid_time_uri, time_description) # Create the time interval for the landmark
+        ri.add_time_to_resource(g, lm_uri, lm_valid_time_uri)
+    elif isinstance(valid_time_uri, URIRef):
+        # Add the valid time interval to the landmark
+        ri.add_time_to_resource(g, lm_uri, valid_time_uri)
 
     lm_type_uri = om.get_landmark_type(lm_type) # Get the URI for the landmark type
-    time_description = tp.get_valid_time_description(lm_valid_time) # Create a time description for the landmark
     attr_types_and_values = create_version_attribute_version(lm_attributes) # Create a dictionary of attribute types and values
-    lm_provenance_uri = get_provenance_uri(lm_provenance) # Get the URI for the provenance
-    ri.create_landmark_version(g, lm_uri, lm_type_uri, lm_label, attr_types_and_values, time_description, lm_provenance_uri, np.FACTOIDS, lm_lang)
+    lm_provenance_uri = create_provenance(g, lm_provenance) # Get the URI for the provenance
+
+    ri.create_landmark_with_attributes(g, lm_uri, lm_type_uri, lm_label, attr_types_and_values, lm_provenance_uri, np.FACTOIDS, lm_lang)
+
+    # Add provenance to the landmark and source to the provenance if it exists
+    if lm_provenance_uri is not None and source_uri is not None:
+        ri.add_source_to_provenance(g, lm_provenance_uri, source_uri)
+
     return lm_id, lm_uri
 
-def create_landmark_relation_version_from_description(g:Graph, lr_state_description:list[dict], landmark_uris:dict):
+def create_landmark_relation_version_from_description(g:Graph, lr_state_description:list[dict], landmark_uris:dict, valid_time_uri:URIRef=None, source_uri:URIRef=None):
     """
     ```
     lr_state_description = {
@@ -338,18 +548,6 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
         "id": 1, 
         "locatum": 1,
         "relatum": [3],
-        "time": {
-            "start": {
-                "stamp": "2020-02-18",
-                "calendar": "gregorian",
-                "precision": "day"
-            },
-            "end": {
-                "stamp": "2023-10-03",
-                "calendar": "gregorian",
-                "precision": "day"
-            }
-        },
         "provenance": {
             "uri": "https://fr.wikipedia.org/wiki/Rue_du_P%C3%A8re-Gu%C3%A9rin"
         }
@@ -368,21 +566,25 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
     lr_uri = gr.generate_uri(np.FACTOIDS, "LR") # Generate a unique URI for the landmark relation
     lr_id = lr_state_description.get("id") # Extract the landmark relation ID from the version description
     lr_type = lr_state_description.get("type") # Extract the landmark relation type from the version description
+    lr_provenance = lr_state_description.get("provenance") or {} # Extract the provenance from the version description
     lr_locatum = lr_state_description.get("locatum") # Extract the landmark relation locatum from the version description
     lr_relatums = lr_state_description.get("relatum") # Extract the landmark relation relatum from the version description
     if not isinstance(lr_relatums, list):
         lr_relatums = [lr_relatums]
-
-    lr_valid_time = lr_state_description.get("time") # Extract the valid time from the version description
-    lr_provenance = lr_state_description.get("provenance") # Extract the provenance from the version description
-
+    
     lr_type_uri = om.get_landmark_relation_type(lr_type) # Get the URI for the landmark relation type
     lr_locatum_uri = landmark_uris.get(lr_locatum) # Get the URI for the landmark relation locatum
     lr_relatums_uris = [landmark_uris.get(x) for x in lr_relatums] # Get the URIs for the landmark relation relatum
-    lr_provenance_uri = get_provenance_uri(lr_provenance) # Get the URI for the provenance
-    time_description = tp.get_valid_time_description(lr_valid_time) # Create a time description for the landmark relation
+    lr_provenance_uri = create_provenance(g, lr_provenance) # Get the URI for the provenance
 
-    ri.create_landmark_relation_version(g, lr_uri, lr_type_uri, lr_locatum_uri, lr_relatums_uris, time_description, lr_provenance_uri)
+    ri.create_landmark_relation(g, lr_uri, lr_type_uri, lr_locatum_uri, lr_relatums_uris)
+    if lr_provenance_uri is not None:
+        ri.add_provenance_to_resource(g, lr_uri, lr_provenance_uri)
+        if source_uri is not None:
+            ri.add_source_to_provenance(g, lr_provenance_uri, source_uri)
+
+    if valid_time_uri is not None:
+        ri.add_time_to_resource(g, lr_uri, valid_time_uri)
 
     return lr_id, lr_uri
 

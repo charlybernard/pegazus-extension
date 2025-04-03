@@ -6,7 +6,7 @@ np = NameSpaces()
 
 ################################################## Generate descriptions ######################################################
 
-def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, lm_attributes:dict, lm_provenance:dict, time_description:dict):
+def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, lm_attributes:dict=None, lm_provenance:dict=None, time_description:dict=None):
     """
     Create a landmark version description
     """
@@ -35,18 +35,30 @@ def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, 
 
     return description
 
-def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict, time_description:dict):
+def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict=None, time_description:dict=None):
     """
     Create a landmark relation description
     """
-    description = {
-        "id": lr_id,
-        "type": lr_type,
-        "locatum": locatum_id,
-        "relatum": relatum_ids,
-        "provenance": lm_provenance,
-        "time": time_description
-    }
+
+    description = {}
+
+    if lr_id is not None:
+        description["id"] = lr_id
+    
+    if lr_type is not None:
+        description["type"] = lr_type
+
+    if locatum_id is not None:
+        description["locatum"] = locatum_id
+        
+    if isinstance(relatum_ids, list):
+        description["relatum"] = relatum_ids
+
+    if isinstance(lm_provenance, dict):
+        description["provenance"] = lm_provenance
+
+    if isinstance(time_description, dict):
+        description["time"] = time_description
 
     return description
 
@@ -61,19 +73,25 @@ def create_landmark_attribute_version_description(value:str, lang:str=None, data
     
     return description
 
-def create_address_description(addr_uuid:str, addr_label:str, lang:str, target_uuid:str, segment_uuids:list[str], lm_provenance:dict):
+def create_address_description(addr_uuid:str, addr_label:str, lang:str, target_uuid:str, segment_uuids:list[str], lm_provenance:dict=None):
     """
     Create an address description
     """
-    description = {
-        "id": addr_uuid,
-        "label": addr_label,
-        "lang": lang,
-        "target": target_uuid,
-        "segments": segment_uuids,
-        "provenance": lm_provenance,
-    }
+    description = {}
 
+    if addr_uuid is not None:
+        description["id"] = addr_uuid
+    if addr_label is not None:
+        description["label"] = addr_label
+        if lang is not None:
+            description["lang"] = lang
+    if target_uuid is not None:
+        description["target"] = target_uuid
+    if isinstance(segment_uuids, list):
+        description["segments"] = segment_uuids
+    if isinstance(lm_provenance, dict):
+        description["provenance"] = lm_provenance
+    
     return description
 
 def create_event_description(label:str, lang:str, landmarks:list, relations:list, provenance:dict, time_description:dict):

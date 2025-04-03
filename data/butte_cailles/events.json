@@ -1,4 +1,14 @@
 {
+   "source":{
+      "uri":"https://fr.wikipedia.org/",
+      "label":"Wikipedia",
+      "lang":"fr",
+      "comment":"Encyclopédie libre, universelle et collaborative",
+      "publisher":{
+         "uri":"https://fr.wikipedia.org/wiki/Wikipedia:À_propos",
+         "label":"Contributeurs de Wikipedia"
+      }
+   },
    "events":[
       {
          "time":{
@@ -11,8 +21,8 @@
          "landmarks":[
             {
                "id":1,
-               "name":"rue du Père Guérin",
-               "type":"Thoroughfare",
+               "label":"rue du Père Guérin",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -20,11 +30,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "makes_effective":[
                         {
                            "value":"rue du Père Guérin",
@@ -36,19 +46,19 @@
             },
             {
                "id":2,
-               "name":"rue Gérard",
-               "type":"Thoroughfare",
+               "label":"rue Gérard",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   }
                ]
             }
          ],
          "relations":[
             {
-               "type":"Touches",
+               "type":"touches",
                "locatum":1,
                "relatum":2
             }
@@ -68,12 +78,12 @@
          "landmarks":[
             {
                "id":1,
-               "name":"rue Bobillot",
-               "type":"Thoroughfare",
+               "label":"rue Bobillot",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   }
                ]
             }
@@ -93,12 +103,12 @@
          "landmarks":[
             {
                "id":1,
-               "name":"rue Bobillot",
-               "type":"Thoroughfare",
+               "label":"rue Bobillot",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   }
                ]
             }
@@ -118,8 +128,8 @@
          "landmarks":[
             {
                "id":1,
-               "name":"passage Simonet",
-               "type":"Thoroughfare",
+               "label":"passage Simonet",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -127,11 +137,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "outdates":[
                         {
                            "value":"passage Simonet",
@@ -143,8 +153,8 @@
             },
             {
                "id":2,
-               "name":"rue Simonet",
-               "type":"Thoroughfare",
+               "label":"rue Simonet",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -152,11 +162,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "makes_effective":[
                         {
                            "value":"rue Simonet",
@@ -182,8 +192,8 @@
          "landmarks":[
             {
                "id":1,
-               "name":"rue Eugène-Atget",
-               "type":"Thoroughfare",
+               "label":"rue Eugène-Atget",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -191,11 +201,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "makes_effective":[
                         {
                            "value":"rue Eugène-Atget",
@@ -207,18 +217,20 @@
             },
             {
                "id":2,
-               "name":"rue Jonas",
-               "type":"Thoroughfare",
+               "label":"rue Jonas",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   }
                ]
             }
          ],
          "provenance":{
-            "uri":"https://fr.wikipedia.org/wiki/Rue_Jonas"
+            "uri":"https://fr.wikipedia.org/wiki/Rue_Jonas",
+            "label":"Page wikipedia de la rue Jonas",
+            "lang":"fr"
          }
       },
       {
@@ -232,8 +244,8 @@
          "landmarks":[
             {
                "id":1,
-               "name":"place du Puits-Artésien",
-               "type":"Thoroughfare",
+               "label":"place du Puits-Artésien",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -241,11 +253,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "outdates":[
                         {
                            "value":"place du Puits-Artésien",
@@ -257,8 +269,8 @@
             },
             {
                "id":2,
-               "name":"place Paul Verlaine",
-               "type":"Thoroughfare",
+               "label":"place Paul Verlaine",
+               "type":"thoroughfare",
                "changes":[
                   {
                      "on":"landmark",
@@ -266,11 +278,11 @@
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Geometry"
+                     "attribute":"geometry"
                   },
                   {
                      "on":"attribute",
-                     "attribute":"Name",
+                     "attribute":"name",
                      "outdates":[
                         {
                            "value":"place Paul Verlaine",
