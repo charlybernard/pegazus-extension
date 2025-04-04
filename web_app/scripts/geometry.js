@@ -127,9 +127,9 @@ function getGeojsonObj(id, geomWkt, properties={}){
 
 }
 
-function addGeometriesOfVersion(version, map, layersToRemove, styleSettings){
-  removeLayersFromList(layersToRemove, map) ;
-  layersToRemove = displayGeometriesOnMapFromList(version.values, map, layersToRemove, styleSettings) ;
+function addGeometriesOfVersion(version, mapSettings, styleSettings){
+  removeLayersFromList(mapSettings.layersToRemove, mapSettings.map) ;
+  displayGeometriesOnMapFromList(version.values, mapSettings, styleSettings) ;
 }
 
 function removeLayersFromList(layersToRemove, map){
@@ -139,14 +139,17 @@ function removeLayersFromList(layersToRemove, map){
   });
 }
 
-function displayGeometriesOnMapFromList(geomsToDisplay, map, layersToRemove, styleSettings){
+function displayGeometriesOnMapFromList(geomsToDisplay, mapSettings, styleSettings){
+  var map = mapSettings.map ;
+  var layersToRemove = mapSettings.layersToRemove ;
   var featuresList = [];
   geomsToDisplay.forEach(element => {
     var geojsonFeature = getGeoJsonForLandmark("", element, {}) ;
-    featuresList.push(geojsonFeature);
+    // Add geojsonFeature to the list only if it has a geometry
+    if (geojsonFeature.geometry != null){ featuresList.push(geojsonFeature); }
   });
 
-  var layerGroup = getLandmarkLayerGroup(featuresList, styleSettings, hasPopup=false);
+  var layerGroup = getLandmarkLayerGroup(featuresList, mapSettings, styleSettings, hasPopup=false);
   layerGroup.getLayers().forEach(layer => {layersToRemove.push(layer)});
   layerGroup.addTo(map);
   fitBoundsToLayerGroups(map, [layerGroup]);
@@ -315,7 +318,6 @@ function getLandmarkLayerGroup(featuresList, mapSettings, styleSettings, selecte
   var featureCollection = initGeoJsonFeatureCollection(featuresList);
   var leafletGeom = L.geoJSON(featureCollection) ;
   var layers = [];
-
   leafletGeom.eachLayer(function (layer) { setLayer(layer, layers, mapSettings, styleSettings, selectedStyleSettings, hasPopup) ; });
 
   var layerGroup = L.layerGroup(layers);

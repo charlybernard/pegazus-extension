@@ -20,31 +20,18 @@ def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_n
         * for unlinked factoid resources, we create its equivalent in the fact graph
     """
 
-    t1 = time.time()
-    make_rooting_for_landmarks(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t2 = time.time()
-    print(t2 - t1)
-    make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t3 = time.time()
-    print(t3 - t2)
-    make_rooting_for_landmark_attributes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t4 = time.time()
-    print(t4 - t3)
+    label_property = np.SKOS.hiddenLabel
+
+    make_rooting_for_landmarks(graphdb_url, repository_name, label_property, facts_named_graph_uri, inter_sources_name_graph_uri)
+    make_rooting_for_landmark_relations(graphdb_url, repository_name, label_property, facts_named_graph_uri, inter_sources_name_graph_uri)
+    make_rooting_for_landmark_attributes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_temporal_entities(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t5 = time.time()
-    print(t5 - t4)
     manage_labels_after_landmark_rooting(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t6 = time.time()
-    print(t6 - t5)
-
+    
     # Les racines de modification sont créées sauf pour les modifications d'attributs.
-    make_rooting_for_changes(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t7 = time.time()
-    print(t7 - t6)
-    make_rooting_for_events(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
-    t8 = time.time()
-    print(t8 - t7)
-
+    make_rooting_for_changes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+    make_rooting_for_events(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+    
 ####################################################################
 
 ## Management of root elements
@@ -60,18 +47,16 @@ Roots apply to Landmark, LandmarkRelation, Attribute, AttributeVersion, Event, C
 # Make rooting at landmarks level
 # The way the rooting is made depends on the type of landmark
 
-def make_rooting_for_landmarks(graphdb_url:URIRef, repository_name:str,
-                               factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def make_rooting_for_landmarks(graphdb_url:URIRef, repository_name:str, label_property:URIRef,
+                               facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Create `addr:hasRoot` links between similar landmarks.
     """
 
-    label_property = SKOS.hiddenLabel
-
     landmark_type_uris = [np.LTYPE["Municipality"], np.LTYPE["District"], np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
     for landmark_type_uri in landmark_type_uris:
         make_rooting_for_landmarks_according_label(graphdb_url, repository_name, landmark_type_uri, label_property,
-                                                             factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+                                                   facts_named_graph_uri, inter_sources_name_graph_uri)
         
     lm_and_lr_type_uris = [
         [np.LTYPE["HouseNumber"], np.LRTYPE["Belongs"]],
@@ -81,10 +66,10 @@ def make_rooting_for_landmarks(graphdb_url:URIRef, repository_name:str,
     for elem in lm_and_lr_type_uris:
         lm_type_uri, lr_type_uri = elem
         make_rooting_for_landmarks_according_label_and_relation(graphdb_url, repository_name, lm_type_uri, lr_type_uri, label_property,
-                                                             factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+                                                                facts_named_graph_uri, inter_sources_name_graph_uri)
 
 def make_rooting_for_landmarks_according_label(graphdb_url:URIRef, repository_name:str, landmark_type_uri:URIRef, label_property:URIRef,
-                                               factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+                                               facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Create roots and traces for landmark according a label criterion : a landmark is similar to a root landmark if they share the same label.
     `label_property` is the property for which the label is linked to the landmark (`rdfs:label`, `skos:hiddenLabel`, ...)
@@ -120,20 +105,20 @@ def make_rooting_for_landmarks_according_label(graphdb_url:URIRef, repository_na
 
     query1 = np.query_prefixes + f"""
     INSERT {{
-        GRAPH ?gf {{ ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel . }}
+        GRAPH ?gf {{ ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel . }}
     }}
     WHERE {{
         {{
-            SELECT DISTINCT ?gf ?landmarkType ?keyLabel ?labelProp WHERE {{
+            SELECT DISTINCT ?gf ?landmarkType ?keyLabel ?propLabel WHERE {{
                 BIND({facts_named_graph_uri.n3()} AS ?gf)
                 BIND({landmark_type_uri.n3()} AS ?landmarkType)
-                BIND({label_property.n3()} AS ?labelProp)
-                GRAPH ?g {{ ?landmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel . }}
+                BIND({label_property.n3()} AS ?propLabel)
+                GRAPH ?g {{ ?landmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel . }}
                 FILTER NOT EXISTS {{ ?landmark addr:hasRoot ?x . }}
                 FILTER (?g != ?gf)
             }}
         }}
-        OPTIONAL {{ GRAPH ?gf {{?existingRootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel . }} }}
+        OPTIONAL {{ GRAPH ?gf {{?existingRootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel . }} }}
         BIND(URI(CONCAT(STR(URI(facts:)), "LM_", STRUUID())) AS ?toCreateRootLandmark)
         BIND(IF(BOUND(?existingRootLandmark), ?existingRootLandmark, ?toCreateRootLandmark) AS ?rootLandmark)
     }}
@@ -150,9 +135,9 @@ def make_rooting_for_landmarks_according_label(graphdb_url:URIRef, repository_na
         BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
         BIND({landmark_type_uri.n3()} AS ?landmarkType)
-        BIND({label_property.n3()} AS ?labelProp)
-        GRAPH ?gf {{ ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel . }}
-        GRAPH ?g {{ ?landmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel . }}
+        BIND({label_property.n3()} AS ?propLabel)
+        GRAPH ?gf {{ ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel . }}
+        GRAPH ?g {{ ?landmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel . }}
         FILTER (?g != ?gf)
     }}   
     """
@@ -164,7 +149,7 @@ def make_rooting_for_landmarks_according_label(graphdb_url:URIRef, repository_na
 
 def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, repository_name:str,
                                                             landmark_type_uri:URIRef, landmark_relation_type_uri:URIRef, label_property:URIRef,
-                                                            factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+                                                            facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Create roots and traces for landmark according a label criterion : a landmark is similar to a root landmark if they share the same label and a the same kind of relation with the same landmark.
     This work wells with HouseNumber as the number is not enough to detect similarities, we need to get the landmark it belongs to.
@@ -223,20 +208,20 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
     query1 = np.query_prefixes + f"""
     INSERT {{
         GRAPH ?gf {{
-            ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel .
+            ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel .
             ?rootLR a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; addr:locatum ?rootLandmark ; addr:relatum ?rootRelatum .
         }}
     }}
     WHERE {{
         {{
-            SELECT DISTINCT ?gf ?landmarkType ?labelProp ?keyLabel ?landmarkRelationType ?rootRelatum WHERE {{
+            SELECT DISTINCT ?gf ?landmarkType ?propLabel ?keyLabel ?landmarkRelationType ?rootRelatum WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
-            BIND({label_property.n3()} AS ?labelProp)
+            BIND({label_property.n3()} AS ?propLabel)
             BIND({landmark_type_uri.n3()} AS ?landmarkType)
             BIND({landmark_relation_type_uri.n3()} AS ?landmarkRelationType)
             GRAPH ?g {{ ?lr a addr:LandmarkRelation . }}
                 ?lr addr:isLandmarkRelationType ?landmarkRelationType ;
-                addr:locatum [a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel] ;
+                addr:locatum [a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel] ;
                 addr:relatum [addr:hasRoot ?rootRelatum] .
                 FILTER NOT EXISTS {{ ?lr addr:hasRoot ?x }}
                 FILTER (?g != ?gf)
@@ -244,7 +229,7 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
         }}
         OPTIONAL {{
             GRAPH ?gf {{
-                ?existingRootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel .
+                ?existingRootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel .
                 ?existingRootLR a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ;
                 addr:locatum ?existingRootLandmark ; addr:relatum ?rootRelatum .
             }}
@@ -268,7 +253,7 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
     WHERE {{
         BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        BIND({label_property.n3()} AS ?labelProp)
+        BIND({label_property.n3()} AS ?propLabel)
         BIND({landmark_type_uri.n3()} AS ?landmarkType)
         BIND({landmark_relation_type_uri.n3()} AS ?landmarkRelationType)
         GRAPH ?g {{
@@ -280,9 +265,9 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
             ?rootLandmark a addr:Landmark .
         }}
         ?landmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; addr:locatum ?landmark ; addr:relatum [addr:hasRoot ?rootRelatum] .
-        ?landmark addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel .
+        ?landmark addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel .
         ?rootLandmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; addr:locatum ?rootLandmark ; addr:relatum ?rootRelatum .
-        ?rootLandmark addr:isLandmarkType ?landmarkType ; ?labelProp ?keyLabel .
+        ?rootLandmark addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel .
         FILTER (?g != ?gf)
     }}  
     """
@@ -294,60 +279,137 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
 
 ########## Changes / Events
 
-def make_rooting_for_changes(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def make_rooting_for_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of changes in the fact graph (except for attribute changes, which are not unique)
-    query = np.query_prefixes + f"""
+
+    # query = np.query_prefixes + f"""
+    # INSERT {{
+    #     GRAPH ?gf {{ ?rootChange a addr:Change ; addr:isChangeType ?changeType ; addr:appliedTo ?rootElem . }}
+    #     GRAPH ?gi {{
+    #         ?change addr:hasRoot ?rootChange .
+    #         ?rootChange addr:hasTrace ?change .
+    #     }}
+    # }} WHERE {{
+    #     BIND({facts_named_graph_uri.n3()} AS ?gf)
+    #     BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+    #     BIND({factoids_named_graph_uri.n3()} AS ?gs)
+    #     {{
+    #         SELECT DISTINCT ?changeType ?rootElem WHERE {{
+    #             ?cg a addr:Change ; addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem].
+    #             MINUS {{ ?cg a addr:AttributeChange }}
+    #         }}
+    #     }}
+    #     BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?toCreateRootChange)
+    #     OPTIONAL {{
+    #         GRAPH ?gf {{ ?existingRootChange a addr:Change . }}
+    #         ?existingRootChange addr:isChangeType ?changeType ; addr:appliedTo ?rootElem .
+    #         }}
+    #     BIND(IF(BOUND(?existingRootChange), ?existingRootChange, ?toCreateRootChange) AS ?rootChange)
+    #     GRAPH ?gs {{ ?change a ?changeClass . }}
+    #     ?changeClass rdfs:subClassOf addr:Change .
+    #     ?change addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem] .
+    #     MINUS {{ ?change addr:hasRoot ?x . }}
+    # }}
+    # """
+
+    query1 = np.query_prefixes + f"""
     INSERT {{
-        GRAPH ?gf {{ ?rootChange a addr:Change ; addr:isChangeType ?changeType ; addr:appliedTo ?rootElem . }}
+        GRAPH ?gf {{
+            ?rootCg a addr:Change ; addr:isChangeType ?changeType ; addr:appliedTo ?rootElem .
+        }}
+    }} WHERE {{
+        {{
+            SELECT DISTINCT ?gf ?changeType ?rootElem WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                GRAPH ?g {{?cg a ?cgClass }}
+                ?cgClass rdfs:subClassOf addr:Change .
+                ?cg addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem].
+                FILTER(?g != ?gf)
+                FILTER NOT EXISTS {{?cg a addr:AttributeChange .}}
+                FILTER NOT EXISTS {{?cg addr:hasRoot ?x .}}
+            }} 
+        }}
+        BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?toCreateRootCg)
+        OPTIONAL {{
+            GRAPH ?gf {{ ?existingRootCg a addr:Change . }}
+            ?existingRootCg addr:isChangeType ?changeType ; addr:appliedTo ?rootElem .
+        }}
+        BIND(IF(BOUND(?existingRootCg), ?existingRootCg, ?toCreateRootCg) AS ?rootCg)
+    }}
+    """
+
+    query2 = np.query_prefixes + f"""
+    INSERT {{
         GRAPH ?gi {{
-            ?change addr:hasRoot ?rootChange .
-            ?rootChange addr:hasTrace ?change .
+            ?cg addr:hasRoot ?rootCg .
+            ?rootCg addr:hasTrace ?cg .
         }}
     }} WHERE {{
         BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        BIND({factoids_named_graph_uri.n3()} AS ?gs)
-        {{
-            SELECT DISTINCT ?changeType ?rootElem WHERE {{
-                ?cg a addr:Change ; addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem].
-                MINUS {{ ?cg a addr:AttributeChange }}
-            }}
-        }}
-        BIND(URI(CONCAT(STR(URI(facts:)), "CG_", STRUUID())) AS ?toCreateRootChange)
-        OPTIONAL {{
-            GRAPH ?gf {{ ?existingRootChange a addr:Change . }}
-            ?existingRootChange addr:isChangeType ?changeType ; addr:appliedTo ?rootElem .
-            }}
-        BIND(IF(BOUND(?existingRootChange), ?existingRootChange, ?toCreateRootChange) AS ?rootChange)
-        GRAPH ?gs {{ ?change a ?changeClass . }}
-        ?changeClass rdfs:subClassOf addr:Change .
-        ?change addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem] .
-        MINUS {{ ?change addr:hasRoot ?x . }}
+        GRAPH ?g {{ ?cg a ?cgClass . }}
+        GRAPH ?gf {{ ?rootCg a addr:Change . }}
+        ?cgClass rdfs:subClassOf addr:Change .
+        ?cg addr:isChangeType ?changeType ; addr:appliedTo [addr:hasRoot ?rootElem] .
+        ?rootCg addr:isChangeType ?changeType ; addr:appliedTo ?rootElem .
+        FILTER(?g != ?gf)
+        FILTER NOT EXISTS {{ ?cg a addr:AttributeChange .}}
     }}
-    """
-    gd.update_query(query, graphdb_url, repository_name)
+    """ 
 
-def make_rooting_for_events(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
+
+def make_rooting_for_events(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of events in the fact graph
     # If two events have at least one change in common, they are considered to be equal (a change depends on only one event).
-    query = np.query_prefixes + f"""
+    # query = np.query_prefixes + f"""
+    # INSERT {{
+    #     GRAPH ?gf {{
+    #         ?rootEvent a addr:Event .
+    #         ?rootChange addr:dependsOn ?rootEvent .
+    #         }}
+    #     GRAPH ?gi {{
+    #         ?event addr:hasRoot ?rootEvent .
+    #         ?rootEvent addr:hasTrace ?event .
+        
+    #     }}
+    # }} WHERE {{
+    #     BIND({facts_named_graph_uri.n3()} AS ?gf)
+    #     BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+    #     BIND({factoids_named_graph_uri.n3()} AS ?gs)
+    #     {{
+    #         SELECT DISTINCT ?rootChange WHERE {{
+    #             ?ev a addr:Event ; addr:hasChange [addr:hasRoot ?rootChange] .
+    #         }}
+    #     }}
+    #     BIND(URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())) AS ?toCreateRootEvent)
+    #     OPTIONAL {{
+    #         GRAPH ?gf {{?existingRootEvent a addr:Event . }}
+    #         ?existingRootEvent addr:hasChange ?rootChange .
+    #     }}
+    #     BIND(IF(BOUND(?existingRootEvent), ?existingRootEvent, ?toCreateRootEvent) AS ?rootEvent)
+    #     GRAPH ?gs {{ ?event a ?Event . }}
+    #     ?event addr:hasChange [addr:hasRoot ?rootChange] .
+    #     MINUS {{ ?event addr:hasRoot ?x . }}
+    # }}
+    # """
+
+    query1 = np.query_prefixes + f"""
     INSERT {{
         GRAPH ?gf {{
             ?rootEvent a addr:Event .
             ?rootChange addr:dependsOn ?rootEvent .
-            }}
-        GRAPH ?gi {{
-            ?event addr:hasRoot ?rootEvent .
-            ?rootEvent addr:hasTrace ?event .
-        
         }}
-    }} WHERE {{
-        BIND({facts_named_graph_uri.n3()} AS ?gf)
-        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        BIND({factoids_named_graph_uri.n3()} AS ?gs)
+    }}
+    WHERE {{
         {{
-            SELECT DISTINCT ?rootChange WHERE {{
-                ?ev a addr:Event ; addr:hasChange [addr:hasRoot ?rootChange] .
+            SELECT DISTINCT ?gf ?rootChange WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                GRAPH ?g {{ ?ev a addr:Event }}
+                ?ev addr:hasChange [addr:hasRoot ?rootChange] .
+                FILTER (?g != ?gf)
             }}
         }}
         BIND(URI(CONCAT(STR(URI(facts:)), "EV_", STRUUID())) AS ?toCreateRootEvent)
@@ -356,17 +418,34 @@ def make_rooting_for_events(graphdb_url:URIRef, repository_name:str, factoids_na
             ?existingRootEvent addr:hasChange ?rootChange .
         }}
         BIND(IF(BOUND(?existingRootEvent), ?existingRootEvent, ?toCreateRootEvent) AS ?rootEvent)
-        GRAPH ?gs {{ ?event a ?Event . }}
-        ?event addr:hasChange [addr:hasRoot ?rootChange] .
-        MINUS {{ ?event addr:hasRoot ?x . }}
     }}
     """
-    gd.update_query(query, graphdb_url, repository_name)
+
+    query2 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gi {{
+            ?event addr:hasRoot ?rootEvent .
+            ?rootEvent addr:hasTrace ?event .
+        }}
+    }} WHERE {{
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gfi)
+        GRAPH ?g {{ ?ev a addr:Event . }}
+        GRAPH ?gf {{ ?rootEv a addr:Event . }}
+        ?ev addr:hasChange [addr:hasRoot ?rootChange] .
+        ?rootEv addr:hasChange ?rootChange .
+        FILTER (?g != ?gf)
+    }}
+    """
+
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
 
 
 ########## Landmark relations
 
-def make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def make_rooting_for_landmark_relations(graphdb_url, repository_name, label_property:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Pour des relations entre repères dans le graphe nommé `factoids_named_graph_uri`, les lier avec une relation entre repères dans `facts_named_graph_uri` qui sont similaires (mêmes locatum, relatums et type de relation).
     Le lien créé est mis dans `factoids_facts_named_graph_uri`.
@@ -377,10 +456,10 @@ def make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_n
     # We create this label for relationships that don't have one
     query1 = np.query_prefixes + f"""
         INSERT {{
-            GRAPH ?gf {{?lr skos:hiddenLabel ?hiddenLabel}}
+            GRAPH ?gf {{?lr {label_property.n3()} ?keyLabel}}
         }} WHERE {{
             {{
-                SELECT ?gf ?lr (CONCAT(STR(?rootLoc), "|", GROUP_CONCAT(STR(?rootRel); separator=";")) AS ?hiddenLabel) WHERE {{
+                SELECT ?gf ?lr (CONCAT(STR(?rootLoc), "|", GROUP_CONCAT(STR(?rootRel); separator=";")) AS ?keyLabel) WHERE {{
                     BIND({facts_named_graph_uri.n3()} AS ?gf)
                     GRAPH ?gf {{ ?lr a addr:LandmarkRelation . }}
                     ?lr addr:relatum ?rootRel ; addr:locatum ?rootLoc .
@@ -393,24 +472,80 @@ def make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_n
     # We do the same thing for the relations in the factoid graph. We don't integrate the URIs of the locatums and relatums, but the URIs of their root in the fact graph.
     query2 = np.query_prefixes + f"""
         INSERT {{
-            GRAPH ?gi {{?lr skos:hiddenLabel ?hiddenLabel}}
+            GRAPH ?gi {{?lr {label_property.n3()} ?keyLabel}}
         }} WHERE {{
             BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
             {{
-                SELECT ?gs ?lr (CONCAT(STR(?rootLoc), "|", GROUP_CONCAT(STR(?rootRel); separator=";")) AS ?hiddenLabel) WHERE {{
-                    BIND({factoids_named_graph_uri.n3()} AS ?gs)
-                    GRAPH ?gs {{ ?lr a ?lrClass . }}
+                SELECT ?g ?lr (CONCAT(STR(?rootLoc), "|", GROUP_CONCAT(STR(?rootRel); separator=";")) AS ?keyLabel) WHERE {{
+                    BIND({facts_named_graph_uri.n3()} AS ?gf)
+                    GRAPH ?g {{ ?lr a ?lrClass . }}
+                    FILTER (?g != ?gf)
                     ?lrClass rdfs:subClassOf addr:LandmarkRelation .
                     ?lr addr:relatum [addr:hasRoot ?rootRel] ; addr:locatum [addr:hasRoot ?rootLoc] .
                 }}
-                GROUP BY ?gs ?lr ?rootLoc ORDER BY ?rootRel
+                GROUP BY ?g ?lr ?rootLoc
+                ORDER BY ?rootRel
             }}
         }}
     """
 
+    # query3 = np.query_prefixes + f"""
+    #     INSERT {{
+    #         GRAPH ?gf {{ ?rootLandmarkRelation a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel . }}
+    #         GRAPH ?gi {{
+    #             ?landmarkRelation addr:hasRoot ?rootLandmarkRelation .
+    #             ?rootLandmarkRelation addr:hasTrace ?landmarkRelation .
+    #         }}
+    #     }}
+    #     WHERE {{
+    #         BIND({facts_named_graph_uri.n3()} AS ?gf)
+    #         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+    #         BIND({factoids_named_graph_uri.n3()} AS ?gs)
+    #         {{
+    #             SELECT DISTINCT ?landmarkRelationType ?keyLabel WHERE {{
+    #                 ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel .
+    #             }}
+    #         }}
+    #         BIND(URI(CONCAT(STR(URI(facts:)), "LR_", STRUUID())) AS ?toCreateRootLR)
+    #         OPTIONAL {{
+    #             GRAPH ?gf {{ ?existingRootLR a addr:LandmarkRelation }}
+    #             ?existingRootLR skos:hiddenLabel ?keyLabel .
+    #         }}
+    #         BIND(IF(BOUND(?existingRootLR), ?existingRootLR, ?toCreateRootLR) AS ?rootLandmarkRelation)
+    #         GRAPH ?gs {{ ?landmarkRelation a ?lrClass . }}
+    #         ?lrClass rdfs:subClassOf addr:LandmarkRelation .
+    #         ?landmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel .
+    #     }}
+    # """
+
     query3 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gf {{
+            ?rootLR a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; ?propLabel ?keyLabel .
+        }}
+    }}
+    WHERE {{
+        {{
+            SELECT DISTINCT ?gf ?landmarkRelationType ?propLabel ?keyLabel WHERE {{
+                BIND({facts_named_graph_uri.n3()} AS ?gf)
+                BIND({label_property.n3()} AS ?propLabel)
+                GRAPH ?g {{ ?lr a addr:LandmarkRelation . }}
+                ?lr addr:isLandmarkRelationType ?landmarkRelationType ; ?propLabel ?keyLabel .
+                FILTER NOT EXISTS {{?lr addr:hasRoot ?x}}
+                FILTER(?g != ?gf)
+            }}  
+        }}
+        OPTIONAL {{
+            GRAPH ?gf {{ ?existingRootLR a addr:LandmarkRelation . }}
+            ?existingRootLR addr:isLandmarkRelationType ?landmarkRelationType ; ?propLabel ?keyLabel .
+        }}
+        BIND(URI(CONCAT(STR(URI(facts:)), "LR_", STRUUID())) AS ?toCreateRootLR)
+        BIND(IF(BOUND(?existingRootLR), ?existingRootLR, ?toCreateRootLR) AS ?rootLR)
+    }}
+    """
+
+    query4 = np.query_prefixes + f"""
         INSERT {{
-            GRAPH ?gf {{ ?rootLandmarkRelation a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel . }}
             GRAPH ?gi {{
                 ?landmarkRelation addr:hasRoot ?rootLandmarkRelation .
                 ?rootLandmarkRelation addr:hasTrace ?landmarkRelation .
@@ -419,25 +554,18 @@ def make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_n
         WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
             BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-            BIND({factoids_named_graph_uri.n3()} AS ?gs)
-            {{
-                SELECT DISTINCT ?landmarkRelationType ?keyLabel WHERE {{
-                    ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel .
-                }}
-            }}
-            BIND(URI(CONCAT(STR(URI(facts:)), "LR_", STRUUID())) AS ?toCreateRootLR)
-            OPTIONAL {{
-                GRAPH ?gf {{ ?existingRootLR a addr:LandmarkRelation }}
-                ?existingRootLR skos:hiddenLabel ?keyLabel .
-            }}
-            BIND(IF(BOUND(?existingRootLR), ?existingRootLR, ?toCreateRootLR) AS ?rootLandmarkRelation)
-            GRAPH ?gs {{ ?landmarkRelation a ?lrClass . }}
+            BIND({label_property.n3()} AS ?propLabel)
+            GRAPH ?g {{ ?landmarkRelation a ?lrClass . }}
+            GRAPH ?gf {{ ?rootLandmarkRelation a addr:LandmarkRelation . }}
             ?lrClass rdfs:subClassOf addr:LandmarkRelation .
-            ?landmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; skos:hiddenLabel ?keyLabel .
-        }}
+            ?landmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; ?propLabel ?keyLabel .
+            ?rootLandmarkRelation addr:isLandmarkRelationType ?landmarkRelationType ; ?propLabel ?keyLabel .
+            FILTER (?g != ?gf)
+        }}  
     """
 
-    query4 = np.query_prefixes + f"""
+
+    query5 = np.query_prefixes + f"""
         INSERT {{
             GRAPH ?gf {{ ?rootLandmarkRelation ?prop ?rootLandmark . }}
         }}
@@ -449,52 +577,99 @@ def make_rooting_for_landmark_relations(graphdb_url, repository_name, factoids_n
         }}
     """
 
-    queries = [query1, query2, query3, query4]
+    queries = [query1, query2, query3, query4, query5]
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
 ########## Atttibutes
 
-def make_rooting_for_landmark_attributes(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def make_rooting_for_landmark_attributes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Integration of changes in the fact graph (except for attribute changes, which are not unique)
-    query = np.query_prefixes + f"""
-    INSERT {{
-        GRAPH ?gf {{
-            ?rootAttr a addr:Attribute ; addr:isAttributeType ?attrType .
-            ?rootLandmark addr:hasAttribute ?rootAttr .
+    # query = np.query_prefixes + f"""
+    # INSERT {{
+    #     GRAPH ?gf {{
+    #         ?rootAttr a addr:Attribute ; addr:isAttributeType ?attrType .
+    #         ?rootLandmark addr:hasAttribute ?rootAttr .
+    #     }}
+    #     GRAPH ?gi {{
+    #         ?attr addr:hasRoot ?rootAttr .
+    #         ?rootAttr addr:hasTrace ?attr .
+    #         }}
+    # }} WHERE {{
+    #     BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+    #     BIND({factoids_named_graph_uri.n3()} AS ?gs)
+    #     {{
+    #         SELECT DISTINCT ?gf ?attrType ?rootLandmark ?rootAttr WHERE {{
+    #             {{
+    #                 SELECT DISTINCT ?gf ?attrType ?rootLandmark ?existingRootAttr WHERE {{
+    #                     BIND({facts_named_graph_uri.n3()} AS ?gf)
+    #                     ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute [a addr:Attribute ; addr:isAttributeType ?attrType] . 
+    #                     OPTIONAL {{
+    #                         GRAPH ?gf {{ ?existingRootAttr a addr:Attribute . }}
+    #                         ?existingRootAttr addr:isAttributeType ?attrType .
+    #                         ?rootLandmark addr:hasAttribute ?existingRootAttr .
+    #                     }}
+    #                 }}
+    #             }}
+    #             BIND(IF(BOUND(?existingRootAttr), ?existingRootAttr, URI(CONCAT(STR(URI(facts:)), "ATTR_", STRUUID()))) AS ?rootAttr)
+    #         }}
+    #     }}
+
+    #     GRAPH ?gs {{ ?attr a addr:Attribute . }}
+    #     ?attr addr:isAttributeType ?attrType .
+    #     ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute ?attr .
+    #     FILTER NOT EXISTS {{ ?attr addr:hasRoot ?x . }}
+    # }}
+    # """
+
+    query1 = np.query_prefixes + f"""
+INSERT {{
+    GRAPH ?gf {{
+        ?rootAttr a addr:Attribute ; addr:isAttributeType ?attrType .
+        ?rootLandmark addr:hasAttribute ?rootAttr .
+    }}
+}}
+WHERE {{
+    {{
+        SELECT DISTINCT ?gf ?attrType ?rootLandmark WHERE {{
+            BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?g {{ ?attr a addr:Attribute . }}
+            FILTER NOT EXISTS {{ ?attr addr:hasRoot ?x }}
+            ?attr addr:isAttributeType ?attrType .
+            ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute ?attr .
+            FILTER (?g != ?gf)
         }}
+    }}
+    OPTIONAL {{
+        GRAPH ?gf {{ ?existingRootAttr a addr:Attribute . }}
+        ?rootLandmark a addr:Landmark ; addr:hasAttribute ?existingRootAttr .
+        ?existingRootAttr addr:isAttributeType ?attrType .
+    }}
+    BIND(URI(CONCAT(STR(URI(facts:)), "ATTR_", STRUUID())) AS ?toCreateRootAttr)
+    BIND(IF(BOUND(?existingRootAttr), ?existingRootAttr, ?toCreateRootAttr) AS ?rootAttr)
+}}
+"""
+
+    query2 = np.query_prefixes + f"""
+    INSERT {{
         GRAPH ?gi {{
             ?attr addr:hasRoot ?rootAttr .
             ?rootAttr addr:hasTrace ?attr .
-            }}
+        }}  
     }} WHERE {{
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        BIND({factoids_named_graph_uri.n3()} AS ?gs)
-        {{
-            SELECT DISTINCT ?gf ?attrType ?rootLandmark ?rootAttr WHERE {{
-                {{
-                    SELECT DISTINCT ?gf ?attrType ?rootLandmark ?existingRootAttr WHERE {{
-                        BIND({facts_named_graph_uri.n3()} AS ?gf)
-                        ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute [a addr:Attribute ; addr:isAttributeType ?attrType] . 
-                        OPTIONAL {{
-                            GRAPH ?gf {{ ?existingRootAttr a addr:Attribute . }}
-                            ?existingRootAttr addr:isAttributeType ?attrType .
-                            ?rootLandmark addr:hasAttribute ?existingRootAttr .
-                        }}
-                    }}
-                }}
-                BIND(IF(BOUND(?existingRootAttr), ?existingRootAttr, URI(CONCAT(STR(URI(facts:)), "ATTR_", STRUUID()))) AS ?rootAttr)
-            }}
-        }}
-
-        GRAPH ?gs {{ ?attr a addr:Attribute . }}
+        GRAPH ?g {{ ?attr a addr:Attribute . }}
+        GRAPH ?gf {{ ?rootAttr a addr:Attribute . }}
         ?attr addr:isAttributeType ?attrType .
-        ?landmark addr:hasRoot ?rootLandmark ; addr:hasAttribute ?attr .
-        FILTER NOT EXISTS {{ ?attr addr:hasRoot ?x . }}
+        ?rootAttr addr:isAttributeType ?attrType .
+        ?lm addr:hasAttribute ?attr ; addr:hasRoot [addr:hasAttribute ?rootAttr].
+        FILTER (?g != ?gf)
     }}
-    """
-
-    gd.update_query(query, graphdb_url, repository_name)
+    """ 
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
 
 ########## Temporal entities
 

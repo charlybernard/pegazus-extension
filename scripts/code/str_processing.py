@@ -208,7 +208,7 @@ def are_similar_names(name_1:str, name_2:str, min_score:float=0.9):
     return False
 
 def normalize_french_name_version(name_version:str, name_type:str):
-    if name_type == "housenumber":
+    if name_type == "number":
         return name_version.lower()
     elif name_type == "thoroughfare":
         return normalize_french_thoroughfare_name(name_version)
@@ -218,7 +218,7 @@ def normalize_french_name_version(name_version:str, name_type:str):
         return None
     
 def normalize_nolang_name_version(name_version:str, name_type:str):
-    if name_type == "housenumber":
+    if name_type == "number":
         return name_version.lower()
     else:
         return None
@@ -234,7 +234,7 @@ def normalize_name_version(name_version:str, name_type:str, name_lang:str):
     return None
 
 def simplify_french_name_version(name_version:str, name_type:str):
-    if name_type == "housenumber":
+    if name_type == "number":
         return remove_spaces(name_version)
     elif name_type in ["thoroughfare", "area"]:
         return simplify_french_landmark_name(name_version, keep_spaces=False, keep_diacritics=False, sort_characters=True)
@@ -242,7 +242,7 @@ def simplify_french_name_version(name_version:str, name_type:str):
         return None
 
 def simplify_nolang_name_version(name_version:str, name_type:str):
-    if name_type == "housenumber":
+    if name_type == "number":
         return remove_spaces(name_version)
     return None
 

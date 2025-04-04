@@ -60,7 +60,7 @@ function actionsOnTimelineChange(timeline, versions, mapSettings){
   var version = versions[uri];
   if (version){
     var geomStyle = {marker:lo.blueMarker, polyline:lo.blueDefaultLineStringStyle, polygon:lo.blueDefaultPolygonStyle}
-    addGeometriesOfVersion(version, mapSettings.map, mapSettings.layersToRemove, geomStyle);
+    addGeometriesOfVersion(version, mapSettings, geomStyle);
   }
 }
 

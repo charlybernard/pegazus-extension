@@ -51,7 +51,7 @@ def get_elements_with_labels(graphdb_url:URIRef, repository_name:str, named_grap
             }}
         }}
         """
-
+    
     results = gd.select_query_to_json(query, graphdb_url, repository_name)
     return results.get("results").get("bindings")
 
@@ -89,7 +89,7 @@ def get_pref_and_hidden_label_triples_for_element(element: URIRef, element_type:
     elif element_type in [np.LTYPE["Municipality"], np.LTYPE["District"]]:
         lm_label_type = "area"
     elif element_type in [np.LTYPE["HouseNumber"],np.LTYPE["StreetNumber"],np.LTYPE["DistrictNumber"],np.LTYPE["PostalCodeArea"]]:
-        lm_label_type = "housenumber"
+        lm_label_type = "number"
     else:
         lm_label_type = None
 
@@ -137,16 +137,19 @@ def get_pref_and_hidden_label_triples_for_elements(elements: list):
     ```
     """
 
-    triples_to_add = []
+    g = Graph()
+
     for element in elements:
         # Retrieval of URIs (attribute and attribute version) and geometry
         elem = gr.convert_result_elem_to_rdflib_elem(element.get('elem'))
         elem_type = gr.convert_result_elem_to_rdflib_elem(element.get('elemType'))
         label = gr.convert_result_elem_to_rdflib_elem(element.get('label'))
 
-        triples_to_add += get_pref_and_hidden_label_triples_for_element(elem, elem_type, label)
+        triples_to_add = get_pref_and_hidden_label_triples_for_element(elem, elem_type, label)
+        for triple in triples_to_add:
+            g.add(triple)
 
-    return triples_to_add
+    return g
 
 def generate_insert_data_query(triples: list, named_graph_uri: URIRef = None):
     """
@@ -255,7 +258,7 @@ def add_triples_to_repository(triples:list[tuple], graphdb_url:URIRef, repositor
     gd.update_query(query, graphdb_url, repository_name)
 
 
-def add_pref_and_hidden_labels_for_elements(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef):
+def add_pref_and_hidden_labels_for_elements(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, pref_hidden_labels_ttl_file:str):
     """
     Adds preferred and hidden labels for the elements (name attribute versions and landmark) to a specified repository in GraphDB.
 
@@ -283,9 +286,12 @@ def add_pref_and_hidden_labels_for_elements(graphdb_url:URIRef, repository_name:
     """
 
     elements = get_elements_with_labels(graphdb_url, repository_name, factoids_named_graph_uri)
-    triples_to_add = get_pref_and_hidden_label_triples_for_elements(elements)
-    add_triples_to_repository(triples_to_add, graphdb_url, repository_name, factoids_named_graph_uri)
+    graph_with_triples_to_add = get_pref_and_hidden_label_triples_for_elements(elements)
+    graph_with_triples_to_add.serialize(pref_hidden_labels_ttl_file)
 
+    # Import the `kg_file` file into the directory
+    gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, pref_hidden_labels_ttl_file, named_graph_uri=factoids_named_graph_uri)
+    
 
 def remove_all_triples_for_resources_to_remove(graphdb_url:URIRef, repository_name:str):
     """
@@ -417,7 +423,9 @@ def transfert_rdflib_graph_to_factoids_repository(graphdb_url: URIRef, repositor
 ####################################################################
 
 
-def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, facts_named_graph_name:str, inter_sources_name_graph_name:str):
+def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str,
+                             factoids_named_graph_name:str, facts_named_graph_name:str, inter_sources_name_graph_name:str,
+                             pref_hidden_labels_ttl_file:str):
     """
     Imports factoids into the facts graph and links them with inter-sources in a GraphDB repository.
 
@@ -447,6 +455,6 @@ def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str, factoids_n
     inter_sources_name_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, inter_sources_name_graph_name)
 
     # Addition of standardised and simplified labels for landmarks (on the factoid graph) in order to make links with fact landmarks
-    add_pref_and_hidden_labels_for_elements(graphdb_url, repository_name, factoids_named_graph_uri)
+    add_pref_and_hidden_labels_for_elements(graphdb_url, repository_name, factoids_named_graph_uri, pref_hidden_labels_ttl_file)
 
     rr.link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)

@@ -580,7 +580,8 @@ def create_state_description_for_geojson_streetnumber_state(streetnumber:dict, t
     th_uuid, th_desc = thoroughfares.get(th_label), None
     if th_uuid is None:
         th_uuid = gr.generate_uuid()
-        th_desc = di.create_landmark_version_description(th_uuid, th_label, "thoroughfare", lang, attributes)
+        th_attributes = {"name":di.create_landmark_attribute_version_description(th_label, lang=lang)}
+        th_desc = di.create_landmark_version_description(th_uuid, th_label, "thoroughfare", lang, th_attributes)
 
     lr_desc = di.create_landmark_relation_version_description(gr.generate_uuid(), "belongs", sn_uuid, [th_uuid])
 

@@ -467,6 +467,7 @@ def create_graph_from_geojson_states_of_thoroughfares(geojson_file:str, lang, va
 
 def create_graph_from_geojson_states_of_streetnumbers(geojson_file:str, lang, valid_time:dict, source:dict, identity_property:str, name_attribute:str):
     state_description = cfd.create_state_description_for_geojson_states_of_streetnumbers(geojson_file, identity_property, name_attribute, lang, valid_time, source)
+
     # Creation of a basic graph with rdflib
     g = sej.create_graph_from_states_descriptions(state_description)
     np.bind_namespaces(g)
