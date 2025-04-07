@@ -153,7 +153,7 @@ function changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, dropDownMen
   initTimelineFromLandmark(graphDBRepositoryURI, landmarkURI, namedGraphURI, timelineDivId, mapSettings);
 }
   
-function displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu){
+function displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu, selectValueMessage){
   var query = getQueryForLandmarks(namedGraphURI);
 
   $.ajax({
@@ -163,12 +163,12 @@ function displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dro
     dataType:"json",
     data:{"query":query}
   }).done((promise) => {
-    insertLandmarksInDropDownMenu(dropDownMenu, promise.results.bindings)
+    insertLandmarksInDropDownMenu(dropDownMenu, selectValueMessage, promise.results.bindings)
   })
 }
   
-function insertLandmarksInDropDownMenu(dropDownMenu, bindings){
-  var option = createOptionDiv("", "Sélectionnez une valeur") ;
+function insertLandmarksInDropDownMenu(dropDownMenu, selectValueMessage, bindings){
+  var option = createOptionDiv("", selectValueMessage) ;
   var uris = [];
   var optGroupUris = {};
   dropDownMenu.appendChild(option) ;
@@ -177,8 +177,11 @@ function insertLandmarksInDropDownMenu(dropDownMenu, bindings){
     var groupUri = binding.lmType.value ;
 
     if (!uris.includes(uri)){
-
-      var option = createOptionDiv(binding.lm.value, binding.lmLabel.value) ;
+      var lmLabel = binding.lmLabel.value ;
+      if (binding.relatumLabel){
+        lmLabel = lmLabel + " " + binding.relatumLabel.value ;
+      }
+      var option = createOptionDiv(binding.lm.value, lmLabel) ;
       if (!Object.keys(optGroupUris).includes(groupUri)){
         var groupUri = binding.lmType.value ;
         var optgroup = createOptionGroupDiv(groupUri, binding.lmTypeLabel.value) ;

@@ -34,6 +34,7 @@ const mapMessages = {
     noLandmarkToDisplay: "Aucun repère à afficher à cette date.",
     nameTitle : "Nom",
     flyOverLandmark : "Survolez un lieu",
+    selectValue : "Sélectionnez une valeur",
 }
 
 const tileLayerSettings = [
@@ -78,7 +79,7 @@ inputRadioDiv.addEventListener('change', function(){
     if (selectedValue == landmarkEvolutionName){
         createHTMLEvolution(L, contentDiv, landmarkNamesDivId, landmarkSelectionLabel, landmarkValidTimeDivId,
             mapTimelineDivId, timelineDivId, mapDivId, mapTimelineResizerDivId, resizerClassName, tileLayerSettings);
-        setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
+        setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, mapMessages, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
     } else if (selectedValue == snapshotName){
         createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
         setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, mapMessages, certainLayerGroupName, uncertainLayerGroupName,

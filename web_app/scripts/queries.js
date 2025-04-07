@@ -9,32 +9,31 @@ function getValuesForQuery(variable, values){
   
 function getQueryForLandmarks(namedGraphURI){
     var query = `
-PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
-WHERE {
-    ?lm rdfs:label ?lmPartLabel .
-    FILTER(LANG(?lmPartLabel) IN ("fr", ""))
-    {
-        SELECT DISTINCT ?lm ?lmType WHERE {
-            BIND(<` + namedGraphURI + `> AS ?g)
-            GRAPH ?g { ?lm a addr:Landmark . }
-            ?lm addr:isLandmarkType ?lmType .
+    PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
+    SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
+    WHERE {
+        ?lm rdfs:label ?lmLabel .
+        FILTER(LANG(?lmLabel) IN ("fr", ""))
+        {
+            SELECT DISTINCT ?lm ?lmType WHERE {
+                BIND(<` + namedGraphURI + `> AS ?g)
+                GRAPH ?g { ?lm a addr:Landmark . }
+                ?lm addr:isLandmarkType ?lmType .
+            }
+        }
+        OPTIONAL {
+            ?lmType skos:prefLabel ?lmTypeLabel .
+            FILTER(LANG(?lmTypeLabel) IN ("fr", ""))
+        }
+        OPTIONAL {
+            ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+            FILTER(LANG(?relatumLabel) IN ("fr", ""))
         }
     }
-    OPTIONAL {
-        ?lmType skos:prefLabel ?lmTypeLabel .
-        FILTER(LANG(?lmTypeLabel) IN ("fr", ""))
-    }
-    OPTIONAL {
-        ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
-        FILTER(LANG(?relatumLabel) IN ("fr", ""))
-    }
-    BIND(IF(BOUND(?relatumLabel), CONCAT(?lmPartLabel, " ", ?relatumLabel), ?lmPartLabel) AS ?lmLabel)
-}
-    ORDER BY ?lmTypeLabel ?lmLabel
+        ORDER BY ?lmTypeLabel ?relatumLabel ?lmLabel
 ` ;
 
     return query;
@@ -115,18 +114,17 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
     PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
     PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
   
-    SELECT DISTINCT ?lm ?lmLabel ?existsForSure WHERE {
+    SELECT DISTINCT ?lm ?lmLabel ?relatumLabel ?existsForSure WHERE {
         BIND(<` + namedGraphURI + `> AS ?g)
         BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
         BIND(<` + timeCalendarURI + `> AS ?timeCalendar)
   
         GRAPH ?g {
-            ?lm a addr:Landmark ; rdfs:label ?lmPartLabel .
+            ?lm a addr:Landmark ; rdfs:label ?lmLabel .
             OPTIONAL {
                 ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
                 FILTER(LANG(?relatumLabel) IN ("fr", ""))
             }
-            BIND(IF(BOUND(?relatumLabel), CONCAT(?lmPartLabel, " ", ?relatumLabel), ?lmPartLabel) AS ?lmLabel)
             ?appCg addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?appEv .
             ?disCg addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?disEv .
         }

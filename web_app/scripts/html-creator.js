@@ -86,12 +86,12 @@ function createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSliderLabel, dat
 
 function setActionsForEvolution(
     graphDBRepositoryURI, namedGraphURI,
-    mapLat, mapLon, mapZoom,
+    mapLat, mapLon, mapZoom, mapMessages,
     landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId,
     resizerClassName, tileLayerSettings){
     
     // Appel aux fonctions d'initialisation
-    var mapSettings = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings);
+    var mapSettings = initLeafletMap(mapDivId, mapLat, mapLon, mapZoom, tileLayerSettings, mapMessages);
     allowMapTimelineResize(resizerClassName, mapSettings.map) ;
 
     // Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
@@ -101,7 +101,7 @@ function setActionsForEvolution(
     });
 
     // Afficher les landmarks dans un menu déroulant
-    displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu) ;
+    displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu, mapSettings.messages.selectValue);
 }
 
 function setActionsForSnapshot(

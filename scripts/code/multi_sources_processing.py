@@ -420,6 +420,13 @@ def transfert_rdflib_graph_to_factoids_repository(graphdb_url: URIRef, repositor
     gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, kg_file, factoids_named_graph_name)
 
 
+
+
+def transfert_rdflib_graph_to_named_graph_repository(g: Graph, graphdb_url: URIRef, repository_name: str, named_graph_name: str, kg_file: str): 
+    g.serialize(kg_file)
+
+    # Import the `kg_file` file into the directory
+    gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, kg_file, named_graph_name)
 ####################################################################
 
 

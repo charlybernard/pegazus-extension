@@ -94,6 +94,9 @@ function getInitLandmarksDescriptions(bindings){
   bindings.forEach(binding => {
     var lm = binding.lm ;
     var lmLabel = binding.lmLabel ;
+    if (binding.relatumLabel){
+      lmLabel.value = lmLabel.value + " " + binding.relatumLabel.value ;
+    }
     var existsForSure = binding.existsForSure ;
     var landmarkDesc = getInitLandmarkDescription(lm, lmLabel, existsForSure);
     landmarksDesc[lm.value] = landmarkDesc;

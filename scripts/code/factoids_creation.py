@@ -71,19 +71,19 @@ def get_paris_landmarks_from_wikidata(out_csv_file):
     WHERE {
         {
             ?landmarkId p:P361 [ps:P361 wd:Q16024163].
-            BIND("Thoroughfare" AS ?landmarkType)
+            BIND("thoroughfare" AS ?landmarkType)
         }UNION{
             ?landmarkId p:P361 [ps:P361 wd:Q107311481].
-            BIND("Thoroughfare" AS ?landmarkType)
+            BIND("thoroughfare" AS ?landmarkType)
         }UNION{
             ?landmarkId p:P31 [ps:P31 wd:Q252916].
-            BIND("District" AS ?landmarkType)
+            BIND("district" AS ?landmarkType)
         }UNION{
             ?landmarkId p:P31 [ps:P31 wd:Q702842]; p:P131 [ps:P131 wd:Q90].
-            BIND("District" AS ?landmarkType)
+            BIND("district" AS ?landmarkType)
         }UNION{
             ?landmarkId p:P31 [ps:P31 wd:Q484170]; p:P131 [ps:P131 wd:Q1142326].
-            BIND("Municipality" AS ?landmarkType)
+            BIND("municipality" AS ?landmarkType)
         }
         {
             ?landmarkId p:P1448 ?nomOffSt.
@@ -103,25 +103,10 @@ def get_paris_landmarks_from_wikidata(out_csv_file):
         OPTIONAL { ?landmarkId p:P576 [psv:P576 ?endTimeValIt] }
         BIND(IF(BOUND(?startTimeValSt), ?startTimeValSt, IF(BOUND(?startTimeValIt), ?startTimeValIt, "")) AS ?startTimeVal)
         BIND(IF(BOUND(?endTimeValSt), ?endTimeValSt, IF(BOUND(?endTimeValIt), ?endTimeValIt, "")) AS ?endTimeVal)
-        OPTIONAL { ?startTimeVal wb:timeValue ?startTimeStamp ; wb:timePrecision ?startTimePrecRaw ; wb:timeCalendarModel ?startTimeCal . }
-        OPTIONAL { ?endTimeVal wb:timeValue ?endTimeStamp ; wb:timePrecision ?endTimePrecRaw ; wb:timeCalendarModel ?endTimeCal . }
+        OPTIONAL { ?startTimeVal wb:timeValue ?startTimeStamp ; wb:timePrecision ?startTimePrec ; wb:timeCalendarModel ?startTimeCal . }
+        OPTIONAL { ?endTimeVal wb:timeValue ?endTimeStamp ; wb:timePrecision ?endTimePrec ; wb:timeCalendarModel ?endTimeCal . }
         BIND(IF(?statementType = wb:Statement, BOUND(?startTimeValSt), IF(?statementType = wb:Item, BOUND(?startTimeValIt), "false"^^xsd:boolean)) AS ?startTimeDef)
         BIND(IF(?statementType = wb:Statement, BOUND(?endTimeValSt), IF(?statementType = wb:Item, BOUND(?endTimeValIt), "false"^^xsd:boolean)) AS ?endTimeDef)
-
-        BIND(IF(?startTimePrecRaw = 11, time:unitDay,
-                IF(?startTimePrecRaw = 10, time:unitMonth,
-                    IF(?startTimePrecRaw = 9, time:unitYear,
-                        IF(?startTimePrecRaw = 8, time:unitDecade,
-                        IF(?startTimePrecRaw = 7, time:unitCentury,
-                            IF(?startTimePrecRaw = 6, time:unitMillenium, ?x
-                                )))))) AS ?startTimePrec)
-        BIND(IF(?endTimePrecRaw = 11, time:unitDay,
-                IF(?endTimePrecRaw = 10, time:unitMonth,
-                    IF(?endTimePrecRaw = 9, time:unitYear,
-                        IF(?endTimePrecRaw = 8, time:unitDecade,
-                        IF(?endTimePrecRaw = 7, time:unitCentury,
-                            IF(?endTimePrecRaw = 6, time:unitMillenium, ?x
-                                )))))) AS ?endTimePrec)
         }
     """
 
@@ -159,23 +144,9 @@ def get_paris_locations_from_wikidata(out_csv_file):
     BIND(wb:Statement AS ?statementType)
     ?locatumId p:P131 ?statement.
     ?statement ps:P131 ?relatumId.
-    OPTIONAL {?statement pq:P580 ?dateStartStamp; pqv:P580 [wb:timeCalendarModel ?dateStartCal ; wb:timePrecision ?dateStartPrecRaw]}
-    OPTIONAL {?statement pq:P582 ?dateEndStamp; pqv:P582 [wb:timeCalendarModel ?dateEndCal; wb:timePrecision ?dateEndPrecRaw]}
-    BIND("Within" AS ?landmarkRelationType)
-    BIND(IF(?dateStartPrecRaw = 11, time:unitDay,
-            IF(?dateStartPrecRaw = 10, time:unitMonth,
-                IF(?dateStartPrecRaw = 9, time:unitYear,
-                    IF(?dateStartPrecRaw = 8, time:unitDecade,
-                    IF(?dateStartPrecRaw = 7, time:unitCentury,
-                        IF(?dateStartPrecRaw = 6, time:unitMillenium, ?x
-                            )))))) AS ?dateStartPrec)
-    BIND(IF(?dateEndPrecRaw = 11, time:unitDay,
-            IF(?dateEndPrecRaw = 10, time:unitMonth,
-                IF(?dateEndPrecRaw = 9, time:unitYear,
-                    IF(?dateEndPrecRaw = 8, time:unitDecade,
-                    IF(?dateEndPrecRaw = 7, time:unitCentury,
-                        IF(?dateEndPrecRaw = 6, time:unitMillenium, ?x
-                            )))))) AS ?dateEndPrec)
+    OPTIONAL {?statement pq:P580 ?dateStartStamp; pqv:P580 [wb:timeCalendarModel ?dateStartCal ; wb:timePrecision ?dateStartPrec]}
+    OPTIONAL {?statement pq:P582 ?dateEndStamp; pqv:P582 [wb:timeCalendarModel ?dateEndCal; wb:timePrecision ?dateEndPrec]}
+    BIND("within" AS ?landmarkRelationType)
     }
     """
 

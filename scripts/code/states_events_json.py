@@ -71,7 +71,7 @@ def create_source_from_description(g:Graph, description:dict):
 
     # Get the source URI 
     source_uri_str = description.get("uri")
-    source_uri = URIRef(source_uri_str) if source_uri_str is not None else gr.generate_uri(np.FACTOIDS, "SRC")
+    source_uri = URIRef(source_uri_str) if source_uri_str is not None else gr.generate_uri(np.FACTS, "SRC")
 
     # Get the source label and language
     lang, label, comment = description.get("lang"), description.get("label"), description.get("comment")
@@ -96,7 +96,7 @@ def create_publisher_from_description(g:Graph, description:dict, lang:str=None):
 
     # Get the publisher URI
     publisher_uri_str = description.get("uri")
-    publisher_uri = URIRef(publisher_uri_str) if publisher_uri_str is not None else gr.generate_uri(np.FACTOIDS, "PUB")
+    publisher_uri = URIRef(publisher_uri_str) if publisher_uri_str is not None else gr.generate_uri(np.FACTS, "PUB")
     publisher_label = description.get("label")
     publisher_lang = description.get("lang") if description.get("lang") is not None else lang
     publisher_label_lit = gr.get_literal_with_lang(publisher_label, publisher_lang)
