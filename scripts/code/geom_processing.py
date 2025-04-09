@@ -28,11 +28,21 @@ def get_srs_iri_from_geojson_feature_collection(geojson_crs:dict):
     except:
         return None
 
-def from_geojson_to_wkt(geojson_obj:dict):
-    a = json.dumps(geojson_obj)
-    geo = geojson.loads(a)
-    geom = shape(geo)
+def from_geojson_to_shape(geojson_obj:dict):
+    """
+    Convert a geojson object to a shapely shape
+    """
 
+    # Convert the geojson object to a string
+    geojson_str = json.dumps(geojson_obj)
+
+    # Load the geojson string into a shapely shape
+    geom = shape(geojson.loads(geojson_str))
+
+    return geom
+
+def from_geojson_to_wkt(geojson_obj:dict):
+    geom = from_geojson_to_shape(geojson_obj)
     return geom.wkt
 
 def merge_geojson_features_from_one_property(feature_collection:dict, property_name:str):

@@ -1,12 +1,7 @@
 from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import RDF, RDFS, XSD, SKOS
 from namespaces import NameSpaces, OntologyMapping
-import file_management as fm
 import time_processing as tp
-import multi_sources_processing as msp
-import graphdb as gd
 import graphrdf as gr
-import resource_transfert as rt
 import resource_initialisation as ri
 
 np = NameSpaces()
@@ -30,7 +25,7 @@ def create_provenance(g, provenance_description:dict):
     prov_lang = provenance_description.get("lang")
     if prov_label is not None:
         prov_label_lit = gr.get_literal_with_lang(prov_label, prov_lang)
-        g.add((prov_uri, RDFS.label, prov_label_lit))
+        g.add((prov_uri, np.RDFS.label, prov_label_lit))
 
     return prov_uri
 
@@ -161,7 +156,7 @@ def create_graph_from_event_description(g:Graph, event_description:dict, source_
     # Create a label for the event if it exists
     if label is not None:
         ev_label = gr.get_literal_with_lang(label, lang)
-        g.add((event_uri, RDFS.comment, ev_label))
+        g.add((event_uri, np.RDFS.comment, ev_label))
 
     for desc in landmark_descriptions:
         lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")

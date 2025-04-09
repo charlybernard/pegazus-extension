@@ -1,6 +1,4 @@
-from rdflib import Graph, Literal, URIRef, Namespace, XSD
 from namespaces import NameSpaces
-
 
 np = NameSpaces()
 

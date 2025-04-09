@@ -1,6 +1,6 @@
 import re
 import unidecode
-from rdflib import Graph, RDFS, Literal, URIRef
+from rdflib import Graph, RDFS, Literal
 from difflib import SequenceMatcher
 
 def remove_spaces(value:str):
@@ -237,7 +237,7 @@ def simplify_french_name_version(name_version:str, name_type:str):
     if name_type == "number":
         return remove_spaces(name_version)
     elif name_type in ["thoroughfare", "area"]:
-        return simplify_french_landmark_name(name_version, keep_spaces=False, keep_diacritics=False, sort_characters=True)
+        return simplify_french_landmark_name(name_version, keep_spaces=False, keep_diacritics=False, sort_characters=False)
     else:
         return None
 

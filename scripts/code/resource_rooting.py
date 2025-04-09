@@ -1,4 +1,4 @@
-from rdflib import URIRef, SKOS
+from rdflib import URIRef
 from namespaces import NameSpaces
 import graphdb as gd
 

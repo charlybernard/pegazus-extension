@@ -1,9 +1,8 @@
 import json
 import re
-from rdflib import Graph, Literal, URIRef, Namespace, XSD
+from rdflib import Graph, Literal, URIRef, Namespace
 from namespaces import NameSpaces
 import file_management as fm
-import multi_sources_processing as msp
 import graphrdf as gr
 import str_processing as sp
 import geom_processing as gp
@@ -439,14 +438,18 @@ def get_time_description_for_ville_paris(time_stamp:str):
 
 ##################################################### Geojson states ##########################################################
 
-def create_state_description_for_geojson_states(geojson_file:str, landmark_type:str, identity_property:str, name_attribute:str, lang:str=None,
+def create_state_description_for_geojson_states(geojson_file:str, landmark_type:str, name_attribute:str, identity_property:str=None, lang:str=None,
                                                 time_description:dict={}, source_description:dict={}):
     """
     `identity_property` is the property used to identify the identity of landmark in the geojson file.
     `name_attribute` is the property used to identify the name of landmark in the geojson file.
     """
     feature_collection = fm.read_json_file(geojson_file)
-    landmarks = get_merged_landmarks_from_geojson_states(feature_collection, identity_property)
+    if identity_property is not None:
+        landmarks = get_merged_landmarks_from_geojson_states(feature_collection, identity_property)
+    else:
+        landmarks = feature_collection.get("features")
+
     state_desc = create_landmarks_descriptions_for_geojson_states(landmarks, landmark_type, name_attribute, lang, time_description, source_description)
 
     return state_desc
@@ -484,7 +487,6 @@ def get_merged_landmarks_from_geojson_states(feature_collection:dict, identity_p
     
     return landmarks
  
-
 def create_landmarks_descriptions_for_geojson_states(landmarks:list, landmark_type:str, name_attribute:str, lang:str=None,
                                                           time_description:dict=None, source_description:dict=None):
     """
@@ -525,12 +527,13 @@ def create_state_description_for_geojson_landmark_state(landmark:dict, landmark_
     lm_desc = di.create_landmark_version_description(lm_uuid, lm_label, landmark_type, lang, attributes, {})
     return lm_desc
     
-
-def create_state_description_for_geojson_states_of_streetnumbers(geojson_file:str, identity_property:str, name_attribute:str,
+def create_state_description_for_geojson_states_of_streetnumbers(geojson_file:str,
+                                                                streetnumber_name_attribute:str=None, thoroughfare_name_attribute:str=None,
+                                                                streetnumber_and_thoroughfare_name_attribute:str=None,
                                                                 lang:str=None, time_description:dict=None, source_description:dict=None):
     """
     `identity_property` is the property used to identify the identity of landmark in the geojson file.
-    `name_attribute` is the property used to identify the name of landmark in the geojson file.
+    `name_attribute` is the property used to identify the name of address in the geojson file (streetnumber + thoroughfare).
     """
     feature_collection = fm.read_json_file(geojson_file)
     features = feature_collection.get("features")
@@ -541,7 +544,10 @@ def create_state_description_for_geojson_states_of_streetnumbers(geojson_file:st
     thoroughfares = {}
 
     for feature in features:
-        sn_desc, [th_uuid, th_desc, th_label], lr_desc = create_state_description_for_geojson_streetnumber_state(feature, thoroughfares, srs_iri, name_attribute, lang)
+        sn_desc, [th_uuid, th_desc, th_label], lr_desc = create_state_description_for_geojson_streetnumber_state(feature,
+                                                                                                                 streetnumber_name_attribute, thoroughfare_name_attribute,
+                                                                                                                 streetnumber_and_thoroughfare_name_attribute,
+                                                                                                                 thoroughfares, srs_iri, lang)
         if sn_desc is not None:
             lm_descs.append(sn_desc)
             if th_desc is not None:
@@ -557,34 +563,68 @@ def create_state_description_for_geojson_states_of_streetnumbers(geojson_file:st
 
     return descriptions
 
-def create_state_description_for_geojson_streetnumber_state(streetnumber:dict, thoroughfares:dict, srs_iri:str, name_attribute:str, lang:str=None):
-    address_label = streetnumber.get("properties").get(name_attribute)
-    if address_label is None:
-        return None, [None, None, None], None
+def get_streetnumber_and_thoroughfare_labels_from_geojson_streetnumber_state(streetnumber:dict, streetnumber_name_attribute:str, thoroughfare_name_attribute:str, streetnumber_and_thoroughfare_name_attribute:str):
+    """
+    Get the street number and thoroughfare labels from a geojson street number state
+    """
+
+    if None not in [streetnumber_name_attribute, thoroughfare_name_attribute]:
+        sn_label = streetnumber.get("properties").get(streetnumber_name_attribute)
+        th_label = streetnumber.get("properties").get(thoroughfare_name_attribute)
+    elif streetnumber_and_thoroughfare_name_attribute is not None:
+        address_label = streetnumber.get("properties").get(streetnumber_and_thoroughfare_name_attribute)
+        sn_label, th_label = sp.split_french_address(address_label)
+    else:
+        sn_label, th_label = None, None
         
-    sn_label, th_label = sp.split_french_address(address_label)
+    return sn_label, th_label
+
+
+def create_state_description_for_geojson_streetnumber_state(streetnumber:dict, sn_name_attr:str, th_name_attr:str, sn_and_th_name_attr:str, thoroughfares:dict, srs_iri:str, lang:str=None):
+    sn_label, th_label = get_streetnumber_and_thoroughfare_labels_from_geojson_streetnumber_state(streetnumber, sn_name_attr, th_name_attr, sn_and_th_name_attr)
+
     geometries = [streetnumber["geometry"]]
     geometry_value = gp.get_wkt_union_of_geojson_geometries(geometries, srs_iri)
 
-    name_attr_desc = di.create_landmark_attribute_version_description(sn_label)
-    geom_attr_desc = di.create_landmark_attribute_version_description(geometry_value, datatype="wkt_literal")
+    return create_state_description_for_geojson_housenumber_state(sn_label, "street_number", th_label, "thoroughfare", thoroughfares, geometry_value, lang)
+
+
+def create_state_description_for_geojson_housenumber_state(hn_label:str, hn_type:str, related_lm_label:str, related_lm_type:str, related_lms:dict,
+                                                           wkt_geometry:str, lang:str=None):
+    """
+    Create a state description for a house number
+    hn_label: the label of the house number
+    hn_type: the type of the house number (house_number, street_number, district_number, etc.)
+    related_lm_label: the label of the related landmark (thoroughfare, district, etc.)
+    related_lm_type: the type of the related landmark (thoroughfare, district, etc.)
+    related_lms: the list of related landmarks
+    wkt_geometry: the geometry of the house number
+    name_attribute: the name attribute of the house number
+    lang: language
+    """
+
+    name_attr_desc = di.create_landmark_attribute_version_description(hn_label)
+    geom_attr_desc = di.create_landmark_attribute_version_description(wkt_geometry, datatype="wkt_literal")
     attributes = {}
     if name_attr_desc is not None:
         attributes["name"] = name_attr_desc
     if geom_attr_desc is not None:
         attributes["geometry"] = geom_attr_desc
 
-    sn_uuid = gr.generate_uuid()
-    sn_desc = di.create_landmark_version_description(sn_uuid, sn_label, "street_number", None, attributes)
+    hn_uuid = gr.generate_uuid()
+    hn_desc = di.create_landmark_version_description(hn_uuid, hn_label, hn_type, None, attributes)
 
-    th_uuid, th_desc = thoroughfares.get(th_label), None
-    if th_uuid is None:
-        th_uuid = gr.generate_uuid()
-        th_attributes = {"name":di.create_landmark_attribute_version_description(th_label, lang=lang)}
-        th_desc = di.create_landmark_version_description(th_uuid, th_label, "thoroughfare", lang, th_attributes)
+    rlm_uuid, rlm_desc = related_lms.get(related_lm_label), None
+    if rlm_uuid is None:
+        rlm_uuid = gr.generate_uuid()
+        rlm_attributes = {}
+        name_attr_desc = di.create_landmark_attribute_version_description(related_lm_label, lang=lang)
+        if name_attr_desc is not None:
+            rlm_attributes["name"] = name_attr_desc
+        rlm_desc = di.create_landmark_version_description(rlm_uuid, related_lm_label, related_lm_type, lang, rlm_attributes)
 
-    lr_desc = di.create_landmark_relation_version_description(gr.generate_uuid(), "belongs", sn_uuid, [th_uuid])
+    lr_desc = di.create_landmark_relation_version_description(gr.generate_uuid(), "belongs", hn_uuid, [rlm_uuid])
 
-    return sn_desc, [th_uuid, th_desc, th_label], lr_desc
+    return hn_desc, [rlm_uuid, rlm_desc, related_lm_label], lr_desc
     
     

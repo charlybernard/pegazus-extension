@@ -1,6 +1,6 @@
 import re
 import datetime
-from rdflib import Namespace, Literal, URIRef
+from rdflib import Literal, URIRef
 from rdflib.namespace import XSD
 from namespaces import NameSpaces, OntologyMapping
 import graphdb as gd
