@@ -558,6 +558,60 @@ def to_be_merged_with(graphdb_url:URIRef, repository_name:str, facts_named_graph
         }}
     """
     
+    # ################################## Test part ######################################
+
+    # query1 = np.query_prefixes + f"""
+    # INSERT {{
+    #     GRAPH ?gt {{
+    #         ?vME addr:toBeMergedWith ?vO .
+    #     }}
+    # }}
+    # WHERE {{
+    #     BIND({tmp_named_graph_uri.n3()} AS ?gt)
+    #     ?change a addr:AttributeChange ; addr:makesEffective ?vME ; addr:outdates ?vO .
+    #     FILTER NOT EXISTS {{ ?change addr:hasTrace ?changeTrace . }}
+    #     ?vME addr:hasTrace ?vMETrace .
+    #     ?vO addr:hasTrace ?vOTrace .
+    #     {{ ?vMETrace addr:sameVersionValueAs ?vOTrace . }} UNION {{ FILTER(sameTerm(?vMETrace, ?vOTrace)) }}
+    #     MINUS {{
+    #         ?vME addr:hasTrace ?vMETrace2 .
+    #         ?vO addr:hasTrace ?vOTrace2 .
+    #         ?vMETrace2 addr:differentVersionValueFrom ?vOTrace2 .
+    #     }}
+    # }}
+    # """
+
+    # # Aggregation of successive versions with similar values (in several queries)
+    # # Add triples indicating similarity (addr:toBeMergedWith) with successive versions that have similar values (addr:hasNextVersion or addr:hasOverlappingVersion)
+    # # If v1 addr:toBeMergedWith v2 and v2 addr:toBeMergedWith v3 then v1 addr:toBeMergedWith v3.
+    # query2 = np.query_prefixes + f"""
+    #     INSERT {{
+    #         GRAPH ?gt {{
+    #             ?attrVers1 addr:toBeMergedWith ?attrVers2 .
+    #             ?attrVers2 addr:toBeMergedWith ?attrVers2 .
+    #             }}
+    #     }} WHERE {{
+    #         BIND({tmp_named_graph_uri.n3()} AS ?gt)
+    #         ?attrVers1 addr:toBeMergedWith+ ?attrVers2 .
+    #         FILTER NOT EXISTS {{ ?attrVers2 addr:toBeMergedWith ?x . }}
+    #     }}
+    # """
+
+    # query3 = np.query_prefixes + f"""
+    # INSERT {{
+    #     GRAPH ?gt {{
+    #         ?vers1 addr:toBeMergedWith ?vers2 .
+    #         ?vers2 addr:toBeMergedWith ?vers1 .
+    #         ?vers1 addr:toBeMergedWith ?v .
+    #         ?vers2 addr:toBeMergedWith ?v .
+    #     }}
+    # }} WHERE {{
+    #     BIND({tmp_named_graph_uri.n3()} AS ?gt)
+    #     ?v addr:toBeMergedWith ?vers1, ?vers2 .
+    # }}
+    # """
+    # #############################################################################
+
     queries = [query1, query2, query3]
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)

@@ -158,19 +158,37 @@ def transform_geometry_crs(geom, crs_from, crs_to):
     Obtain geometry defined in the `from_crs` coordinate system to the `to_crs` coordinate system.
     """
 
-    project = pyproj.Transformer.from_crs(crs_from, crs_to, always_xy=True).transform
+    project = get_crs_transformer(crs_from, crs_to)
     return transform(project, geom)
 
+def get_crs_transformer(crs_from:str, crs_to:str):
+    project = pyproj.Transformer.from_crs(crs_from, crs_to, always_xy=True).transform
+    return project
+
 def get_pyproj_crs_from_opengis_epsg_uri(opengis_epsg_uri:URIRef):
+    """
+    Extract EPSG code from `opengis_epsg_uri` to return a pyproj.CRS object
+    """
+    
+    epsg_code = get_epsg_code_from_opengis_epsg_uri(opengis_epsg_uri)
+    if epsg_code is not None:
+        return pyproj.CRS.from_epsg(epsg_code)
+    else :
+        return None
+
+def get_epsg_code_from_opengis_epsg_uri(opengis_epsg_uri:URIRef, with_epsg:bool=False):
     """
     Extract EPSG code from `opengis_epsg_uri` to return a pyproj.CRS object
     """
     pattern = "http://www.opengis.net/def/crs/EPSG/0/([0-9]{1,})"
     try :
         epsg_code = re.match(pattern, opengis_epsg_uri.strip()).group(1)
-        return pyproj.CRS(f'EPSG:{epsg_code}')
+        if with_epsg:
+            epsg_code = f'EPSG:{epsg_code}'
     except :
-        return None
+        epsg_code = None
+
+    return epsg_code
 
 def are_similar_geometries(geom_1, geom_2, geom_type:str, coef_min:float=0.8, max_dist=10) -> bool:
     """
@@ -218,23 +236,53 @@ def are_similar_polygons(geom_1, geom_2, coef_min:float):
         return False
     
 
-def get_processed_geometry(geom_wkt:str, geom_srid_uri:URIRef, geom_type:str, crs_uri:URIRef, buffer_radius:float):
+def get_projected_geometry(geom, geom_srid_uri:URIRef, crs_uri:URIRef, transformers:dict[str, pyproj.Transformer]={}):
+    """
+    Obtain geometry defined in the `geom_srid_uri` coordinate system to the `crs_uri` coordinate system.
+    The `transformers` dictionary is used to store transformers for each coordinate system.
+    """
+
+    # Getting the EPSG code from the OpenGIS URI
+    crs_from = get_epsg_code_from_opengis_epsg_uri(geom_srid_uri, True)
+    crs_to = get_epsg_code_from_opengis_epsg_uri(crs_uri, True)
+
+    # transformers dictionary is used to store transformers for each coordinate system
+    transformer = transformers.get(crs_to)
+
+    if transformer is None and crs_from != crs_to:
+        # If the transformer is not already in the dictionary, create it
+        transformer = get_crs_transformer(crs_from, crs_to)
+
+    # Converting geometry to the target coordinate system
+    if crs_from != crs_to:
+        geom = transform(transformer, geom)
+
+    return geom
+
+def get_processed_geometry(geom_wkt:str, geom_srid_uri:URIRef, geom_type:str, crs_uri:URIRef, buffer_radius:float, transformers:dict[str, pyproj.Transformer]={}):
     """
     Obtaining a geometry so that it can be compared with others:
-    * its co-ordinates will be expressed in the reference frame linked to `crs_uri`.
+    * its coordinates will be expressed in the reference frame linked to `crs_uri`.
     * if the geometry is a line or a point (area=0.0) and we want to have a polygon as geometry (`geom_type == ‘polygon’`), then we retrieve a buffer zone whose buffer is given by `buffer_radius`.
     """
 
     geom = wkt.loads(geom_wkt)
-    crs_from = get_pyproj_crs_from_opengis_epsg_uri(geom_srid_uri)
-    crs_to = get_pyproj_crs_from_opengis_epsg_uri(crs_uri)
-
-    # Converting geometry to the target coordinate system
-    if crs_from != crs_to:
-        geom = transform_geometry_crs(geom, crs_from, crs_to)
+    geom = get_projected_geometry(geom, geom_srid_uri, crs_uri, transformers)
     
     # Add a `meter_buffer` if it's not a polygon
     if geom.area == 0.0 and geom_type == "polygon":
         geom = geom.buffer(buffer_radius)
 
     return geom
+
+def get_useful_transformers_for_from_crs(from_crs:str, to_crs_list:list[str]):
+    """
+    Get a list of transformers to be used for converting geometries from `from_crs` to each of the `to_crs_list` coordinate systems.
+    """
+
+    transformers = {}
+    for to_crs in to_crs_list:
+        transformer = get_crs_transformer(from_crs, to_crs)
+        transformers[to_crs] = transformer
+
+    return transformers

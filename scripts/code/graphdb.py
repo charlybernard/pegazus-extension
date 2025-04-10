@@ -164,7 +164,7 @@ def create_config_local_repository_file(config_repository_file:str, repository_n
     g.add((sail_impl, graph_db["repository-type"], Literal("file-repository")))
     g.add((sail_impl, graph_db["ruleset"], Literal(ruleset_name)))
     g.add((sail_impl, graph_db["storage-folder"], Literal("storage")))
-    g.add((sail_impl, graph_db["enable-context-index"], Literal("false")))
+    g.add((sail_impl, graph_db["enable-context-index"], Literal("true")))
     g.add((sail_impl, graph_db["enablePredicateList"], Literal("true")))
     g.add((sail_impl, graph_db["in-memory-literal-properties"], Literal("true")))
     g.add((sail_impl, graph_db["enable-literal-index"], Literal("true")))

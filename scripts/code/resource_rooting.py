@@ -9,9 +9,7 @@ np = NameSpaces()
 # Function to rely all resources from `factoids_named_graph_uri` named graph to similar resources in `facts_named_graph_uri` (if they exists, else create the similar resource)
 # Triple to tell similarity is store in `inter_sources_name_graph_uri`
 
-import time
-
-def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     """
     Landmarks are created as follows:
         * creation of links (using `addr:hasRoot`) between landmarks in the facts named graph and those which are in the factoid named graph ;
@@ -26,7 +24,7 @@ def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, factoids_n
     make_rooting_for_landmark_relations(graphdb_url, repository_name, label_property, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_landmark_attributes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_temporal_entities(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
-    manage_labels_after_landmark_rooting(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+    manage_labels_after_landmark_rooting(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
     
     # Les racines de modification sont créées sauf pour les modifications d'attributs.
     make_rooting_for_changes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
@@ -53,7 +51,7 @@ def make_rooting_for_landmarks(graphdb_url:URIRef, repository_name:str, label_pr
     Create `addr:hasRoot` links between similar landmarks.
     """
 
-    landmark_type_uris = [np.LTYPE["Municipality"], np.LTYPE["District"], np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
+    landmark_type_uris = [np.LTYPE["Municipality"], np.LTYPE["District"], np.LTYPE["PostalCodeArea"], np.LTYPE["Thoroughfare"]]
     for landmark_type_uri in landmark_type_uris:
         make_rooting_for_landmarks_according_label(graphdb_url, repository_name, landmark_type_uri, label_property,
                                                    facts_named_graph_uri, inter_sources_name_graph_uri)
@@ -156,54 +154,6 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
     `label_property` is the property for which the label is linked to the landmark (`rdfs:label`, `skos:hiddenLabel`, ...)
     `landmark_relation_type_uri` describes the type of landmark relation (`lrtype:Belongs`, `ltype:Within`, ...) 
     """
-
-    # query = np.query_prefixes + f"""
-    # INSERT {{
-    #     GRAPH ?gf {{
-    #         ?rootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; {label_property.n3()} ?keyLabel .
-    #         ?rootLandmarkRelation a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ; addr:locatum ?rootLandmark ; addr:relatum ?rootRelatum .
-    #     }}
-    #     GRAPH ?gi {{
-    #         ?landmark addr:hasRoot ?rootLandmark .
-    #         ?rootLandmark addr:hasTrace ?landmark .
-    #         ?landmarkRelation addr:hasRoot ?rootLandmarkRelation .
-    #         ?rootLandmarkRelation addr:hasTrace ?landmarkRelation .
-    #     }}
-    # }}
-    # WHERE {{
-    #     BIND({facts_named_graph_uri.n3()} AS ?gf)
-    #     BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-    #     BIND({factoids_named_graph_uri.n3()} AS ?gs)
-    #     BIND({landmark_type_uri.n3()} AS ?landmarkType)
-    #     BIND({landmark_relation_type_uri.n3()} AS ?landmarkRelationType)
-    #     {{
-    #         SELECT DISTINCT ?landmarkType ?keyLabel ?landmarkRelationType ?rootRelatum WHERE {{
-    #             ?lr a addr:LandmarkRelation ;
-    #             addr:isLandmarkRelationType ?landmarkRelationType ;
-    #             addr:locatum [a addr:Landmark ; addr:isLandmarkType ?landmarkType ; {label_property.n3()} ?keyLabel] ;
-    #             addr:relatum [addr:hasRoot ?rootRelatum] .
-    #         }}
-    #     }}
-    #     BIND(URI(CONCAT(STR(URI(facts:)), "LM_", STRUUID())) AS ?toCreateRootLandmark)
-    #     BIND(URI(CONCAT(STR(URI(facts:)), "LR_", STRUUID())) AS ?toCreateRootLR)
-    #     OPTIONAL {{
-    #         GRAPH ?gf {{
-    #             ?existingRootLandmark a addr:Landmark ; addr:isLandmarkType ?landmarkType ; {label_property.n3()} ?keyLabel .
-    #             ?existingRootLR a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ;
-    #             addr:locatum ?existingRootLandmark ; addr:relatum ?rootRelatum .
-    #         }}
-    #     }}
-    #     BIND(IF(BOUND(?existingRootLandmark), ?existingRootLandmark, ?toCreateRootLandmark) AS ?rootLandmark)
-    #     BIND(IF(BOUND(?existingRootLR), ?existingRootLR, ?toCreateRootLR) AS ?rootLandmarkRelation)
-    #     GRAPH ?gs {{ ?landmark a addr:Landmark . }}
-    #     ?landmark addr:isLandmarkType ?landmarkType ; {label_property.n3()} ?keyLabel .
-    #     ?landmarkRelation a addr:LandmarkRelation ; addr:isLandmarkRelationType ?landmarkRelationType ;
-    #     addr:locatum ?landmark ; addr:relatum [addr:hasRoot ?rootRelatum] .
-    #     MINUS {{ ?landmark addr:hasRoot ?rl . }}
-    # }}
-    # """
-    # print(query)
-    # print(0/0)
 
     query1 = np.query_prefixes + f"""
     INSERT {{
@@ -748,7 +698,7 @@ def make_rooting_for_temporal_entities(graphdb_url:URIRef, repository_name:str, 
 
 ###################################################### Other processes ######################################################
 
-def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     # Add a label for root landmarks which have been initialized after landmark rooting
     # If there is already a label (∃ <landmark rdfs:label label>), then add alternative labels if they exists
     # This query exists to get only one label per landmark, other labels are alt labels
@@ -758,7 +708,6 @@ def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str
     }} WHERE {{
         BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        BIND({factoids_named_graph_uri.n3()} AS ?gs)
 
         GRAPH ?gi {{ ?rootLandmark addr:hasTrace ?landmark . }}
         OPTIONAL {{ ?rootLandmark rdfs:label ?rootLandmarkLabel . }}
