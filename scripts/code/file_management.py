@@ -68,7 +68,7 @@ def read_csv_file(csv_file:str, has_header:bool=False, delimiter:str=",", quotec
     return header, rows
 
 def read_csv_file_as_dict(csv_file:str, id_col:str=None, selected_columns:list[str]=None, delimiter:str=",", quotechar:str='"', encoding:str='utf-8'):
-    file =  open(csv_file, 'r', encoding=encoding)
+    file = open(csv_file, 'r', encoding=encoding)
     csvreader = csv.DictReader(file, delimiter=delimiter, quotechar=quotechar)
 
     has_selected_columns = (isinstance(selected_columns, list) and len(selected_columns) != 0)

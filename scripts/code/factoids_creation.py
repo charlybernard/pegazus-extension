@@ -10,7 +10,41 @@ import create_factoids_descriptions as cfd
 
 np = NameSpaces()
 
+##################################################### Generic ##########################################################
+
+
+def clean_imported_repository(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, permanent_named_graph_name:str):
+    factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
+    permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
+
+    # Transferring non-modifiable triples to the permanent named graph
+    rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
+
+
+def create_factoids_repository(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
+                               ont_file:str, ontology_named_graph_name:str, kg_file:str,
+                               factoids_named_graph_name:str, permanent_named_graph_name:str,
+                               g:Graph):
+    # Export the graph and import it into the repository
+    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
+
+    # Adapting data with the ontology, merging duplicates, etc.
+    clean_imported_repository(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name)
+
+################################################################################################################
+
 ## Wikidata data
+
+def create_graph_from_wikidata(wdp_land_csv_file:str, wdp_loc_csv_file:str, source:dict, lang:str):
+    """
+    Creation of a graph from the Wikidata file
+    """
+    
+    wd_description = cfd.create_event_description_for_wikidata(wdp_land_csv_file, wdp_loc_csv_file, lang, source)
+    g = sej.create_graph_from_event_descriptions(wd_description)
+    np.bind_namespaces(g)
+
+    return g
 
 ### Use Wikidata endpoint to select data
 
@@ -27,18 +61,17 @@ def get_paris_landmarks_from_wikidata(out_csv_file):
     """
 
     query = """
+    PREFIX wb: <http://wikiba.se/ontology#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX wd: <http://www.wikidata.org/entity/>
     PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-    PREFIX pq: <http://www.wikidata.org/prop/qualifier/>
     PREFIX ps: <http://www.wikidata.org/prop/statement/>
     PREFIX p: <http://www.wikidata.org/prop/>
+    PREFIX psv: <http://www.wikidata.org/prop/statement/value/>
     PREFIX pqv: <http://www.wikidata.org/prop/qualifier/value/>
-    PREFIX wb: <http://wikiba.se/ontology#>
-    PREFIX time: <http://www.w3.org/2006/time#>
 
-    SELECT DISTINCT ?landmarkId ?landmarkType ?nomOff ?startTimeStamp ?startTimePrec ?startTimeCal ?startTimeDef ?endTimeStamp ?endTimePrec ?endTimeCal ?endTimeDef ?statement ?statementType
-    WHERE {
+    SELECT DISTINCT ?landmarkId ?landmarkType ?nomOff ?lang ?timeType ?timeStamp ?timePrec ?timeCal ?statement
+        WHERE {
         {
             ?landmarkId p:P361 [ps:P361 wd:Q16024163].
             BIND("thoroughfare" AS ?landmarkType)
@@ -56,28 +89,20 @@ def get_paris_landmarks_from_wikidata(out_csv_file):
             BIND("municipality" AS ?landmarkType)
         }
         {
-            ?landmarkId p:P1448 ?nomOffSt.
-            ?nomOffSt ps:P1448 ?nomOff.
-            BIND(?nomOffSt AS ?statement)
-            BIND(wb:Statement AS ?statementType)
-            OPTIONAL {?nomOffSt pqv:P580 ?startTimeValSt }
-            OPTIONAL {?nomOffSt pqv:P582 ?endTimeValSt }
-        }UNION{
-            ?landmarkId rdfs:label ?nomOff.
-            FILTER (LANG(?nomOff) = "fr")
-            MINUS {?landmarkId p:P1448 ?nomOffSt}
-            BIND(?landmarkId AS ?statement)
-            BIND(wb:Item AS ?statementType)
+            VALUES (?timeProp ?timeType) { (pqv:P580 "start") (pqv:P582 "end") }
+            ?landmarkId p:P1448 ?statement.
+            ?statement ps:P1448 ?nomOff ; ?timeProp [wb:timeValue ?timeStamp ; wb:timePrecision ?timePrec ; wb:timeCalendarModel ?timeCal].
+            BIND(LANG(?nomOff) AS ?lang)
+        }UNION
+        {
+            VALUES (?prop ?timeProp ?timeType) { (p:P571 psv:P571 "start") (p:P576 psv:P576 "end") }
+            ?landmarkId wdt:P361 wd:Q107311481 ; rdfs:label ?nomOff ; ?prop ?statement.
+            BIND("fr" AS ?lang)
+            FILTER (LANG(?nomOff) = ?lang)
+            FILTER NOT EXISTS {?landmarkId p:P1448 ?nomOffSt}
+            ?statement ?timeProp [wb:timeValue ?timeStamp ; wb:timePrecision ?timePrec ; wb:timeCalendarModel ?timeCal] .
         }
-        OPTIONAL { ?landmarkId p:P571 [psv:P571 ?startTimeValIt] }
-        OPTIONAL { ?landmarkId p:P576 [psv:P576 ?endTimeValIt] }
-        BIND(IF(BOUND(?startTimeValSt), ?startTimeValSt, IF(BOUND(?startTimeValIt), ?startTimeValIt, "")) AS ?startTimeVal)
-        BIND(IF(BOUND(?endTimeValSt), ?endTimeValSt, IF(BOUND(?endTimeValIt), ?endTimeValIt, "")) AS ?endTimeVal)
-        OPTIONAL { ?startTimeVal wb:timeValue ?startTimeStamp ; wb:timePrecision ?startTimePrec ; wb:timeCalendarModel ?startTimeCal . }
-        OPTIONAL { ?endTimeVal wb:timeValue ?endTimeStamp ; wb:timePrecision ?endTimePrec ; wb:timeCalendarModel ?endTimeCal . }
-        BIND(IF(?statementType = wb:Statement, BOUND(?startTimeValSt), IF(?statementType = wb:Item, BOUND(?startTimeValIt), "false"^^xsd:boolean)) AS ?startTimeDef)
-        BIND(IF(?statementType = wb:Statement, BOUND(?endTimeValSt), IF(?statementType = wb:Item, BOUND(?endTimeValIt), "false"^^xsd:boolean)) AS ?endTimeDef)
-        }
+    }
     """
 
     query = wd.save_select_query_as_csv_file(query, out_csv_file)
@@ -218,24 +243,3 @@ def create_graph_from_geojson_states_of_streetnumbers(geojson_file:str, lang, va
     np.bind_namespaces(g)
 
     return g
-
-##################################################### Generic ##########################################################
-
-
-def clean_imported_repository(graphdb_url:URIRef, repository_name:str, factoids_named_graph_name:str, permanent_named_graph_name:str):
-    factoids_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, factoids_named_graph_name)
-    permanent_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, permanent_named_graph_name)
-
-    # Transferring non-modifiable triples to the permanent named graph
-    rt.transfert_immutable_triples(graphdb_url, repository_name, factoids_named_graph_uri, permanent_named_graph_uri)
-
-
-def create_factoids_repository(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
-                               ont_file:str, ontology_named_graph_name:str, kg_file:str,
-                               factoids_named_graph_name:str, permanent_named_graph_name:str,
-                               g:Graph):
-    # Export the graph and import it into the repository
-    msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
-
-    # Adapting data with the ontology, merging duplicates, etc.
-    clean_imported_repository(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name)

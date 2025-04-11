@@ -6,6 +6,7 @@ import file_management as fm
 import graphrdf as gr
 import str_processing as sp
 import geom_processing as gp
+import time_processing as tp
 import description_initialisation as di
 np = NameSpaces()
 
@@ -436,6 +437,63 @@ def create_landmark_disappearance_event_for_ville_paris(lm_label:str, lm_lang:st
 def get_time_description_for_ville_paris(time_stamp:str):
     return {"stamp":time_stamp, "calendar":"gregorian", "precision":"day"}
 
+
+##################################################### Wikidata #####################################################
+
+def create_event_description_for_wikidata(wd_land_csv_file:str, wd_loc_csv_file:str, lang:str, source_description:dict={}):
+    """
+    Create a state description for a wikidata file
+    """
+
+    landmark_id_col, landmark_type_col = "landmarkId", "landmarkType"
+    nom_off_col, lang_col = "nomOff", "lang"
+    time_type_col, time_stamp_col, time_prec_col, time_cal_col = "timeType", "timeStamp", "timePrec", "timeCal"
+    statement_col = "statement"
+
+    ev_descs = []
+
+    lm_content = fm.read_csv_file_as_dict(wd_land_csv_file, delimiter=",", encoding='utf-8-sig')
+    # lr_content = fm.read_csv_file_as_dict(wd_loc_csv_file, delimiter=",", encoding='utf-8-sig')
+
+    for value in lm_content.values():
+        ev_desc = create_event_description_for_wikidata_line(value, statement_col, landmark_id_col, landmark_type_col, nom_off_col, lang_col,
+                                                             time_type_col, time_stamp_col, time_prec_col, time_cal_col)
+        ev_descs.append(ev_desc)
+
+    description = {"events":ev_descs}
+
+    if isinstance(source_description, dict):
+        description["source"] = source_description
+
+    return description
+
+def create_event_description_for_wikidata_line(value, statement_col:str, landmark_id_col:str, landmark_type_col:str, nom_off_col:str, lang_col:str,
+                                               time_type_col:str, time_stamp_col:str, time_prec_col:str, time_cal_col:str):
+    statement = value.get(statement_col)
+    landmark_id, landmark_type = value.get(landmark_id_col), value.get(landmark_type_col)
+    landmark_type = value.get(landmark_type_col)
+    nom_off, lang = value.get(nom_off_col), value.get(lang_col)
+    time_type, time_stamp, time_prec, time_cal = value.get(time_type_col), value.get(time_stamp_col), value.get(time_prec_col), value.get(time_cal_col)
+
+    time_precision = tp.get_time_precision_from_integer(int(time_prec))
+    time_calendar = tp.get_time_calendar_from_wikidata_uri(URIRef(time_cal))
+    time_description = {"stamp":time_stamp, "calendar":time_calendar, "precision":time_precision}
+    provenance = {"uri":statement}
+
+    name_attr_cg, lm_cg = {}, {}
+    vers_desc = [di.create_landmark_attribute_version_description(nom_off, lang=lang)]
+    if time_type == "start":
+        lm_cg = di.create_landmark_change_event_description("appearance")
+        name_attr_cg = di.create_landmark_attribute_change_event_description("name", makes_effective=vers_desc)
+    elif time_type == "end":
+        vers_desc = [di.create_landmark_attribute_version_description(nom_off, lang=lang)]
+        lm_cg = di.create_landmark_change_event_description("disappearance")
+        name_attr_cg = di.create_landmark_attribute_change_event_description("name", outdates=vers_desc)
+    
+    lm_desc = di.create_landmark_event_description(1, landmark_type, nom_off, lang, changes=[lm_cg, name_attr_cg])
+    ev_desc = di.create_event_description(None, lang, [lm_desc], [], provenance, time_description)
+    return ev_desc
+
 ##################################################### Geojson states ##########################################################
 
 def create_state_description_for_geojson_states(geojson_file:str, landmark_type:str, name_attribute:str, identity_property:str=None, lang:str=None,
@@ -626,5 +684,3 @@ def create_state_description_for_geojson_housenumber_state(hn_label:str, hn_type
     lr_desc = di.create_landmark_relation_version_description(gr.generate_uuid(), "belongs", hn_uuid, [rlm_uuid])
 
     return hn_desc, [rlm_uuid, rlm_desc, related_lm_label], lr_desc
-    
-    

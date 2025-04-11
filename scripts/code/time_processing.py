@@ -541,6 +541,48 @@ def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_
     for query in queries :
         gd.update_query(query, graphdb_url, repository_name)
 
+def get_time_precision_from_integer(precision_int:int):
+    """
+    Get the precision of a time instant from an integer.
+    The integer is defined in the ontology as follows:
+    1: millennium
+    2: century
+    3: decade
+    4: year
+    5: month
+    6: day
+    """
+
+    precisions = {
+        0: "billion_years",
+        1: "hundred_million_years",
+        3: "million_years",
+        4: "hundred_thousand_years",
+        5: "ten_thousand_years",
+        6: "millennium",
+        7: "century",
+        8: "decade",
+        9: "year",
+        10: "month",
+        11: "day",
+        12: "hour",
+        13: "minute",
+        14: "second"
+    }
+
+    precision = precisions.get(precision_int)    
+    return precision
+
+def get_time_calendar_from_wikidata_uri(calendar_uri:URIRef):
+    calendars = {
+        np.WD["Q1985727"]: "gregorian",
+        np.WD["Q181974"]: "republican",
+        np.WD["Q1985786"]: "julian",
+    }
+
+    calendar = calendars.get(calendar_uri)
+    return calendar
+
 def get_time_instant_elements(time_dict:dict):
     if not isinstance(time_dict, dict):
         return [None, None, None]
