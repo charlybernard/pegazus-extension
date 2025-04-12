@@ -137,6 +137,7 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
     AttributeVersion(v) ^ Landmark(lm) ^ hasTime(lm, t) ^ hasAttribute(lm, attr) ^ hasAttributeVersion(attr, v) => AttributeChange(cgME) ^ AttributeChange(cgO) ^ makesEffective(cgME, v) ^ outdates(cgO, v)
     """
 
+    # Create triples for real attribute changes (changes according factoids) : < ?change addr:isRealChange "true"^^xsd:boolean>
     query1 = np.query_prefixes + f"""
     INSERT {{
         GRAPH ?gt {{
@@ -145,7 +146,7 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
     }}
     WHERE {{
         BIND({tmp_named_graph_uri.n3()} AS ?gt)
-        ?rootAttr addr:hasTrace ?attr .
+        ?rootAttr a addr:Attribute ; addr:hasTrace ?attr .
         ?change addr:appliedTo ?attr .
     }}
     """
