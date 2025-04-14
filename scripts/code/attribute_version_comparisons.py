@@ -7,129 +7,6 @@ from rdflib import URIRef, Graph, Literal
 
 np = NameSpaces()
 
-import time
-
-# def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_named_graph_name:str, comp_tmp_file:str, comparison_settings:dict={}):
-#     """
-#     Compare versions related to the same attribute. The way of versions are compared are set by `comparison_settings`.
-#     """
-
-#     t1 = time.time()
-#     # Get versions which have to be compared
-#     results = get_attribute_versions_to_compare(graphdb_url, repository_name)
-#     elements = results.get("results").get("bindings")
-#     t2 = time.time()
-#     print(f"Time to get attribute versions to compare: {t2-t1} seconds")
-#     # Initialisation of a RDFLib graph (it will be exported as a TTL file at the end of the process)
-#     g = Graph() 
-
-#     # Dictionary which defines properties to used according comparison outputs.
-#     val_comp_dict = {True:np.ADDR["sameVersionValueAs"], False:np.ADDR["differentVersionValueFrom"], None:None}
-    
-#     similarity_coef = comparison_settings.get("geom_similarity_coef")
-#     buffer_radius = comparison_settings.get("geom_buffer_radius")
-#     crs_uri = comparison_settings.get("geom_crs_uri")
-#     epsg_code = gp.get_epsg_code_from_opengis_epsg_uri(crs_uri, True)
-#     transformers = gp.get_useful_transformers_for_from_crs(epsg_code, ["EPSG:4326", "EPSG:3857", "EPSG:2154"])
-
-#     for elem in elements:
-#         # Get URIs (attribute and attribute versions)
-#         attr_type = gr.convert_result_elem_to_rdflib_elem(elem.get('attrType'))
-#         lm_type = gr.convert_result_elem_to_rdflib_elem(elem.get('ltype'))
-#         attr_vers_1 = gr.convert_result_elem_to_rdflib_elem(elem.get('attrVers1'))
-#         attr_vers_2 = gr.convert_result_elem_to_rdflib_elem(elem.get('attrVers2'))
-#         vers_val_1 = gr.convert_result_elem_to_rdflib_elem(elem.get('versVal1'))
-#         vers_val_2 = gr.convert_result_elem_to_rdflib_elem(elem.get('versVal2'))
-
-#         # If the attribute describes a name, comparison is done thanks to `are_similar_name_versions()`.
-#         # This comparison depends on the type of landmark (`lm_type`)
-#         if attr_type == np.ATYPE["Name"]:
-#             is_same_value = are_similar_name_versions(lm_type, vers_val_1, vers_val_2)
-  
-#         # If the attribute describes a geometry, comparison is done thanks to `are_similar_geom_versions()`.
-#         # This comparison depends on the type of landmark (`lm_type`)
-#         elif attr_type == np.ATYPE["Geometry"]:
-#             is_same_value = are_similar_geom_versions(lm_type, vers_val_1, vers_val_2, similarity_coef, buffer_radius, crs_uri, transformers)
-        
-#         elif attr_type == np.ATYPE["InseeCode"]:
-#             # For INSEE code, comparison is done with the help of `are_similar_name_versions()`
-#             # but the result is always True
-#             is_same_value = are_similar_name_versions(lm_type, vers_val_1, vers_val_2)
-#         else:
-#             is_same_value = None
-        
-#         # Get the property to be used to compare versions according the result of comparison
-#         # Add the triple in the graph
-#         comp_pred = val_comp_dict.get(is_same_value)
-#         if comp_pred is not None:
-#             g.add((attr_vers_1, comp_pred, attr_vers_2))
-    
-#     t3 = time.time()
-#     print(f"Time to compare attribute versions: {t3-t2} seconds")
-#     # Export the graph to of TTL file
-#     g.serialize(destination=comp_tmp_file)
-#     t4 = time.time()
-#     print(f"Time to export graph to TTL file: {t4-t3} seconds")
-    
-#     # Import the TTL file in GraphDB
-#     gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, comp_tmp_file, named_graph_name=comp_named_graph_name)
-#     t5 = time.time()
-#     print(f"Time to import TTL file in GraphDB: {t5-t4} seconds")
-        
-# def get_geom_type_according_landmark_type(rel_lm_type:URIRef):
-#     """
-#     According landmark type, return a shape of geometry.
-#     """
-    
-#     if rel_lm_type in [np.LTYPE["HouseNumber"], np.LTYPE["StreetNumber"], np.LTYPE["DistrictNumber"]]:
-#         return "point"
-#     elif rel_lm_type in [np.LTYPE["Thoroughfare"], np.LTYPE["District"], np.LTYPE["Municipality"]]:
-#         return "polygon"
-#     else:
-#         return "polygon"
-
-# def get_name_type_according_landmark_type(rel_lm_type:URIRef):
-#     """
-#     According landmark type, return a value (housenumber, thoroughfare, area)
-#     """
-#     if rel_lm_type in [np.LTYPE["HouseNumber"], np.LTYPE["StreetNumber"], np.LTYPE["DistrictNumber"]]:
-#         return "housenumber"
-#     elif rel_lm_type in [np.LTYPE["Thoroughfare"]]:
-#         return "thoroughfare"
-#     elif rel_lm_type in [np.LTYPE["District"], np.LTYPE["Municipality"]]:
-#         return "area"
-#     else:
-#         return ""
-
-# def are_similar_geom_versions(lm_type, vers_val_1, vers_val_2, similarity_coef, buffer_radius, crs_uri, transformers) -> bool:
-#     """
-#     Returns True if `vers_val_1` is similar to `vers_val_2`, False else.
-#     Similarity depends on type of landmark (`lm_type`) and coefficient of similarity (`similarity_coef`).
-#     To comparable geometries, they must have the same shape (point, linestring, polygon) so buffer radius (`buffer_radius`) is used for linestring to be converted as polygon if needed.
-#     Besides, for geometries to have same coordinated reference system (`crs_uri`).
-#     """
-
-#     # Get the suitable shape type of geometries (point, linestring, polygon) to compare them according landmark type
-#     geom_type = get_geom_type_according_landmark_type(lm_type)
-
-#     # Extract wkt literal and cri uri from vers_val Literal and modify wkt literal if needed (add buffer and change CRS)
-#     geom_wkt_1, geom_srid_uri_1 = gp.get_wkt_geom_from_geosparql_wktliteral(vers_val_1.strip())
-#     geom_1 = gp.get_processed_geometry(geom_wkt_1, geom_srid_uri_1, geom_type, crs_uri, buffer_radius, transformers)
-#     geom_wkt_2, geom_srid_uri_2 = gp.get_wkt_geom_from_geosparql_wktliteral(vers_val_2.strip())
-#     geom_2 = gp.get_processed_geometry(geom_wkt_2, geom_srid_uri_2, geom_type, crs_uri, buffer_radius, transformers)
-
-#     return gp.are_similar_geometries(geom_1, geom_2, geom_type, similarity_coef, max_dist=buffer_radius)
-
-# def are_similar_name_versions(lm_type, vers_val_1, vers_val_2):
-#     name_type = get_name_type_according_landmark_type(lm_type)
-#     _, simplified_name_1 = sp.normalize_and_simplify_name_version(vers_val_1.strip(), name_type, name_lang=vers_val_1.language)
-#     _, simplified_name_2 = sp.normalize_and_simplify_name_version(vers_val_2.strip(), name_type, name_lang=vers_val_2.language)
-
-#     if simplified_name_1 == simplified_name_2:
-#         return True
-#     else:
-#         return False
-
 def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_named_graph_name:str, comp_tmp_file:str, comparison_settings:dict={}):
     # Get versions which have to be compared
     results = get_attribute_versions_to_compare(graphdb_url, repository_name)
@@ -137,6 +14,7 @@ def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_nam
 
     # Creation of a RDFLib graph (it will be exported as a TTL file at the end of the process)
     g = get_processed_attribute_version_values(bindings, comparison_settings)
+    gr.add_namespaces_to_graph(g, np.namespaces_with_prefixes)
     g.serialize(destination=comp_tmp_file)
     
     # Import the TTL file in GraphDB
@@ -182,7 +60,7 @@ def get_processed_attribute_version_values(bindings:dict,  comparison_settings:d
     # Dictionary which defines properties to used according comparison outputs.
     crs_uri = comparison_settings.get("geom_crs_uri")
     epsg_code = gp.get_epsg_code_from_opengis_epsg_uri(crs_uri, True)
-    geom_transformers = gp.get_useful_transformers_for_from_crs(epsg_code, ["EPSG:4326", "EPSG:3857", "EPSG:2154"])
+    geom_transformers = gp.get_useful_transformers_for_to_crs(epsg_code, ["EPSG:4326", "EPSG:3857", "EPSG:2154"])
     comparison_settings["geom_transformers"] = geom_transformers
 
     for binding in bindings:
@@ -227,9 +105,6 @@ def are_similar_versions(vers_val_1, vers_val_2, attr_type:URIRef, lm_type:URIRe
     Besides, for geometries to have same coordinated reference system (`crs_uri`).
     """
 
-    # Get the suitable shape type of geometries (point, linestring, polygon) to compare them according landmark type
-    geom_type = get_geom_type_according_landmark_type(lm_type)
-
     is_same_value = None
 
     if attr_type == np.ATYPE["Name"]:
@@ -266,7 +141,7 @@ def get_processed_attribute_version_value(vers_val:Literal, attr_type:URIRef, lm
         geom_wkt, geom_srid_uri = gp.get_wkt_geom_from_geosparql_wktliteral(vers_val.strip())
         # Get the transformer to convert geometry from its original CRS to the one used in the comparison
         # If the geometry is already in the right CRS, no transformation is needed
-        processed_value = gp.get_processed_geometry(geom_wkt, geom_srid_uri, geom_type, crs_uri, buffer_radius, transformers)
+        processed_value = gp.get_processed_geometry(geom_wkt, geom_type, geom_srid_uri, crs_uri, buffer_radius, transformers)
 
     elif attr_type == np.ATYPE["InseeCode"]:
         processed_value = vers_val.strip()
@@ -318,3 +193,25 @@ def are_similar_geom_versions(lm_type, vers_val_1, vers_val_2, similarity_coef, 
 
     return gp.are_similar_geometries(vers_val_1, vers_val_2, geom_type, similarity_coef, max_dist=max_distance_for_points)
     
+# if __name__ == "__main__":
+#     binding = {
+#         "ltype": {"type": "uri", "value": "http://rdf.geohistoricaldata.org/id/codes/address/landmarkType/Thoroughfare"},
+#         "attrType": {"type": "uri", "value": "http://rdf.geohistoricaldata.org/id/codes/address/attributeType/Geometry"},
+#         "attrVers1": {"type": "uri", "value": "http://rdf.geohistoricaldata.org/id/address/factoids/AV_ff60c9d04eb342499f45387e34f9d992"},
+#         "attrVers2": {"type": "uri", "value": "http://rdf.geohistoricaldata.org/id/address/factoids/AV_4a6c3b8e7f2b4a0b8d5a0c5c7a4f8c3"},
+#         "versVal1": {"type": "literal", "value": "<http://www.opengis.net/def/crs/EPSG/0/2154> LINESTRING (654162.457422 6861451.622655, 654213.2102 6861541.193389)", "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral"},
+#         "versVal2": {"type": "literal", "value": "POLYGON ((2.375453 48.851553, 2.375414 48.851563, 2.375481 48.851649, 2.375492 48.85168, 2.375509 48.851747, 2.375512 48.851748, 2.37552 48.851758, 2.375553 48.851746, 2.375598 48.851798, 2.375882 48.852127, 2.375884 48.85213, 2.375893 48.852127, 2.376004 48.852256, 2.376015 48.852271, 2.376043 48.852289, 2.37607 48.852281, 2.376037 48.852243, 2.375997 48.852197, 2.376021 48.852187, 2.376018 48.852184, 2.37601 48.852187, 2.375986 48.852159, 2.375991 48.852151, 2.375964 48.852121, 2.37595 48.852106, 2.375672 48.851792, 2.375661 48.851795, 2.375558 48.85167, 2.375569 48.851666, 2.375567 48.851661, 2.375569 48.851656, 2.375572 48.851653, 2.375577 48.85165, 2.375561 48.85163, 2.375533 48.851637, 2.375521 48.85164, 2.375453 48.851553))", "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral"}
+#         }
+#     comparison_settings = {
+#         "geom_crs_uri": "http://www.opengis.net/def/crs/EPSG/0/2154",
+#         "geom_similarity_coef": 0.85,
+#         "geom_buffer_radius": 10
+#     }
+#     crs_uri = comparison_settings.get("geom_crs_uri")
+#     epsg_code = gp.get_epsg_code_from_opengis_epsg_uri(crs_uri, True)
+#     geom_transformers = gp.get_useful_transformers_for_to_crs(epsg_code, ["EPSG:4326", "EPSG:3857", "EPSG:2154"])
+#     comparison_settings["geom_transformers"] = geom_transformers
+
+#     are_similar = are_two_attribute_versions_similar(binding, {}, comparison_settings)
+#     print(are_similar[0])
+#     print(are_similar[4].wkt)
