@@ -5,6 +5,8 @@ import str_processing as sp
 import graphdb as gd
 import graphrdf as gr
 import resource_rooting as rr
+import time
+import json
 
 np = NameSpaces()
 
@@ -150,112 +152,6 @@ def get_pref_and_hidden_label_triples_for_elements(elements: list):
             g.add(triple)
 
     return g
-
-def generate_insert_data_query(triples: list, named_graph_uri: URIRef = None):
-    """
-    Generates a SPARQL INSERT DATA query to insert a list of triples into an optional named graph.
-
-    Parameters:
-    - triples (list): A list of triples, where each triple is a tuple (subject, predicate, object). 
-                       Each element of the triple is either a URIRef or a Literal.
-    - named_graph_uri (URIRef, optional): The URI of the named graph to insert the triples into. If not provided,
-                                           the triples will be inserted into the default graph.
-
-    Returns:
-    - str: A string containing the SPARQL query. The query is formatted to insert the provided triples into
-           the specified named graph (if provided), or into the default graph if no named graph is specified.
-
-    Description:
-    This function generates a SPARQL query in the form of `INSERT DATA` to add a set of triples to a specified graph in a GraphDB store.
-    If a named graph URI is provided, the triples will be inserted into that graph. Otherwise, the triples will be inserted into the default graph.
-
-    Example usage:
-    ```python
-    triples = [
-        (URIRef('http://example.org#Alice'), URIRef('http://example.org#knows'), URIRef('http://example.org#Bob')),
-        (URIRef('http://example.org#Bob'), URIRef('http://example.org#knows'), URIRef('http://example.org#Charlie'))
-    ]
-    named_graph_uri = URIRef('http://example.org/graph')
-
-    query = generate_insert_data_query(triples, named_graph_uri)
-    ```
-
-    If no named graph is provided:
-    ```python
-    query = generate_insert_data_query(triples)
-    ```
-
-    This will generate a SPARQL query like:
-    ```sparql
-    INSERT DATA {
-        GRAPH <http://example.org/graph> {
-            <http://example.org#Alice> <http://example.org#knows> <http://example.org#Bob> .
-            <http://example.org#Bob> <http://example.org#knows> <http://example.org#Charlie> .
-        }
-    }
-    ```
-    """
-
-    # Prepare formatted triples
-    triple_statements = [f"{s.n3()} {p.n3()} {o.n3()} ." for s, p, o in triples]
-    triples_str = "\n".join(triple_statements)
-
-    if isinstance(named_graph_uri, URIRef):
-    # Build the query
-        query = f"""
-        INSERT DATA {{
-            GRAPH {named_graph_uri.n3()} {{
-                {triples_str}
-            }}
-        }}
-        """
-    else:
-        query = f"""
-        INSERT DATA {{
-            {triples_str}
-        }}
-        """
-
-    return query.strip()
-
-def add_triples_to_repository(triples:list[tuple], graphdb_url:URIRef, repository_name:str, named_graph_uri:URIRef=None):
-    """
-    Adds a list of triples to a specified repository in a GraphDB store.
-
-    Parameters:
-    - triples (list[tuple]): A list of triples, where each triple is represented as a tuple (subject, predicate, object).
-      These triples will be inserted into the specified repository.
-    - graphdb_url (URIRef): The URL of the GraphDB instance that holds the repository where the triples will be added.
-    - repository_name (str): The name of the repository where the triples will be inserted.
-    - named_graph_uri (URIRef, optional): An optional named graph URI. If provided, the triples will be added to this
-      specific graph within the repository. If not provided, the triples will be inserted into the default graph.
-
-    Returns:
-    - None: The function does not return any value. It performs an update on the GraphDB repository by adding the triples.
-
-    Description:
-    This function generates an insert data query using the provided triples and optional named graph URI.
-    It then sends the query to the specified GraphDB repository to insert the data.
-
-    Example usage:
-    ```python
-    # Define the triples
-    triples = [
-        (URIRef('http://example.org#Alice'), URIRef('http://example.org#knows'), URIRef('http://example.org#Bob')),
-        (URIRef('http://example.org#Bob'), URIRef('http://example.org#knows'), URIRef('http://example.org#Charlie'))
-    ]
-
-    # Define the GraphDB URL and repository name
-    graphdb_url = URIRef('http://localhost:7200')
-    repository_name = 'exampleRepository'
-
-    # Add triples to the repository
-    add_triples_to_repository(triples, graphdb_url, repository_name)
-    ```
-    """
-
-    query = generate_insert_data_query(triples, named_graph_uri)
-    gd.update_query(query, graphdb_url, repository_name)
 
 
 def add_pref_and_hidden_labels_for_elements(graphdb_url:URIRef, repository_name:str, factoids_named_graph_uri:URIRef, pref_hidden_labels_ttl_file:str):
@@ -427,6 +323,7 @@ def transfert_rdflib_graph_to_named_graph_repository(g: Graph, graphdb_url: URIR
 
     # Import the `kg_file` file into the directory
     gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, kg_file, named_graph_name)
+
 ####################################################################
 
 
@@ -465,3 +362,120 @@ def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str,
     add_pref_and_hidden_labels_for_elements(graphdb_url, repository_name, factoids_named_graph_uri, pref_hidden_labels_ttl_file)
 
     rr.link_factoids_with_facts(graphdb_url, repository_name, factoids_named_graph_uri, facts_named_graph_uri, inter_sources_name_graph_uri)
+
+
+######################################################### Test functions ######################################################
+
+def get_landmark_labels(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
+    """
+    Retrieves landmark labels and their types from a specified named graph in a GraphDB repository."
+    """
+
+    query = np.query_prefixes + f"""
+        SELECT ?landmark ?landmarkType ?landmarkLabel ?relatedLandmarkType ?relatedLandmarkLabel WHERE {{
+            GRAPH ?g {{ ?landmark a addr:Landmark . }}
+            ?landmark rdfs:label ?landmarkLabel ; addr:isLandmarkType ?landmarkType .
+            OPTIONAL {{
+                ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?landmark ; addr:relatum ?relatedLandmark .
+                ?relatedLandmark rdfs:label ?relatedLandmarkLabel ; addr:isLandmarkType ?relatedLandmarkType .
+            }}
+            FILTER(?g != {facts_named_graph_uri.n3()})
+        }}
+    """
+    
+    results = gd.select_query_to_json(query, graphdb_url, repository_name)
+    return results.get("results").get("bindings")
+
+def add_pref_and_hidden_labels_for_landmarks(graphdb_url:URIRef, repository_name:str,
+                                             facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef,
+                                             pref_hidden_labels_ttl_file:str):
+    t1 = time.time()
+    elements = get_landmark_labels(graphdb_url, repository_name, facts_named_graph_uri)
+    t2 = time.time()
+    print("Time to get elements with labels: ", t2 - t1)
+    landmarks = get_pref_and_hidden_label_triples_for_landmarks(elements)
+    t3 = time.time()
+    print("Time to get triples: ", t3 - t2)
+    print(landmarks)
+    json.dump(landmarks, open("/home/CBernard2/Téléchargements/landmarks.json", "w"), indent=4)
+    # graph_with_triples_to_add.serialize(pref_hidden_labels_ttl_file)
+
+    # # Import the `kg_file` file into the directory
+    # gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, pref_hidden_labels_ttl_file, named_graph_uri=facts_named_graph_uri)
+
+def get_pref_and_hidden_label_triples_for_landmarks(elements: list):
+    landmarks = {}
+
+    for element in elements:
+        # Retrieval of URIs (attribute and attribute version) and geometry
+        lm = gr.convert_result_elem_to_rdflib_elem(element.get('landmark'))
+        lm_type = gr.convert_result_elem_to_rdflib_elem(element.get('landmarkType'))
+        lm_label = gr.convert_result_elem_to_rdflib_elem(element.get('landmarkLabel'))
+        related_lm_type = gr.convert_result_elem_to_rdflib_elem(element.get('relatedLandmarkType'))
+        related_lm_label = gr.convert_result_elem_to_rdflib_elem(element.get('relatedLandmarkLabel'))
+
+        normalized_label, simplified_label = get_pref_and_hidden_label_for_landmark(lm_type, lm_label)
+        related_normalized_label, related_simplified_label = get_pref_and_hidden_label_for_landmark(related_lm_type, related_lm_label)
+        if isinstance(normalized_label, str) and isinstance(related_normalized_label, str):
+            normalized_label += ", " + related_normalized_label
+        if isinstance(simplified_label, str) and isinstance(related_simplified_label, str):
+            simplified_label += " || " + related_simplified_label
+
+        if lm_type not in landmarks.keys():
+            landmarks[lm_type] = {}
+        if simplified_label not in landmarks[lm_type].keys():
+            landmarks[lm_type][simplified_label] = {
+                "id":gr.generate_uuid(),
+                "normalized_label":normalized_label,
+                "simplified_label":simplified_label,
+                "landmarks": [lm]
+                }
+        else:
+            landmarks[lm_type][simplified_label]["landmarks"].append(lm)
+        
+    return landmarks
+
+def get_pref_and_hidden_label_for_landmark(type: URIRef, label: Literal):
+    if type == np.LTYPE["Thoroughfare"]:
+        lm_label_type = "thoroughfare"
+    elif type in [np.LTYPE["Municipality"], np.LTYPE["District"]]:
+        lm_label_type = "area"
+    elif type in [np.LTYPE["HouseNumber"],np.LTYPE["StreetNumber"],np.LTYPE["DistrictNumber"],np.LTYPE["PostalCodeArea"]]:
+        lm_label_type = "number"
+    else:
+        lm_label_type = None
+
+    label_value, label_lang = None, None
+    if isinstance(label, Literal):
+        label_value = label.strip()
+        label_lang = label.language
+    normalized_name, simplified_name = sp.normalize_and_simplify_name_version(label_value, lm_label_type, label_lang)
+
+    return normalized_name, simplified_name
+
+def create_facts_landmarks_graph(landmarks):
+    g = Graph()
+
+    for lm_type, lm_labels in landmarks.items():
+        for lm_label, lm_data in lm_labels.items():
+            lm_id = lm_data["id"]
+            normalized_label = lm_data["normalized_label"]
+            simplified_label = lm_data["simplified_label"]
+            for landmark in lm_data["landmarks"]:
+                g.add((landmark, SKOS.prefLabel, Literal(normalized_label)))
+                g.add((landmark, SKOS.hiddenLabel, Literal(simplified_label)))
+                g.add((landmark, np.ADDR["hasLandmarkID"], Literal(lm_id)))
+
+    return g
+
+if __name__ == "__main__":
+    # Example usage
+    graphdb_url = URIRef('http://localhost:7200')
+    repository_name = 'addresses_from_factoids'
+    facts_named_graph_uri = URIRef('http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/facts')
+    inter_sources_name_graph_uri = URIRef('http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/inter_sources')
+    pref_hidden_labels_ttl_file = 'pref_hidden_labels.ttl'
+
+    add_pref_and_hidden_labels_for_landmarks(graphdb_url, repository_name,
+                                             facts_named_graph_uri, inter_sources_name_graph_uri,
+                                             pref_hidden_labels_ttl_file)

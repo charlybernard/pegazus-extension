@@ -153,6 +153,13 @@ def get_wkt_geom_from_geosparql_wktliteral(wktliteral:str):
 
     return wkt_geom_value, wkt_geom_srid
 
+def transform_geometry(geom, transformer):
+    """
+    Obtain geometry defined in the `from_crs` coordinate system to the `to_crs` coordinate system.
+    """
+
+    return transform(transformer.transform, geom)
+
 def transform_geometry_crs(geom, crs_from, crs_to):
     """
     Obtain geometry defined in the `from_crs` coordinate system to the `to_crs` coordinate system.

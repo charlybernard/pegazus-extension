@@ -135,6 +135,12 @@ def normalize_french_thoroughfare_name(thoroughfare_name:str):
 
 def simplify_french_landmark_name(landmark_name:str, keep_spaces:bool=True, keep_diacritics:bool=True, sort_characters:bool=False):
     words_to_remove = ["&","a","à","au","aux","d","de","des","du","en","ès","es","et","l","la","le","les","lès","ou"]
+    words_to_replace = {
+        "boulevart":"boulevard",
+        "quay":"quai",
+        "enfans":"enfants",
+        "fauxbourg":"faubourg",
+    }
     commune_name_words = get_words_list_from_label(landmark_name, case_option="lower")
     new_commune_name_words = []
 
@@ -144,6 +150,9 @@ def simplify_french_landmark_name(landmark_name:str, keep_spaces:bool=True, keep
             if not keep_diacritics:
                 word = unidecode.unidecode(word)
             new_commune_name_words.append(word)
+
+    for word, replacement in words_to_replace.items():
+        new_commune_name_words = [replacement if x == word else x for x in new_commune_name_words]
 
     word_sep = ""
     if keep_spaces:
@@ -155,22 +164,6 @@ def simplify_french_landmark_name(landmark_name:str, keep_spaces:bool=True, keep
         simplified_name = "".join(sorted(simplified_name))
 
     return simplified_name
-
-
-def get_lower_simplified_french_street_name_function(variable:str):
-    replacements = [["([- ]de[- ]la[- ]|[- ]de[- ]|[- ]des[- ]|[- ]du[- ]|[- ]le[- ]|[- ]la[- ]|[- ]les[- ]|[- ]aux[- ]|[- ]au[- ]|[- ]à[- ]|[- ]en[- ]|/|-|\\.)", " "],
-                ["(l'|d')", ""],
-                ["[àâ]", "a"], 
-                ["[éèêë]", "e"], 
-                ["[îíìï]", "i"], 
-                ["[ôö]", "o"], 
-                ["[ûüù]", "u"], 
-                ["[ÿŷ]", "y"],
-                ["[ç]", "c"], 
-                ]
-    
-    lc_variable = f"LCASE({variable})"
-    return get_remplacement_sparql_function(lc_variable, replacements)
 
 def get_remplacement_sparql_function(string:str, replacements:list):
     function_str = string

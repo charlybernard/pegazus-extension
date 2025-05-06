@@ -16,11 +16,11 @@ proj4.defs([
 
 // Gestion du côté leaflet
 
-function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[], messages={}){
+function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[], messages={}, maxZoom=18, minZoom=1){
   var mapSettings = {};
 
   // Initialisation de la carte
-  mapSettings.map = L.map(id).setView([lat, lon], zoom);;
+  mapSettings.map = L.map(id , {center: [lat, lon], zoom: zoom, maxZoom: maxZoom, minZoom: minZoom}); ;
   mapSettings.layerControl = L.control.layers()
   mapSettings.tileLayers = {};
   mapSettings.overlayLayers = {};
