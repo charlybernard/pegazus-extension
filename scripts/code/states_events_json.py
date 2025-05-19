@@ -138,7 +138,8 @@ def create_graph_from_event_description(g:Graph, event_description:dict, source_
             ]}
         ],
         "relations": [
-            {"type":"touches", "locatum":1, "relatum":2}
+            {"type":"touches", "locatum":1, "relatum":2}, , "changes":[
+                {"on":"relation", "type":"apprearance"},
         ], 
         "provenance": {"uri": "https://fr.wikipedia.org/wiki/Rue_G%C3%A9rard_(Paris)"}
     }
@@ -147,10 +148,9 @@ def create_graph_from_event_description(g:Graph, event_description:dict, source_
 
     event_uri = gr.generate_uri(np.FACTOIDS, "EV")
     landmark_uris = {}
+
     created_entities = [event_uri]
-
     time_description, label, lang, landmark_descriptions, landmark_relation_descriptions, provenance_description = get_event_description_elements(event_description)
-
     create_event_with_time(g, event_uri, time_description)
 
     # Create a label for the event if it exists
@@ -183,9 +183,9 @@ def get_event_description_elements(event_description:dict):
     """
 
     time_description = event_description.get("time")
-    # Check if the time description is a dictionary and contains the keys 'stamp', 'calendar' and 'precision'
-    if not isinstance(time_description, dict) or not all(key in time_description for key in ["stamp", "calendar", "precision"]):
-        raise ValueError("The time description must contain the keys 'stamp', 'calendar' and 'precision'")
+    # # Check if the time description is a dictionary and contains the keys 'stamp', 'calendar' and 'precision'
+    # if not isinstance(time_description, dict) or not all(key in time_description for key in ["stamp", "calendar", "precision"]):
+    #     raise ValueError("The time description must contain the keys 'stamp', 'calendar' and 'precision'")
 
     label = event_description.get("label") or None
     
@@ -217,8 +217,11 @@ def get_event_description_elements(event_description:dict):
 
 def create_event_with_time(g:Graph, event_uri:URIRef, time_description:dict):
     time_uri = gr.generate_uri(np.FACTOIDS, "TI")
-    ri.create_event_with_time(g, event_uri, time_uri)
-    create_time_instant(g, time_uri, time_description)
+    if isinstance(time_description, dict):
+        ri.create_event_with_time(g, event_uri, time_uri)
+        create_time_instant(g, time_uri, time_description)
+    else:
+        ri.create_event(g, event_uri)
 
 def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict, lang:str=None):
     created_entities = [landmark_uri]
@@ -228,7 +231,7 @@ def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landma
     type_uri = om.get_landmark_type(type)
     ri.create_landmark(g, landmark_uri, label_lit, type_uri)
     
-    changes = landmark_description.get("changes")
+    changes = landmark_description.get("changes") or []
     for change in changes:
         created_entities_from_change = create_event_change(g, event_uri, landmark_uri, change)
         created_entities += created_entities_from_change
@@ -247,7 +250,13 @@ def create_event_change(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_d
     return created_entities
 
 def create_event_change_on_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, change_description:dict):
-    change_types = {"appearance":"landmark_appearance", "disappearance":"landmark_disappearance"}
+    change_types = {
+        "appearance":"landmark_appearance",
+        "disappearance":"landmark_disappearance",
+        "numerotation":"landmark_numerotation",
+        "classement":"landmark_classement",
+        "unclassement":"landmark_unclassement",
+    }
     
     change_uri = gr.generate_uri(np.FACTOIDS, "CG")
     change_type = change_description.get("type")
@@ -279,7 +288,6 @@ def create_event_change_on_landmark_attribute(g:Graph, event_uri:URIRef, landmar
         outdated_versions_uris.append(vers_uri)
 
     created_entities = made_effective_versions_uris + outdated_versions_uris
-
     ri.create_landmark_attribute(g, attribute_uri, attribute_type_uri, landmark_uri)
     ri.create_attribute_change(g, change_uri, change_type_uri, attribute_uri, made_effective_versions_uris, outdated_versions_uris)
     ri.create_change_event_relation(g, change_uri, event_uri)
@@ -307,7 +315,11 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
 
     ri.create_landmark_relation(g, landmark_relation_uri, type_uri, locatum_uri, relatum_uris)
 
-    change_type = landmark_relation_description.get("change")
+    change_desc = landmark_relation_description.get("change") or None
+    if change_desc is None:
+        return None
+    
+    change_type = change_desc.get("type")
     change_type_uri = om.get_change_type(change_types.get(change_type))
     if change_type_uri is not None:
         change_uri = gr.generate_uri(np.FACTOIDS, "CG")
@@ -365,7 +377,7 @@ def create_graph_from_states_descriptions(states_descriptions:dict):
                 "id": 3,
                 "label": "Paris",
                 "lang": "fr",
-                "type": "city",
+                "type": "municipality",
                 "attributes": {
                     "geometry": {
                         "value": "POINT(2.3589 48.8394)",

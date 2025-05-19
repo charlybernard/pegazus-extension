@@ -155,7 +155,7 @@ def create_postal_code_area_description_for_ban(cp_label:str, cp_id:str, lang:st
 
 ##################################################### OSM ##########################################################
 
-def create_state_description_for_osm(osm_file:str, osm_sn_file:str, valid_time:dict, source:dict, lang:str, ban_ns:Namespace):
+def create_state_description_for_osm(osm_file:str, osm_sn_file:str, valid_time:dict, source:dict, lang:str, osm_ns:Namespace):
     landmarks_desc = []
     relations_desc = []
     osm_relations = [] # ["https://www.openstreetmap.org/relation/11832935", "https://www.openstreetmap.org/relation/11832936"]

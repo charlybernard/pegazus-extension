@@ -163,6 +163,26 @@ def create_graph_from_events(events_json_file:str):
 
     return g
 
+################################################################ States ###########################################################
+
+def create_graph_from_different_states(states_json_file:str):
+    """
+    Creation of a graph from the JSON file which contains a list of different states
+    """
+
+    # Creation of a basic graph with rdflib
+    states_descriptions = fm.read_json_file(states_json_file)
+
+    state_desc = states_descriptions.get("states")
+    g = Graph()
+
+    for desc in state_desc:
+        g+= sej.create_graph_from_states_descriptions(desc)
+
+    np.bind_namespaces(g)
+
+    return g
+
 ##################################################### BAN ##########################################################
 
 def create_graph_from_paris_ban(ban_file:str, valid_time:dict, source:dict, lang:str):

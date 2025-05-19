@@ -617,80 +617,182 @@ WHERE {{
         FILTER (?g != ?gf)
     }}
     """ 
+
     queries = [query1, query2]
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
 ########## Temporal entities
 
+# def make_rooting_for_crisp_time_instants(graphdb_url:URIRef, repository_name:str,
+#                                         facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+#     query = np.query_prefixes + f"""
+#     INSERT {{
+#         GRAPH ?gf {{ ?rootTime a addr:CrispTimeInstant ; addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp . }}
+#         GRAPH ?gi {{
+#             ?time addr:hasRoot ?rootTime .
+#             ?rootTime addr:hasTrace ?time .
+#         }}
+#     }} WHERE {{
+#         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+#         {{
+#             SELECT DISTINCT ?gf ?rootTime ?existingRootTime ?toCreateRootTime ?ts ?tc ?tp WHERE {{
+#                 {{
+#                     SELECT DISTINCT ?gf ?existingRootTime ?ts ?tc ?tp {{
+#                         BIND({facts_named_graph_uri.n3()} AS ?gf)
+#                         GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+#                         OPTIONAL {{
+#                             GRAPH ?gf {{ ?existingRootTime addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+#                         }}
+#                         FILTER (?gs != ?gf)
+#                     }}
+#                 }}
+#                 BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTime)
+#                 BIND(IF(BOUND(?existingRootTime), ?existingRootTime, ?toCreateRootTime) AS ?rootTime)
+#             }}
+#         }}
+#         GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
+#         FILTER (?gs != ?gf)
+#     }}
+#     """
+
+#     gd.update_query(query, graphdb_url, repository_name)
+
+
 def make_rooting_for_crisp_time_instants(graphdb_url:URIRef, repository_name:str,
                                         facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
-    query = np.query_prefixes + f"""
+    query1 = np.query_prefixes + f"""
+INSERT {{
+    GRAPH ?gf {{
+        ?rootTime a addr:CrispTimeInstant ; addr:timeStamp ?timeStamp ; addr:timePrecision ?timePrec ; addr:timeCalendar ?timeCal .
+    }}
+}}
+WHERE {{
+    {{
+        SELECT DISTINCT ?gf ?timeStamp ?timePrec ?timeCal WHERE {{
+            BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?g {{ ?time a addr:CrispTimeInstant . }}
+            FILTER NOT EXISTS {{ ?time addr:hasRoot ?x }}
+            ?time addr:timeStamp ?timeStamp ; addr:timePrecision ?timePrec ; addr:timeCalendar ?timeCal .
+            FILTER (?g != ?gf)
+        }}
+    }}
+    OPTIONAL {{
+        GRAPH ?gf {{ ?existingRootTime a addr:CrispTimeInstant . }}
+        ?existingRootTime a addr:CrispTimeInstant ; addr:timeStamp ?timeStamp ; addr:timePrecision ?timePrec ; addr:timeCalendar ?timeCal .
+    }}
+    BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTime)
+    BIND(IF(BOUND(?existingRootTime), ?existingRootTime, ?toCreateRootTime) AS ?rootTime)
+}}
+"""
+    
+    query2 = np.query_prefixes + f"""
     INSERT {{
-        GRAPH ?gf {{ ?rootTime a addr:CrispTimeInstant ; addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp . }}
         GRAPH ?gi {{
             ?time addr:hasRoot ?rootTime .
             ?rootTime addr:hasTrace ?time .
-        }}
+        }}  
     }} WHERE {{
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        {{
-            SELECT DISTINCT ?gf ?rootTime ?existingRootTime ?toCreateRootTime ?ts ?tc ?tp WHERE {{
-                {{
-                    SELECT DISTINCT ?gf ?existingRootTime ?ts ?tc ?tp {{
-                        BIND({facts_named_graph_uri.n3()} AS ?gf)
-                        GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
-                        OPTIONAL {{
-                            GRAPH ?gf {{ ?existingRootTime addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
-                        }}
-                        FILTER (?gs != ?gf)
-                    }}
-                }}
-                BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTime)
-                BIND(IF(BOUND(?existingRootTime), ?existingRootTime, ?toCreateRootTime) AS ?rootTime)
-            }}
-        }}
-        GRAPH ?gs {{ ?time addr:timeStamp ?ts ; addr:timeCalendar ?tc ; addr:timePrecision ?tp .}}
-        FILTER (?gs != ?gf)
+        GRAPH ?g {{ ?time a addr:CrispTimeInstant . }}
+        GRAPH ?gf {{ ?rootTime a addr:CrispTimeInstant . }}
+        ?time addr:timeStamp ?timeStamp ; addr:timePrecision ?timePrec ; addr:timeCalendar ?timeCal .
+        ?rootTime addr:timeStamp ?timeStamp ; addr:timePrecision ?timePrec ; addr:timeCalendar ?timeCal .
+        FILTER (?g != ?gf)
     }}
-    """
+    """ 
 
-    gd.update_query(query, graphdb_url, repository_name)
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
+
+# def make_rooting_for_crisp_time_intervals(graphdb_url:URIRef, repository_name:str,
+#                                           facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+
+#     query = np.query_prefixes + f"""
+#     INSERT {{
+#         GRAPH ?gf {{ ?rootTimeInt a addr:CrispTimeInterval ; addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime. }}
+#         GRAPH ?gi {{
+#             ?timeInt addr:hasRoot ?rootTimeInt .
+#             ?rootTimeInt addr:hasTrace ?timeInt .
+#         }}
+#     }} WHERE {{
+#         BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+#         {{
+#             SELECT DISTINCT ?gf ?rootTimeInt ?existingRootTimeInt ?toCreateRootTimeInt ?rootStartTime ?rootEndTime WHERE {{
+#                 {{
+#                     SELECT DISTINCT ?gf ?existingRootTimeInt ?rootStartTime ?rootEndTime {{
+#                         BIND({facts_named_graph_uri.n3()} AS ?gf)
+#                         GRAPH ?gs {{ ?time addr:hasBeginning ?startTime ; addr:hasEnd ?endTime . }}
+#                         ?rootStartTime addr:hasTrace ?startTime .
+#                         ?rootEndTime addr:hasTrace ?endTime .
+#                         OPTIONAL {{ GRAPH ?gf {{?existingRootTimeInt addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .}} }}
+#                         FILTER (?gs != ?gf)
+#                     }}
+#                 }}
+#                 BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTimeInt)
+#                 BIND(IF(BOUND(?existingRootTimeInt), ?existingRootTimeInt, ?toCreateRootTimeInt) AS ?rootTimeInt)
+#             }}
+#         }}
+#         GRAPH ?gs {{ ?timeInt addr:hasBeginning ?startTime ; addr:hasEnd ?endTime .}}
+#         FILTER (?gs != ?gf)
+#     }}
+#     """
+
+#     gd.update_query(query, graphdb_url, repository_name)
+
 
 def make_rooting_for_crisp_time_intervals(graphdb_url:URIRef, repository_name:str,
                                           facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
-
-    query = np.query_prefixes + f"""
-    INSERT {{
-        GRAPH ?gf {{ ?rootTimeInt a addr:CrispTimeInterval ; addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime. }}
-        GRAPH ?gi {{
-            ?timeInt addr:hasRoot ?rootTimeInt .
-            ?rootTimeInt addr:hasTrace ?timeInt .
-        }}
-    }} WHERE {{
-        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-        {{
-            SELECT DISTINCT ?gf ?rootTimeInt ?existingRootTimeInt ?toCreateRootTimeInt ?rootStartTime ?rootEndTime WHERE {{
-                {{
-                    SELECT DISTINCT ?gf ?existingRootTimeInt ?rootStartTime ?rootEndTime {{
-                        BIND({facts_named_graph_uri.n3()} AS ?gf)
-                        GRAPH ?gs {{ ?time addr:hasBeginning ?startTime ; addr:hasEnd ?endTime . }}
-                        ?rootStartTime addr:hasTrace ?startTime .
-                        ?rootEndTime addr:hasTrace ?endTime .
-                        OPTIONAL {{ GRAPH ?gf {{?existingRootTimeInt addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .}} }}
-                        FILTER (?gs != ?gf)
-                    }}
-                }}
-                BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTimeInt)
-                BIND(IF(BOUND(?existingRootTimeInt), ?existingRootTimeInt, ?toCreateRootTimeInt) AS ?rootTimeInt)
-            }}
-        }}
-        GRAPH ?gs {{ ?timeInt addr:hasBeginning ?startTime ; addr:hasEnd ?endTime .}}
-        FILTER (?gs != ?gf)
+    query1 = np.query_prefixes + f"""
+INSERT {{
+    GRAPH ?gf {{
+        ?rootTime a addr:CrispTimeInterval ; addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .
     }}
-    """
+}}
+WHERE {{
+    {{
+        SELECT DISTINCT ?gf ?rootStartTime ?rootEndTime WHERE {{
+            BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?g {{ ?time addr:hasBeginning ?startTime ; addr:hasEnd ?endTime . }}
+            FILTER NOT EXISTS {{ ?time addr:hasRoot ?x }}
+            ?rootStartTime addr:hasTrace ?startTime .
+            ?rootEndTime addr:hasTrace ?endTime .
+            FILTER (?g != ?gf)
+        }}
+    }}
+    OPTIONAL {{
+        GRAPH ?gf {{ ?existingRootTime a addr:CrispTimeInterval . }}
+        ?existingRootTime a addr:CrispTimeInterval ; addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .
+    }}
+    BIND(URI(CONCAT(STR(URI(facts:)), "TI_", STRUUID())) AS ?toCreateRootTime)
+    BIND(IF(BOUND(?existingRootTime), ?existingRootTime, ?toCreateRootTime) AS ?rootTime)
+}}
+"""
+    
+    query2 = np.query_prefixes + f"""
+    INSERT {{
+        GRAPH ?gi {{
+            ?time addr:hasRoot ?rootTime .
+            ?rootTime addr:hasTrace ?time .
+        }}  
+    }} WHERE {{
+        BIND({facts_named_graph_uri.n3()} AS ?gf)
+        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
+        GRAPH ?g {{ ?time a addr:CrispTimeInterval . }}
+        GRAPH ?gf {{ ?rootTime a addr:CrispTimeInterval . }}
+        ?time addr:hasBeginning ?startTime ; addr:hasEnd ?endTime .
+        ?rootTime addr:hasBeginning ?rootStartTime ; addr:hasEnd ?rootEndTime .
+        ?startTime addr:hasRoot ?rootStartTime .
+        ?endTime addr:hasRoot ?rootEndTime .
+        FILTER (?g != ?gf)
+    }}
+    """ 
 
-    gd.update_query(query, graphdb_url, repository_name)
+    queries = [query1, query2]
+    for query in queries:
+        gd.update_query(query, graphdb_url, repository_name)
 
 def make_rooting_for_temporal_entities(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
     make_rooting_for_crisp_time_instants(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
