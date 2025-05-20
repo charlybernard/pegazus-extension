@@ -39,7 +39,7 @@ def create_graph_from_wikidata(wdp_land_csv_file:str, wdp_loc_csv_file:str, sour
     """
     Creation of a graph from the Wikidata file
     """
-    
+
     wd_description = cfd.create_event_description_for_wikidata(wdp_land_csv_file, wdp_loc_csv_file, lang, source)
     g = sej.create_graph_from_event_descriptions(wd_description)
     np.bind_namespaces(g)
@@ -165,20 +165,16 @@ def create_graph_from_events(events_json_file:str):
 
 ################################################################ States ###########################################################
 
-def create_graph_from_different_states(states_json_file:str):
+def create_graph_from_states(states_json_file:str):
     """
     Creation of a graph from the JSON file which contains a list of different states
     """
 
     # Creation of a basic graph with rdflib
     states_descriptions = fm.read_json_file(states_json_file)
-
-    state_desc = states_descriptions.get("states")
-    g = Graph()
-
-    for desc in state_desc:
-        g+= sej.create_graph_from_states_descriptions(desc)
-
+    
+    # Creation of a basic graph with rdflib
+    g = sej.create_graph_from_state_descriptions(states_descriptions)
     np.bind_namespaces(g)
 
     return g
@@ -191,9 +187,9 @@ def create_graph_from_paris_ban(ban_file:str, valid_time:dict, source:dict, lang
     """
 
     ban_pref, ban_ns = "ban", Namespace("https://adresse.data.gouv.fr/base-adresse-nationale/")
-    
-    ban_description = cfd.create_state_description_for_ban(ban_file, valid_time, source, lang, ban_ns)    
-    g = sej.create_graph_from_states_descriptions(ban_description)
+
+    ban_description = cfd.create_state_description_for_ban(ban_file, valid_time, source, lang, ban_ns) 
+    g = sej.create_graph_from_state_descriptions(ban_description)
     g.bind(ban_pref, ban_ns)
     np.bind_namespaces(g)
 
@@ -206,7 +202,7 @@ def create_graph_from_osm(osm_file:str, osm_hn_file:str, valid_time:dict, source
     osm_rel_pref, osm_rel_ns = "osmRel", Namespace("https://www.openstreetmap.org/relation/")
 
     osm_description = cfd.create_state_description_for_osm(osm_file, osm_hn_file, valid_time, source, lang, osm_ns)
-    g = sej.create_graph_from_states_descriptions(osm_description)
+    g = sej.create_graph_from_state_descriptions(osm_description)
     g.bind(osm_pref, osm_ns)
     g.bind(osm_rel_pref, osm_rel_ns)
     np.bind_namespaces(g)
@@ -223,7 +219,7 @@ def create_graph_from_ville_paris(vpa_file:str, vpc_file:str, vpa_valid_time:dic
     event_vpc_description = cfd.create_event_description_for_ville_paris_caduques(vpc_file, vpc_source, lang, vpc_ns)
 
     # Creation of a basic graph with rdflib
-    g = sej.create_graph_from_states_descriptions(state_vpa_description)
+    g = sej.create_graph_from_state_descriptions(state_vpa_description)
     g += sej.create_graph_from_event_descriptions(event_vpa_description)
     g += sej.create_graph_from_event_descriptions(event_vpc_description)
     g.bind(vpa_pref, vpa_ns)
@@ -239,7 +235,7 @@ def create_graph_from_geojson_states_of_thoroughfares(geojson_file:str, lang, va
     state_description = cfd.create_state_description_for_geojson_states(geojson_file, lm_type, name_attribute, identity_property, lang, valid_time, source)
 
     # Creation of a basic graph with rdflib
-    g = sej.create_graph_from_states_descriptions(state_description)
+    g = sej.create_graph_from_state_descriptions(state_description)
     np.bind_namespaces(g)
 
     return g
@@ -249,7 +245,7 @@ def create_graph_from_geojson_states_of_streetnumbers_from_addresses(geojson_fil
                                                                                          lang=lang, time_description=valid_time, source_description=source)
 
     # Creation of a basic graph with rdflib
-    g = sej.create_graph_from_states_descriptions(state_description)
+    g = sej.create_graph_from_state_descriptions(state_description)
     np.bind_namespaces(g)
 
     return g
@@ -259,7 +255,7 @@ def create_graph_from_geojson_states_of_streetnumbers(geojson_file:str, lang, va
                                                                                          lang=lang, time_description=valid_time, source_description=source)
 
     # Creation of a basic graph with rdflib
-    g = sej.create_graph_from_states_descriptions(state_description)
+    g = sej.create_graph_from_state_descriptions(state_description)
     np.bind_namespaces(g)
 
     return g

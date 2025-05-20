@@ -329,7 +329,7 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
 
 ####################################################### States creation ####################################################################
 
-def create_graph_from_states_descriptions(states_descriptions:dict):
+def create_graph_from_state_descriptions(states_descriptions:dict):
     """
     Generate a graph describing a set of states from a description which is a dictionary
     Example of states_descriptions
@@ -569,13 +569,13 @@ def create_landmark_relation_version_from_description(g:Graph, lr_state_descript
     }
     ```
     """
-
     lr_uri = gr.generate_uri(np.FACTOIDS, "LR") # Generate a unique URI for the landmark relation
     lr_id = lr_state_description.get("id") # Extract the landmark relation ID from the version description
     lr_type = lr_state_description.get("type") # Extract the landmark relation type from the version description
     lr_provenance = lr_state_description.get("provenance") or {} # Extract the provenance from the version description
     lr_locatum = lr_state_description.get("locatum") # Extract the landmark relation locatum from the version description
     lr_relatums = lr_state_description.get("relatum") # Extract the landmark relation relatum from the version description
+
     if not isinstance(lr_relatums, list):
         lr_relatums = [lr_relatums]
     
