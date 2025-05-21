@@ -170,11 +170,11 @@ def make_rooting_for_landmarks_according_label_and_relation(graphdb_url:URIRef, 
             BIND({landmark_type_uri.n3()} AS ?landmarkType)
             BIND({landmark_relation_type_uri.n3()} AS ?landmarkRelationType)
             GRAPH ?g {{ ?lr a addr:LandmarkRelation . }}
-                ?lr addr:isLandmarkRelationType ?landmarkRelationType ;
-                addr:locatum [a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel] ;
-                addr:relatum [addr:hasRoot ?rootRelatum] .
-                FILTER NOT EXISTS {{ ?lr addr:hasRoot ?x }}
-                FILTER (?g != ?gf)
+            ?lr addr:isLandmarkRelationType ?landmarkRelationType ;
+            addr:locatum [a addr:Landmark ; addr:isLandmarkType ?landmarkType ; ?propLabel ?keyLabel] ;
+            addr:relatum [addr:hasRoot ?rootRelatum] .
+            FILTER NOT EXISTS {{ ?lr addr:hasRoot ?x }}
+            FILTER (?g != ?gf)
             }}  
         }}
         OPTIONAL {{

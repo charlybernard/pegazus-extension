@@ -128,12 +128,12 @@ def create_graph_from_event_description(g:Graph, event_description:dict, source_
         "label": "Par arrêté municipal du 30 août 1978, sa portion orientale, de la rue Bobillot à la rue du Moulin-des-Prés, prend le nom de rue du Père-Guérin.",
         "lang": "fr",
         "landmarks": [
-            {"id":1, "label":"rue du Père Guérin", "type":"thoroughfare", "changes":[
+            {"id":1, "label":"rue du Père Guérin", "lang":"fr, "type":"thoroughfare", "changes":[
                 {"on":"landmark", "type":"appearance"},
                 {"on":"attribute", "attribute":"geometry"},
                 {"on":"attribute", "attribute":"name", "makes_effective":[{"value":"rue du Père Guérin", "lang":"fr"}]}
             ]},
-            {"id":2, "label":"rue Gérard", "type":"thoroughfare", "changes":[
+            {"id":2, "label":"rue Gérard", "lang":"fr, "type":"thoroughfare", "changes":[
                 {"on":"attribute", "attribute":"Geometry"},
             ]}
         ],
@@ -161,7 +161,7 @@ def create_graph_from_event_description(g:Graph, event_description:dict, source_
     for desc in landmark_descriptions:
         lm_id, lm_uri = desc.get("id"), gr.generate_uri(np.FACTOIDS, "LM")
         landmark_uris[lm_id] = lm_uri
-        new_entities = create_event_landmark(g, event_uri, lm_uri, desc, lang)
+        new_entities = create_event_landmark(g, event_uri, lm_uri, desc)
         created_entities += new_entities
 
     for desc in landmark_relation_descriptions:
@@ -223,9 +223,10 @@ def create_event_with_time(g:Graph, event_uri:URIRef, time_description:dict):
     else:
         ri.create_event(g, event_uri)
 
-def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict, lang:str=None):
+def create_event_landmark(g:Graph, event_uri:URIRef, landmark_uri:URIRef, landmark_description:dict):
     created_entities = [landmark_uri]
     label = landmark_description.get("label")
+    lang = landmark_description.get("lang")
     label_lit = gr.get_name_literal(label, lang)
     type = landmark_description.get("type")
     type_uri = om.get_landmark_type(type)
