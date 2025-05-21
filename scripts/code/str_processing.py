@@ -79,6 +79,27 @@ def normalize_french_commune_name(commune_name:str):
    
     return "".join(commune_name_words)
 
+def normalize_nolang_number_name_version(number_name:str):
+    normalized_name = number_name.lower()
+    normalized_name = normalized_name.replace(" ", "")
+
+    replace_dict = {
+        "bis":"b",
+        "ter":"c",
+        "quater":"d",
+        "quinquies ":"e",
+        "sexies ":"f",
+        "septies ":"g",
+        "octies ":"h",
+        "nonies ":"i",
+        "decies ":"j",
+        ";":"-",
+        "/":"-",
+    }
+    normalized_name = remove_abbreviations_from_dict(normalized_name, replace_dict, False)
+
+    return normalized_name
+
 def normalize_french_thoroughfare_name(thoroughfare_name:str):
     abbreviations_dict = {
         "pl(a|)(\.|)":"place",
@@ -212,7 +233,7 @@ def normalize_french_name_version(name_version:str, name_type:str):
     
 def normalize_nolang_name_version(name_version:str, name_type:str):
     if name_type == "number":
-        return name_version.lower()
+        return normalize_nolang_number_name_version(name_version)
     else:
         return None
     
