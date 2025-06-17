@@ -111,9 +111,9 @@ def create_landmarks_descriptions_from_ban_line(value, lang, ban_ns,
 
 def create_landmark_relations_descriptions_from_ban_line(sn_uuid, th_uuid, arrdt_uuid, cp_uuid, provenance_uri):
     lr_uuid_1, lr_uuid_2, lr_uuid_3 = gr.generate_uuid(), gr.generate_uuid(), gr.generate_uuid()
-    lr_desc_1 = di.create_landmark_relation_version_description(lr_uuid_1, "belongs", sn_uuid, [th_uuid], {"uri":provenance_uri})
-    lr_desc_2 = di.create_landmark_relation_version_description(lr_uuid_2, "within", sn_uuid, [arrdt_uuid], {"uri":provenance_uri})
-    lr_desc_3 = di.create_landmark_relation_version_description(lr_uuid_3, "within", sn_uuid, [cp_uuid], {"uri":provenance_uri})
+    lr_desc_1 = di.create_landmark_relation_description(lr_uuid_1, "belongs", sn_uuid, [th_uuid], {"uri":provenance_uri})
+    lr_desc_2 = di.create_landmark_relation_description(lr_uuid_2, "within", sn_uuid, [arrdt_uuid], {"uri":provenance_uri})
+    lr_desc_3 = di.create_landmark_relation_description(lr_uuid_3, "within", sn_uuid, [cp_uuid], {"uri":provenance_uri})
     return [lr_desc_1, lr_desc_2, lr_desc_3], [lr_uuid_1, lr_uuid_2, lr_uuid_3]
 
 
@@ -237,8 +237,8 @@ def create_landmarks_descriptions_from_osm_line(value, lang,
 
 def create_landmark_relations_descriptions_from_osm_line(sn_uuid, th_uuid, arrdt_uuid):
     lr_uuid_1, lr_uuid_2 = gr.generate_uuid(), gr.generate_uuid()
-    lr_desc_1 = di.create_landmark_relation_version_description(lr_uuid_1, "belongs", sn_uuid, [th_uuid], {"uri":th_uuid})
-    lr_desc_2 = di.create_landmark_relation_version_description(lr_uuid_2, "within", sn_uuid, [arrdt_uuid], {"uri":arrdt_uuid})
+    lr_desc_1 = di.create_landmark_relation_description(lr_uuid_1, "belongs", sn_uuid, [th_uuid], {"uri":th_uuid})
+    lr_desc_2 = di.create_landmark_relation_description(lr_uuid_2, "within", sn_uuid, [arrdt_uuid], {"uri":arrdt_uuid})
     return [lr_desc_1, lr_desc_2]
 
 def create_streetnumber_description_for_osm(sn_label:str, sn_geom:str, sn_id:str):
@@ -384,7 +384,7 @@ def create_landmark_relations_descriptions_for_ville_paris_line(th_uuid, distric
     for uuid in district_and_arrdt_uuids:
         lr_uuid = gr.generate_uuid()
         lr_provenance = {"uri":str(vp_ns[th_uuid])}
-        lr_desc = di.create_landmark_relation_version_description(lr_uuid, "within", th_uuid, [uuid], lr_provenance)
+        lr_desc = di.create_landmark_relation_description(lr_uuid, "within", th_uuid, [uuid], lr_provenance)
         lr_descs.append(lr_desc)
 
     return lr_descs
@@ -681,6 +681,6 @@ def create_state_description_for_geojson_housenumber_state(hn_label:str, hn_type
             rlm_attributes["name"] = name_attr_desc
         rlm_desc = di.create_landmark_version_description(rlm_uuid, related_lm_label, related_lm_type, lang, rlm_attributes)
 
-    lr_desc = di.create_landmark_relation_version_description(gr.generate_uuid(), "belongs", hn_uuid, [rlm_uuid])
+    lr_desc = di.create_landmark_relation_description(gr.generate_uuid(), "belongs", hn_uuid, [rlm_uuid])
 
     return hn_desc, [rlm_uuid, rlm_desc, related_lm_label], lr_desc

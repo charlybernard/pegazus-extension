@@ -316,16 +316,14 @@ def create_event_landmark_relation(g:Graph, event_uri:URIRef, landmark_relation_
 
     ri.create_landmark_relation(g, landmark_relation_uri, type_uri, locatum_uri, relatum_uris)
 
-    change_desc = landmark_relation_description.get("change") or None
-    if change_desc is None:
-        return None
-    
-    change_type = change_desc.get("type")
-    change_type_uri = om.get_change_type(change_types.get(change_type))
-    if change_type_uri is not None:
-        change_uri = gr.generate_uri(np.FACTOIDS, "CG")
-        ri.create_landmark_relation_change(g, change_uri, change_type_uri, landmark_relation_uri)
-        ri.create_change_event_relation(g, change_uri, event_uri)
+    change_descs = landmark_relation_description.get("change") or []
+    for cg_desc in change_descs:
+        change_type = cg_desc.get("type")
+        change_type_uri = om.get_change_type(change_types.get(change_type))
+        if change_type_uri is not None:
+            change_uri = gr.generate_uri(np.FACTOIDS, "CG")
+            ri.create_landmark_relation_change(g, change_uri, change_type_uri, landmark_relation_uri)
+            ri.create_change_event_relation(g, change_uri, event_uri)
 
 
 ####################################################### States creation ####################################################################

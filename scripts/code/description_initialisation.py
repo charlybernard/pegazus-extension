@@ -4,7 +4,9 @@ np = NameSpaces()
 
 ################################################## Generate descriptions ######################################################
 
-def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, lm_attributes:dict=None, lm_provenance:dict=None, time_description:dict=None):
+def create_landmark_version_description(
+        lm_id:str, lm_label:str, lm_type:str, lang:str,
+        lm_attributes:dict=None, lm_provenance:dict=None, time_description:dict=None):
     """
     Create a landmark version description
     """
@@ -33,7 +35,11 @@ def create_landmark_version_description(lm_id, lm_label, lm_type:str, lang:str, 
 
     return description
 
-def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:str, relatum_ids:list[str], lm_provenance:dict=None, time_description:dict=None):
+def create_landmark_relation_description(
+        lr_id:str, lr_type:str,
+        locatum_id:str, relatum_ids:list[str],
+        lm_provenance:dict=None, time_description:dict=None,
+        changes:list=None):
     """
     Create a landmark relation description
     """
@@ -58,7 +64,11 @@ def create_landmark_relation_version_description(lr_id, lr_type:str, locatum_id:
     if isinstance(time_description, dict):
         description["time"] = time_description
 
+    if isinstance(changes, list) and len(changes) != 0:
+        description["changes"] = changes
+
     return description
+
 
 def create_landmark_attribute_version_description(value:str, lang:str=None, datatype:str=None):
     description = None
@@ -144,7 +154,7 @@ def create_landmark_relation_change_event_description(cg_type:str):
     """
 
     description = {
-        "on": "landmark_relation", 
+        "on": "relation", 
         "type": cg_type
     }
 
