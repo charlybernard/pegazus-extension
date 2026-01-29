@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "atlas_jacoubet_1836_voies_paris_est",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 2728, "gid": 2724, "nom_entier": "Rue de la Roquette" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653873.249669971410185, 6861772.24641293566674 ], [ 653950.120679530198686, 6861807.870143737643957 ], [ 654023.815388426999561, 6861849.162662006914616 ], [ 654091.56382908904925, 6861902.192395969294012 ], [ 654107.439458579407074, 6861910.543029699474573 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 3980, "gid": 3980, "nom_entier": "Rue de la Roquette" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653780.392408877261914, 6861659.698565060272813 ], [ 653798.587460611364804, 6861661.630730026401579 ], [ 653847.573843386024237, 6861738.20691513363272 ], [ 653873.249669971410185, 6861772.24641293566674 ] ] ] } }
+]
+}

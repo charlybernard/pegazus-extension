@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "plan_andriveau_1849_voies_paris_est",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 1033, "gid": 990, "nom_entier": "Rue de la Roquette" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653873.249669971410185, 6861772.24641293566674 ], [ 653950.120679530198686, 6861807.870143737643957 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 2527, "gid": 2486, "nom_entier": "Rue de la Roquette" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653780.392408877261914, 6861659.698565060272813 ], [ 653798.587460611364804, 6861661.630730026401579 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 2530, "gid": 2489, "nom_entier": "Rue de la Roquette" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653798.587460611364804, 6861661.630730026401579 ], [ 653847.573843386024237, 6861738.20691513363272 ], [ 653873.249669971410185, 6861772.24641293566674 ] ] ] } }
+]
+}

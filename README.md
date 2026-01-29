@@ -4,11 +4,12 @@ This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of
 
 ## Structure of the repository
 📂  
-├── 📄 [`README.md`](./README.md)  
-├── 📄 [`index.html`](./index.html)  
+├── 📄 [`README.md`](./README.md)   
+├── 📄 [`index.html`](./index.html)   
 ├── 📂 [`data`](./data/)   
+├── 📂 [`notebooks`](./notebooks/)   
 ├── 📂 [`ontology`](./ontology/)   
-│   ├── 📄 [`ontology.ttl`](./ontology/ontology.ttl)  
+│   ├── 📄 [`ontology.ttl`](./ontology/ontology.ttl)   
 │   └── 📂 [`documentation`](./ontology/documentation/)  
 │   │   ├── 📂 [`addresses`](./ontology/documentation/addresses/)   
 │   │   ├── 📂 [`sources`](./ontology/documentation/sources/)   
@@ -22,6 +23,15 @@ This repository contains the documentation of the PeGazUs (PErpetual GAZeteer of
 This folder stores files used to build knowledge graph. It contains csv and geojson files which describe addresses and streets from different sources at different times (RDF resources are built during process.
 
 ⚠️ To get more information about their content, please read their [readme](data/README.md).
+
+## `notebooks` folder
+
+This folder contains Jupyter notebooks to interact with and evaluate the knowledge graph:
+
+* `create_graph.ipynb` – creates the knowledge graph from data sources.
+* `create_graph_evaluation.ipynb` – creates the knowledge graph and runs evaluation procedures.
+
+⚠️ To get more information about their content, please read their [notebooks](data/README.md).
 
 ### `ontology` folder
 `ontology.ttl` describes the ontology: it is the core part of the ontology and describe landmarks and addresses.

@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "atlas_municipal_1888_voies_paris_est",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 578, "gid": 578, "nom_1888": "R DE LA ROQUETTE", "type_voie": "R", "particule": "DE LA", "nom_voie": "ROQUETTE", "adr_fg88": "0", "adr_fd88": "2", "adr_dg88": "0", "adr_dd88": "2", "id": "4142" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653790.116375223617069, 6861647.751682081259787 ], [ 653794.225374999456108, 6861660.716826417483389 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 1189, "gid": 1189, "nom_1888": "R DE LA ROQUETTE", "type_voie": "R", "particule": "DE LA", "nom_voie": "ROQUETTE", "adr_fg88": "15", "adr_fd88": "32", "adr_dg88": "9", "adr_dd88": "22", "id": "5325" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653847.876728295697831, 6861738.263729832135141 ], [ 653873.177326752222143, 6861774.050086796283722 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 1190, "gid": 1190, "nom_1888": "R DE LA ROQUETTE", "type_voie": "R", "particule": "DE LA", "nom_voie": "ROQUETTE", "adr_fg88": "9", "adr_fd88": "22", "adr_dg88": "1", "adr_dd88": "2", "id": "5326" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653794.225374999456108, 6861660.716826417483389 ], [ 653847.876728295697831, 6861738.263729832135141 ] ] ] } },
+{ "type": "Feature", "properties": { "fid": 4421, "gid": 4421, "nom_1888": "R DE LA ROQUETTE", "type_voie": "R", "particule": "DE LA", "nom_voie": "ROQUETTE", "adr_fg88": "0", "adr_fd88": "48", "adr_dg88": "17", "adr_dd88": "34", "id": "13289" }, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 653873.177326752222143, 6861774.050086796283722 ], [ 653970.572343906736933, 6861821.229528193362057 ] ] ] } }
+]
+}
