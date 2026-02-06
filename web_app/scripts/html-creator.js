@@ -1,17 +1,29 @@
-function createHTML(L, radioInputs, contentDivId){
+function createHTML(L, radioInputs, contentDivId, selectionDivId, graphSettings, mapMessages, lang="fr"){
     document.body.style.height = "100vh";
     document.body.style.width = "100vw";
 
+    var selectionDiv = createDiv(L, "div", {"id":selectionDivId}, null, null);
     var inputRadioDiv = createInputRadioDiv(L, radioInputs);
     var contentDiv = createDiv(L, "div", {"id":contentDivId}, null, null);
+    var graphDiv = createDiv(L, "div", {"id":graphSettings.divId}, null, null);
     
-    document.body.appendChild(inputRadioDiv);
+    // --- Sélection d'un graphe au lancement ---
+    var graphDiv = createHTMLGraph(L, graphSettings.divId, graphSettings.selectionDivId, graphSettings.selectionLabel) ;
+
+    document.body.appendChild(selectionDiv);
     document.body.appendChild(contentDiv);
+
+    selectionDiv.appendChild(graphDiv);
+    selectionDiv.appendChild(inputRadioDiv);
 
     var contentDivHeightInt = 100*(document.body.clientHeight - inputRadioDiv.clientHeight)/document.body.clientHeight;
     contentDiv.style.height = `${contentDivHeightInt}em`
 
     createStyleInputRadioDiv(inputRadioDiv);
+
+    // --- Affichage des graphes dans un menu déroulant ---
+    dropDownMenu = document.getElementById(graphSettings.selectionDivId) ;
+    displayGraphsInDropDownMenu(graphDBRepositoryURI, dropDownMenu, mapMessages.graphSelectValue, lang=lang) ;
 }
 
 function createStyleInputRadioDiv(inputRadioDiv){
@@ -19,9 +31,9 @@ function createStyleInputRadioDiv(inputRadioDiv){
     inputRadioDiv.style.flexDirection = "row";
 }
 
-function createHTMLEvolution(L, contentDiv, landmarkNamesDivId, landmarkNamesLabel, landmarkValidTimeDivId,
+function createHTMLEvolution(L, divId, contentDiv, selectDiv, landmarkNamesDivId, landmarkNamesLabel, landmarkValidTimeDivId,
     mapTimelineDivId, timelineDivId, mapDivId, mapTimelineResizerDivId, resizerClassName){
-    var landmarkNamesDiv = createDiv(L, "div", {}, null, null);
+    var landmarkNamesDiv = createDiv(L, "div", {"id":divId}, null, null);
     var landmarkNamesLabelDiv = createLabel(L, landmarkNamesDivId, landmarkNamesLabel, null, labelContentIsBold = true);
     var landmarkNamesSelectDiv = createDiv(L, "select", {"name":landmarkNamesDivId, "id":landmarkNamesDivId}, null, null);
     landmarkNamesDiv.appendChild(landmarkNamesLabelDiv);
@@ -37,8 +49,8 @@ function createHTMLEvolution(L, contentDiv, landmarkNamesDivId, landmarkNamesLab
     mapTimelineDiv.appendChild(mapTimelineResizerDiv);
     mapTimelineDiv.appendChild(mapDiv);
 
-    contentDiv.appendChild(landmarkNamesDiv);
-    contentDiv.appendChild(landmarkValidTimeDiv);
+    selectDiv.appendChild(landmarkNamesDiv);
+    selectDiv.appendChild(landmarkValidTimeDiv);
     contentDiv.appendChild(mapTimelineDiv);
 
     getStyleForHTMLEvolution(contentDiv, landmarkNamesDiv, landmarkValidTimeDiv, mapTimelineDiv, timelineDiv, mapTimelineResizerDiv, mapDiv);
@@ -66,9 +78,11 @@ function getStyleForHTMLEvolution(contentDiv, landmarkNamesDiv, landmarkValidTim
     
 }
 
-function createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSliderLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, dateValidationButtonLabel, mapDivId){
+function createHTMLSnapshot(
+    L, divId, contentDiv, selectDiv,
+    dateSliderDivId, dateSliderLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, dateValidationButtonLabel, mapDivId){
     //  dateSliderSettings = {"min":0, "max":100, "value":0}
-    var dateDiv = createDiv(L, "div", {}, null, null);
+    var dateDiv = createDiv(L, "div", {"id":divId}, null, null);
     var dateSliderLabelDiv = createLabel(L, dateSliderDivId, dateSliderLabel, null, labelContentIsBold = true);
     var dateSliderDiv = createDiv(L, "input", {"type":"range", "id":dateSliderDivId, "min":dateSliderSettings.min, "max":dateSliderSettings.max, "value":dateSliderSettings.value}, null, null);
     var dateInputDiv = createDiv(L, "input", {"type":"date", "id":dateInputDivId}, null, null);
@@ -80,8 +94,94 @@ function createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSliderLabel, dat
     dateDiv.appendChild(dateValidationButtonDiv);
 
     var mapDiv = createDiv(L, "div", {"id":mapDivId}, null, null);
-    contentDiv.appendChild(dateDiv);
+    selectDiv.appendChild(dateDiv);
     contentDiv.appendChild(mapDiv);
+}
+
+function extractGraphs(bindings){
+    return bindings.map(binding => {
+            // Récupère le label ou fallback sur la dernière partie de l'URI
+            var uri = binding.graph.value;
+            var label = binding.label ? binding.label.value : uri.split('/').filter(Boolean).pop();
+            return { uri, label };
+        });
+}
+
+
+function createHTMLGraph(L, divId, graphSelectionDivId, graphSelectionLabel){
+    var graphNamesDiv = createDiv(L, "div", {"id":divId}, null, null);
+    var graphNamesSelectDivLabel = createLabel(L, graphSelectionDivId, graphSelectionLabel, null, labelContentIsBold = true);
+    var graphNamesSelectDiv = createDiv(L, "select", {"name":graphSelectionDivId, "id":graphSelectionDivId}, null, null);
+    graphNamesDiv.appendChild(graphNamesSelectDivLabel);
+    graphNamesDiv.appendChild(graphNamesSelectDiv);
+
+    return graphNamesDiv;   
+}
+
+function displayGraphsInDropDownMenu(graphDBRepositoryURI, dropDownMenu, selectValueMessage, lang="fr"){
+  var query = getQueryForGraphs(lang);
+
+  $.ajax({
+    url: graphDBRepositoryURI,
+    Accept: "application/sparql-results+json",
+    contentType:"application/sparql-results+json",
+    dataType:"json",
+    data:{"query":query}
+  }).done((promise) => {
+    insertGraphsInDropDownMenu(dropDownMenu, selectValueMessage, promise.results.bindings);
+  })
+}
+
+function insertGraphsInDropDownMenu(dropDownMenu, selectValueMessage, bindings) {
+
+    // Reset du menu
+    dropDownMenu.innerHTML = "";
+
+    // Option par défaut
+    var defaultOption = createOptionDiv("", selectValueMessage);
+    dropDownMenu.appendChild(defaultOption);
+
+    var uris = [];
+
+    bindings.forEach(binding => {
+
+        // URI du graphe
+        var graph = binding.graph.value;
+
+
+        // Label : rdfs:label ou fallback sur fin d'URI (# ou /)
+        var gLabel = (binding.label && binding.label.value)
+            ? binding.label.value
+            : graph.split(/[/#]/).filter(Boolean).pop();
+
+        // Création option
+        var option = createOptionDiv(graph, gLabel);
+        dropDownMenu.appendChild(option);
+
+        uris.push(graph);
+    });
+
+    return uris;
+}
+
+function selectGraphs(L, graphDBRepositoryURI, lang = "fr", graphSelectionDivId, graphSelectionLabel, mapMessages, selectDiv) {
+
+    var query = getQueryForGraph(lang);
+
+    $.ajax({
+        url: graphDBRepositoryURI,
+        headers: { "Accept": "application/sparql-results+json" },
+        contentType: "application/sparql-results+json",
+        dataType: "json",
+        data: { "query": query }
+    }).done((response) => {
+        var graphURIs = extractGraphs(response.results.bindings);
+        var selectGraphDiv = createHTMLGraphSelection(L, graphURIs, graphSelectionDivId, graphSelectionLabel, graphSelectionSelectValue);   
+        selectDiv.appendChild(selectGraphDiv); 
+    }).fail((err) => {
+        console.error("Erreur lors de la récupération des Graphs:", err);
+        alert("Impossible de récupérer les Graphs.");
+    });
 }
 
 function setActionsForEvolution(
@@ -97,11 +197,11 @@ function setActionsForEvolution(
     // Afficher la timeline quand on clique sur un bouton (ou entrée dans le drop menu)
     var dropDownMenu = document.getElementById(landmarkNamesDivId);
     dropDownMenu.addEventListener("change", function() {
-        changeSelectedLandmark(graphDBRepositoryURI, factsNamedGraphURI, dropDownMenu, mapSettings, timelineDivId, landmarkValidTimeDivId) ;
+        changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, dropDownMenu, mapSettings, timelineDivId, landmarkValidTimeDivId) ;
     });
 
     // Afficher les landmarks dans un menu déroulant
-    displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu, mapSettings.messages.selectValue);
+    displayLandmarksInDropDownMenu(graphDBRepositoryURI, namedGraphURI, dropDownMenu, mapSettings.messages.landmarkSelectValue);
 }
 
 function setActionsForSnapshot(
@@ -130,11 +230,19 @@ function setActionsForSnapshot(
     document.getElementById(dateValidatonButtonId).addEventListener("click", function() {
         displaySnapshotFromSelectedTime(graphDBRepositoryURI, dateInputDivId, calendarURI, timeDelay, namedGraphURI, mapSettings);
     });
-
 }
 
 function setDivStyle(div, style){
     Object.entries(style).forEach(([key, value]) => {
       div.style[key] = value;
     });
-  }  
+  }
+
+function removeElementsByIds(divIds){
+    divIds.forEach(divId => {
+        var div = document.getElementById(divId);
+        if (div) {
+            div.remove();
+        }
+    });
+}

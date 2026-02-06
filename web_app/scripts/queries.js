@@ -1,22 +1,61 @@
+const prefixes = {
+    xsd: "http://www.w3.org/2001/XMLSchema#",
+    skos: "http://www.w3.org/2004/02/skos/core#",
+    rdfs: "http://www.w3.org/2000/01/rdf-schema#",
+    wd: "http://www.wikidata.org/entity/",
+    addr: "http://rdf.geohistoricaldata.org/def/address#",
+    ctype: "http://rdf.geohistoricaldata.org/id/codes/address/changeType/",
+    lrtype: "http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/",
+    atype: "http://rdf.geohistoricaldata.org/id/codes/address/attributeType/",
+    ltype: "http://rdf.geohistoricaldata.org/id/codes/address/landmarkType/",
+    geo: "http://www.opengis.net/ont/geosparql#",
+    geof: "http://www.opengis.net/def/function/geosparql/",
+    geor: "http://www.opengis.net/def/rule/geosparql/",
+    geos: "http://www.opengis.net/def/srs/geosparql/",
+    time: "http://www.w3.org/2006/time#",
+    prov: "http://www.w3.org/ns/prov#",
+    foaf: "http://xmlns.com/foaf/0.1/",
+    dcterms: "http://purl.org/dc/terms/"
+};
+
+
+function getPrefixesForQuery(prefixes){
+    var prefixesForQuery = "";
+    for (p in prefixes){
+        prefixesForQuery += `PREFIX ${p}: <${prefixes[p]}>\n` ;
+    }
+    return prefixesForQuery ;
+}
+
 function getValuesForQuery(variable, values){
-    var strValues = "VALUES ?" + variable + "{"
+    var strValues = `VALUES ?${variable} {`
     for (uri in values){
       strValues += "<" + uri + "> " ;
     }
     strValues += "}" ;
     return strValues ;
   }
+
+function getQueryForGraphs(lang = "fr"){
+    var query = getPrefixesForQuery(prefixes) + `
+        SELECT ?graph ?label WHERE {
+            ?graph a addr:FinalGraph .
+
+            OPTIONAL {
+                ?graph rdfs:label ?label
+                FILTER(lang(?label) = "${lang}")
+            }
+        }
+    `;
+    return query ;
+  }
   
-function getQueryForLandmarks(namedGraphURI){
-    var query = `
-    PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
-    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
+function getQueryForLandmarks(namedGraphURI, lang = "fr"){
+    var query = getPrefixesForQuery(prefixes) + `
     SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
     WHERE {
         ?lm rdfs:label ?lmLabel .
-        FILTER(LANG(?lmLabel) IN ("fr", ""))
+        FILTER(LANG(?lmLabel) IN ("${lang}", ""))
         {
             SELECT DISTINCT ?lm ?lmType WHERE {
                 BIND(<` + namedGraphURI + `> AS ?g)
@@ -26,11 +65,12 @@ function getQueryForLandmarks(namedGraphURI){
         }
         OPTIONAL {
             ?lmType skos:prefLabel ?lmTypeLabel .
-            FILTER(LANG(?lmTypeLabel) IN ("fr", ""))
+            FILTER(LANG(?lmTypeLabel) IN ("${lang}", ""))
         }
         OPTIONAL {
-            ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
-            FILTER(LANG(?relatumLabel) IN ("fr", ""))
+            ?lr a ?lrClass ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+            ?lrClass rdfs:subClassOf* addr:LandmarkRelation .
+            FILTER(LANG(?relatumLabel) IN ("${lang}", ""))
         }
     }
         ORDER BY ?lmTypeLabel ?relatumLabel ?lmLabel
@@ -40,26 +80,26 @@ function getQueryForLandmarks(namedGraphURI){
 }
 
 function getQueryValidTimeForLandmark(landmarkURI, namedGraphURI){
-    var query = `PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-  PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-  PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
+    var query = getPrefixesForQuery(prefixes) + `
   SELECT DISTINCT ?lm
   ?tStampApp ?tPrecApp ?tStampDis ?tPrecDis
   ?tStampAppBefore ?tPrecAppBefore ?tStampAppAfter ?tPrecAppAfter
   ?tStampDisBefore ?tPrecDisBefore ?tStampDisAfter ?tPrecDisAfter
   WHERE {
-      BIND(<` + namedGraphURI + `> AS ?g)
-      BIND (<` + landmarkURI + `> AS ?lm)
-  
-      ?changeApp a addr:Change ; addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?evApp .
-      ?changeDis a addr:Change ; addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?evDis .
-  
-      OPTIONAL { ?evApp addr:hasTime [addr:timeStamp ?tStampApp ; addr:timePrecision ?tPrecApp] }
-      OPTIONAL { ?evApp addr:hasTimeBefore [addr:timeStamp ?tStampAppBefore ; addr:timePrecision ?tPrecAppBefore] }
-      OPTIONAL { ?evApp addr:hasTimeAfter [addr:timeStamp ?tStampAppAfter ; addr:timePrecision ?tPrecAppAfter] }
-      OPTIONAL { ?evDis addr:hasTime [addr:timeStamp ?tStampDis ; addr:timePrecision ?tPrecDis] }
-      OPTIONAL { ?evDis addr:hasTimeBefore [addr:timeStamp ?tStampDisBefore ; addr:timePrecision ?tPrecDisBefore] }
-      OPTIONAL { ?evDis addr:hasTimeAfter [addr:timeStamp ?tStampDisAfter ; addr:timePrecision ?tPrecDisAfter] }
+    BIND(<` + namedGraphURI + `> AS ?g)
+    BIND (<` + landmarkURI + `> AS ?lm)
+
+    ?changeApp a ?changeAppClass ; addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?evApp .
+    ?changeDis a ?changeDisClass ; addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?evDis .
+    ?changeAppClass rdfs:subClassOf* addr:Change .
+    ?changeDisClass rdfs:subClassOf* addr:Change .
+
+    OPTIONAL { ?evApp addr:hasTime [addr:timeStamp ?tStampApp ; addr:timePrecision ?tPrecApp] }
+    OPTIONAL { ?evApp addr:hasTimeBefore [addr:timeStamp ?tStampAppBefore ; addr:timePrecision ?tPrecAppBefore] }
+    OPTIONAL { ?evApp addr:hasTimeAfter [addr:timeStamp ?tStampAppAfter ; addr:timePrecision ?tPrecAppAfter] }
+    OPTIONAL { ?evDis addr:hasTime [addr:timeStamp ?tStampDis ; addr:timePrecision ?tPrecDis] }
+    OPTIONAL { ?evDis addr:hasTimeBefore [addr:timeStamp ?tStampDisBefore ; addr:timePrecision ?tPrecDisBefore] }
+    OPTIONAL { ?evDis addr:hasTimeAfter [addr:timeStamp ?tStampDisAfter ; addr:timePrecision ?tPrecDisAfter] }
   }
   LIMIT 1
   `
@@ -67,8 +107,7 @@ function getQueryValidTimeForLandmark(landmarkURI, namedGraphURI){
 }
   
 function getQueryToInitTimeline(landmarkURI, namedGraphURI){
-    var query = `PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    var query = getPrefixesForQuery(prefixes) + `
   
   SELECT DISTINCT ?lm ?attrType ?attrVers ?cgME ?cgO
   ?tStampME ?tPrecME ?tStampO ?tPrecO
@@ -92,7 +131,7 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
     return query ;
 }
 
-function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp=null, highTimeStamp=null){
+function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp=null, highTimeStamp=null, lang = "fr"){
     
     var lowTimeStampFilter = ``;
     var highTimeStampFilter = ``;
@@ -105,15 +144,7 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
             BIND(?appTimeBeforeStamp <= ?highTimeStamp AS ?appTimeBeforeExists)`;;
     }
 
-    var query = `
-    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX wd: <http://www.wikidata.org/entity/>
-    PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-    PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
-    PREFIX lrtype: <http://rdf.geohistoricaldata.org/id/codes/address/landmarkRelationType/>
-  
+    var query = getPrefixesForQuery(prefixes) + `
     SELECT DISTINCT ?lm ?lmLabel ?relatumLabel ?existsForSure WHERE {
         BIND(<` + namedGraphURI + `> AS ?g)
         BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
@@ -122,12 +153,14 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
         GRAPH ?g {
             ?lm a addr:Landmark ; rdfs:label ?lmLabel .
             OPTIONAL {
-                ?lr a addr:LandmarkRelation ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
-                FILTER(LANG(?relatumLabel) IN ("fr", ""))
+                ?lr a ?lrClass ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+                ?lrClass rdfs:subClassOf* addr:LandmarkRelation .
+                FILTER(LANG(?relatumLabel) IN ("${lang}", ""))
             }
             ?appCg addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?appEv .
             ?disCg addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?disEv .
         }
+
   
         OPTIONAL {
             ?appEv addr:hasTime ?appTime .
@@ -177,12 +210,7 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
   }
   
   function getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI){
-    var query = `
-PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX ctype: <http://rdf.geohistoricaldata.org/id/codes/address/changeType/>
-
+    var query = getPrefixesForQuery(prefixes) + `
 SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
     BIND(<` + namedGraphURI + `> AS ?g)
     BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
@@ -244,9 +272,7 @@ SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
   }
 
 function getQueryForAttributeVersionValues(valuesForQuery){
-    var query = `
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX addr: <http://rdf.geohistoricaldata.org/def/address#>
+    var query = getPrefixesForQuery(prefixes) + `
     SELECT DISTINCT ?vers ?val WHERE {` + valuesForQuery +
     `?vers addr:versionValue ?val }`
 

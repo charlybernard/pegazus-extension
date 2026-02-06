@@ -116,6 +116,22 @@ def get_insee_literal(insee_num:str):
     """
     return get_literal_without_option(insee_num)
 
+def get_boolean_literal(value: bool):
+    """
+    Create a Literal object for a boolean value (xsd:boolean).
+
+    Parameters:
+    - value (bool): The boolean value to be turned into a Literal.
+
+    Returns:
+    - Literal: A Literal object containing the boolean value with xsd:boolean datatype.
+    """
+
+    if value is None:
+        return None
+    
+    return Literal(value, datatype=XSD.boolean)
+
 def convert_result_elem_to_rdflib_elem(result_elem:dict):
     """
     Convert a dictionary describing an element of a query result into an RDFLib element (URIRef, Literal, or BNode).

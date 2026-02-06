@@ -1,11 +1,11 @@
 //////////////////////////////// Variables //////////////////////////////////
 
 const graphDBRepositoryURI = getGraphDBRepositoryURI(graphDBURI, graphName) ;
-const factsNamedGraphURI = getNamedGraphURI(graphDBURI, graphName, namedGraphName) ;
 
 const contentDivId = "content";
+const selectionDivId = "selection";
 
-const radioInputName = "visu_selection";
+const radioInputName = "radioInput";
 const radioInputDivId = radioInputName ;
 const radioInputLabel = "Type de visualisation";
 
@@ -13,6 +13,11 @@ const validationButtonLabel = "Valider";
 const landmarkSelectionLabel = "Entité à sélectionner : " ;
 const dateSelectionLabel = "Sélectionnez une date : ";
 
+const graphDivId = "graph";
+const graphSelectionDivId = "graph-selection";
+const graphSelectionLabel = "Graphe à sélectionner : ";
+
+const landmarkSelectionDivId = "landmark-selection"; ;
 const landmarkValidTimeDivId = "landmark-valid-time" ;
 const landmarkNamesDivId = "landmark-names" ;
 const landmarkNamesLabelDivId = "landmark-names-label" ;
@@ -22,6 +27,7 @@ const mapDivId = "leaflet-map";
 const mapTimelineResizerDivId = "map-timeline-resizer";
 const resizerClassName = "resizer";
 
+const dateSelectionDivId = "date-selection";
 const dateSliderDivId = "date-slider";
 const dateSliderSettings = {"min":0, "max":100, "value":0};
 const dateInputDivId = "date-input";
@@ -34,7 +40,8 @@ const mapMessages = {
     noLandmarkToDisplay: "Aucun repère à afficher à cette date.",
     nameTitle : "Nom",
     flyOverLandmark : "Survolez un lieu",
-    selectValue : "Sélectionnez une valeur",
+    landmarkSelectValue : "Sélectionnez une valeur",
+    graphSelectValue : "Sélectionnez un graphe",
 }
 
 const tileLayerSettings = [
@@ -47,7 +54,7 @@ const tileLayerSettings = [
 ];
 
 const startTimeStampSlider = "1790-01-01";
-const endTimeStampSlider = "2026-01-01";
+const endTimeStampSlider = "2027-01-01";
 const timeDelay = 20 ; // Delay in years, not delay if null
 // const timeDelay = null ; // Delay in years, not delay if null
 
@@ -65,25 +72,40 @@ const lo = new LeafletObjects(L);
 const radioInputs = {"name":radioInputName, "label":radioInputLabel, "id":radioInputName,
                 "values":{"snapshot":{"label":snapshotName, "id":"snapshot-selection"}, "timeline":{"label":landmarkEvolutionName, "id":"timeline-selection"}}};
 
+const graphSettings = {"divId":graphDivId, "selectionDivId":graphSelectionDivId, "selectionLabel":graphSelectionLabel} ;
 
 //////////////////////////////// Actions on the page //////////////////////////////////
 
-createHTML(L, radioInputs, contentDivId);
-
-const inputRadioDiv = document.getElementById(radioInputDivId);
+createHTML(L, radioInputs, contentDivId, selectionDivId, graphSettings, mapMessages);
 const contentDiv = document.getElementById(contentDivId);
+const selectDiv = document.getElementById(selectionDivId);
+const inputRadioDiv = document.getElementById(radioInputDivId);
+const graphSelectionDiv = document.getElementById(graphSettings.selectionDivId);
+
+var namedGraphURI = graphSelectionDiv.value;
 
 inputRadioDiv.addEventListener('change', function(){
     var querySelectorSetting = `input[name="${radioInputName}"]:checked`;
     var selectedValue = document.querySelector(querySelectorSetting).value;
+
+    // Supprimer les éléments de sélection de landmark et de date s'ils existent (car pas nécessaires pour les deux types de visualisation)
     clearDiv(contentDiv);
+    removeElementsByIds([landmarkSelectionDivId, landmarkValidTimeDivId, dateSelectionDivId]) ;
+
     if (selectedValue == landmarkEvolutionName){
-        createHTMLEvolution(L, contentDiv, landmarkNamesDivId, landmarkSelectionLabel, landmarkValidTimeDivId,
+        createHTMLEvolution(L, landmarkSelectionDivId, contentDiv, selectDiv, landmarkNamesDivId, landmarkSelectionLabel, landmarkValidTimeDivId,
             mapTimelineDivId, timelineDivId, mapDivId, mapTimelineResizerDivId, resizerClassName, tileLayerSettings);
-        setActionsForEvolution(graphDBRepositoryURI, factsNamedGraphURI, mapLat, mapLon, mapZoom, mapMessages, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
+        setActionsForEvolution(graphDBRepositoryURI, namedGraphURI, mapLat, mapLon, mapZoom, mapMessages, landmarkNamesDivId, timelineDivId, landmarkValidTimeDivId, resizerClassName, tileLayerSettings);
     } else if (selectedValue == snapshotName){
-        createHTMLSnapshot(L, contentDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
-        setActionsForSnapshot(graphDBRepositoryURI, factsNamedGraphURI, mapDivId, mapLat, mapLon, mapZoom, mapMessages, certainLayerGroupName, uncertainLayerGroupName,
-            dateSliderDivId, dateInputDivId, dateValidationButtonId, startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings);
+        createHTMLSnapshot(L, dateSelectionDivId, contentDiv, selectDiv, dateSliderDivId, dateSelectionLabel, dateSliderSettings, dateInputDivId, dateValidationButtonId, validationButtonLabel, mapDivId);
+        setActionsForSnapshot(graphDBRepositoryURI, namedGraphURI, mapDivId, mapLat, mapLon, mapZoom, mapMessages, certainLayerGroupName, uncertainLayerGroupName,
+            dateSliderDivId, dateInputDivId, dateValidationButtonId, startTimeStampSlider, endTimeStampSlider, timeDelay, calendarURI, tileLayerSettings) ;
     }
+});
+
+
+graphSelectionDiv.addEventListener('change', function(){
+    namedGraphURI = graphSelectionDiv.value;
+    console.log("Selected named graph:", namedGraphURI);
+
 });

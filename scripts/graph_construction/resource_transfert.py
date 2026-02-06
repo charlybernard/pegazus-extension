@@ -75,9 +75,7 @@ def transfert_immutable_triples(graphdb_url, repository_name, factoids_named_gra
     {{
         BIND({factoids_named_graph_uri.n3()} AS ?gf)
         BIND({permanent_named_graph_uri.n3()} AS ?gp)
-        GRAPH ?gf {{
-            ?elem a ?type.
-        }}
+        GRAPH ?gf {{ ?elem a ?type. }}
         FILTER (?type in (wb:Item, wb:Statement))
     }}
     """
@@ -96,6 +94,7 @@ def transfer_version_values_to_roots(graphdb_url:URIRef, repository_name:str, fa
             GRAPH ?gf {{ ?rootAttr addr:versionValue ?value }}
         }} WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?gf {{ ?rootAttr a ?x . }}
             ?av addr:versionValue ?value .
             ?rootAttr addr:hasTrace ?av .
         }}
@@ -113,6 +112,7 @@ def transfer_provenances_to_roots(graphdb_url:URIRef, repository_name:str, facts
             GRAPH ?gf {{ ?rootElem prov:wasDerivedFrom ?provenance }}
         }} WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?gf {{ ?rootElem a ?x . }}
             ?elem prov:wasDerivedFrom ?provenance .
             ?rootElem addr:hasTrace ?elem .
         }}
@@ -130,6 +130,7 @@ def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository
             GRAPH ?gf {{ ?rootTime ?p ?timeElem }}
         }} WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
+            GRAPH ?gf {{ ?rootTime a ?x . }}
             ?time ?p ?timeElem .
             ?rootTime addr:hasTrace ?time .
             FILTER(?p IN (addr:timeStamp, addr:timeCalendar, addr:timePrecision))
@@ -146,8 +147,10 @@ def transfer_labels_to_roots(graphdb_url:URIRef, repository_name:str, facts_name
         }} WHERE {{
             BIND({facts_named_graph_uri.n3()} AS ?gf)
             VALUES ?propLabel {{ skos:hiddenLabel skos:prefLabel  }}
+            GRAPH ?gf {{ ?rootElem a ?x . }}
             ?rootElem addr:hasTrace [?propLabel ?label] .
-            ?el
+            ?elem ?propLabel ?label .
+            
         }}
     """
 

@@ -46,11 +46,9 @@ def get_elements_with_labels(graphdb_url:URIRef, repository_name:str, has_filter
         SELECT ?elem ?label ?elemType WHERE {{
             {{
                 GRAPH ?g {{ ?elem a addr:AttributeVersion . }}
-    
                 ?lm a addr:Landmark ; addr:isLandmarkType ?elemType ; addr:hasAttribute ?attr .
                 ?attr a addr:Attribute ; addr:isAttributeType atype:Name ; addr:hasAttributeVersion ?elem .
                 ?elem addr:versionValue ?label .
-
             }} UNION {{
                 GRAPH ?g {{ ?elem a addr:Landmark . }}
                 ?elem rdfs:label ?label ; addr:isLandmarkType ?elemType .
@@ -326,22 +324,24 @@ def transfert_rdflib_graph_to_factoids_repository(graphdb_url: URIRef, repositor
 def transfert_rdflib_graph_to_named_graph_repository(
         g: Graph, graphdb_url: URIRef,
         repository_name: str, named_graph_name: str,
-        kg_file: str, named_graph_type:str=None, meta_name_graph_uri:URIRef=None, is_active: bool=True):
+        kg_file: str, named_graph_type:str=None,
+        meta_named_graph_name:str=None, is_active: bool=True):
     
     g.serialize(kg_file)
 
     # Import the `kg_file` file into the directory
     gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, kg_file, named_graph_name)
 
-    if meta_name_graph_uri is not None:
+    if meta_named_graph_name is not None:
+        # Get the URI of the meta graph
         if named_graph_type == "source":
-            add_source_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, named_graph_name, is_active=is_active)
+            add_source_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, named_graph_name, is_active=is_active)
         elif named_graph_type == "construction":
-            add_construction_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, named_graph_name, is_active=is_active)
+            add_construction_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, named_graph_name, is_active=is_active)
         elif named_graph_type == "facts":
-            add_final_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, named_graph_name, is_active=is_active)
+            add_final_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, named_graph_name, is_active=is_active)
         else:
-            add_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, named_graph_name, is_active=is_active)
+            add_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, named_graph_name, is_active=is_active)
 
 ####################################################################
 
@@ -387,10 +387,11 @@ def import_factoids_in_facts(graphdb_url:URIRef, repository_name:str,
 
 def add_named_graph_to_repository(
         graphdb_url:URIRef, repository_name:str,
-        meta_name_graph_uri:URIRef, named_graph_name:str,
+        meta_named_graph_name:str, named_graph_name:str,
         graph_class:URIRef=None, is_active:bool=True):
     
     named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, named_graph_name)
+    meta_name_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, meta_named_graph_name)
 
     if graph_class is None:
         graph_class = np.ADDR["Graph"]
@@ -405,44 +406,79 @@ def add_named_graph_to_repository(
 
     gd.update_query(query, graphdb_url, repository_name)
 
-    # Set the named graph as active or not
-    set_named_graph_active(graphdb_url, repository_name, named_graph_name, meta_name_graph_uri, active=is_active)
+    if is_active is not None:
+        # Set the named graph as active or not
+        set_named_graph_active(graphdb_url, repository_name, named_graph_name, meta_named_graph_name, active=is_active)
 
 def add_source_named_graph_to_repository(
         graphdb_url:URIRef, repository_name:str,
-        meta_name_graph_uri:URIRef, source_named_graph_name:str, is_active:bool=True):
+        meta_named_graph_name:str, source_named_graph_name:str, is_active:bool=True):
     
     graph_class = np.ADDR["SourceGraph"]
-    add_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, source_named_graph_name, graph_class=graph_class, is_active=is_active)
+    add_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, source_named_graph_name, graph_class=graph_class, is_active=is_active)
 
 
 def add_construction_named_graph_to_repository(
         graphdb_url:URIRef, repository_name:str,
-        meta_name_graph_uri:URIRef, construction_named_graph_name:str, is_active:bool=True):
+        meta_named_graph_name:str,
+        construction_named_graph_name:str, is_active:bool=True):
     
     graph_class = np.ADDR["ConstructionGraph"]
-    add_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, construction_named_graph_name, graph_class=graph_class, is_active=is_active)
+    add_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, construction_named_graph_name, graph_class=graph_class, is_active=is_active)
 
 def add_final_named_graph_to_repository(
         graphdb_url:URIRef, repository_name:str,
-        meta_name_graph_uri:URIRef, facts_named_graph_name:str, is_active:bool=True):
+        meta_named_graph_name:str,
+        facts_named_graph_name:str, facts_named_graph_name_label:str=None, lang:str=None,
+        is_active:bool=None):
     
     graph_class = np.ADDR["FinalGraph"]
-    add_named_graph_to_repository(graphdb_url, repository_name, meta_name_graph_uri, facts_named_graph_name, graph_class=graph_class, is_active=is_active)
+    add_named_graph_to_repository(graphdb_url, repository_name, meta_named_graph_name, facts_named_graph_name, graph_class=graph_class, is_active=is_active)
 
-def select_active_source_named_graphs(
+    if facts_named_graph_name_label is not None:
+        add_final_named_graph_label_to_repository(graphdb_url, repository_name, meta_named_graph_name, facts_named_graph_name, facts_named_graph_name_label, lang=lang)
+
+def add_final_named_graph_label_to_repository(
+        graphdb_url:URIRef, repository_name:str,
+        meta_named_graph_name:str,
+        facts_named_graph_name:str, facts_named_graph_name_label:str, lang:str=None):
+    
+    # Add label for the final graph in the meta graph
+    meta_named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, meta_named_graph_name)
+    named_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, facts_named_graph_name)
+
+    lang_suffix = f"@{lang}" if lang is not None else ""
+
+    query = np.query_prefixes + f"""
+        INSERT DATA {{
+            GRAPH {meta_named_graph_uri.n3()} {{
+                {named_graph_uri.n3()} rdfs:label "{facts_named_graph_name_label}"{lang_suffix} .
+            }}
+        }}
+    """
+
+    gd.update_query(query, graphdb_url, repository_name)
+
+def set_all_named_graphs_active(
     graphdb_url: URIRef,
     repository_name: str,
-    graph_named_graphs_to_work_with_names: list,
-    meta_name_graph_uri: URIRef
+    meta_named_graph_name: str,
+    active: bool,
+    graph_type: str=None
 ):
+    
+    meta_name_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, meta_named_graph_name)
 
-    selected_graphs = " ".join([
-        gd.get_named_graph_uri_from_name(
-            graphdb_url, repository_name, ng_name
-        ).n3()
-        for ng_name in graph_named_graphs_to_work_with_names
-    ])
+    # Booléen RDF
+    new_value = gr.get_boolean_literal(active)
+
+    graph_types = {
+        "source":np.ADDR["SourceGraph"],
+        "final":np.ADDR["FinalGraph"],
+        "construction":np.ADDR["ConstructionGraph"]
+    }
+
+    graph_class = graph_types.get(graph_type, np.ADDR["Graph"])
 
     query = np.query_prefixes + f"""
     DELETE {{
@@ -452,7 +488,7 @@ def select_active_source_named_graphs(
     }}
     INSERT {{
         GRAPH ?g {{
-            ?gs addr:isActiveGraph ?newValue .
+            ?gs addr:isActiveGraph {new_value.n3()} .
         }}
     }}
     WHERE {{
@@ -463,25 +499,19 @@ def select_active_source_named_graphs(
             OPTIONAL {{ ?gs addr:isActiveGraph ?oldValue . }}
         }}
 
-        ?gsClass rdfs:subClassOf* addr:Graph .
-
-        VALUES ?selected {{ {selected_graphs} }}
-
-        BIND(
-            IF(?gs = ?selected, true^^xsd:boolean, false^^xsd:boolean)
-            AS ?newValue
-        )
+        ?gsClass rdfs:subClassOf* {graph_class.n3()} .
     }}
     """
 
     gd.update_query(query, graphdb_url, repository_name)
 
+
 def set_named_graph_active(
     graphdb_url: URIRef,
     repository_name: str,
     graph_name: str,
-    meta_name_graph_uri: URIRef,
-    active: bool=True
+    meta_named_graph_name: str,
+    active: bool=True,
 ):
     """
     Set the status of a single source graph in the meta graph.
@@ -490,32 +520,33 @@ def set_named_graph_active(
         graphdb_url: URI of the GraphDB instance
         repository_name: repository name
         graph_name: the source graph name to update
-        meta_name_graph_uri: URI of the meta graph containing the sources
+        meta_named_graph_name: name of the meta graph containing the sources
         active: True to activate (set as active), False to deactivate
     """
 
     # Récupère l'URI du graphe source
-    gs_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, graph_name).n3()
+    gs_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, graph_name)
+    meta_name_graph_uri = gd.get_named_graph_uri_from_name(graphdb_url, repository_name, meta_named_graph_name)
 
     # Booléen RDF
-    bool_rdf = "true" if active else "false"
+    new_value = gr.get_boolean_literal(active)
 
     query = np.query_prefixes + f"""
     DELETE {{
         GRAPH ?g {{
-            {gs_uri} addr:isActiveGraph ?oldValue .
+            {gs_uri.n3()} addr:isActiveGraph ?oldValue .
         }}
     }}
     INSERT {{
         GRAPH ?g {{
-            {gs_uri} addr:isActiveGraph "{bool_rdf}"^^xsd:boolean .
+            {gs_uri.n3()} addr:isActiveGraph {new_value.n3()} .
         }}
     }}
     WHERE {{
         BIND({meta_name_graph_uri.n3()} AS ?g)
         GRAPH ?g {{
-            {gs_uri} a ?gsClass .
-            OPTIONAL {{ {gs_uri} addr:isActiveGraph ?oldValue . }}
+            {gs_uri.n3()} a ?gsClass .
+            OPTIONAL {{ {gs_uri.n3()} addr:isActiveGraph ?oldValue . }}
         }}
         ?gsClass rdfs:subClassOf* addr:Graph .
     }}

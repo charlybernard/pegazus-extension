@@ -25,7 +25,7 @@ def link_factoids_with_facts(graphdb_url:URIRef, repository_name:str, facts_name
     make_rooting_for_landmark_relations(graphdb_url, repository_name, label_property, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_landmark_attributes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
     make_rooting_for_temporal_entities(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
-    manage_labels_after_landmark_rooting(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
+    manage_labels_after_landmark_rooting(graphdb_url, repository_name, facts_named_graph_uri)
     
     # Les racines de modification sont créées sauf pour les modifications d'attributs.
     make_rooting_for_changes(graphdb_url, repository_name, facts_named_graph_uri, inter_sources_name_graph_uri)
@@ -865,7 +865,7 @@ def make_rooting_for_temporal_entities(graphdb_url:URIRef, repository_name:str, 
 
 ###################################################### Other processes ######################################################
 
-def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef):
+def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     # Add a label for root landmarks which have been initialized after landmark rooting
     # If there is already a label (∃ <landmark rdfs:label label>), then add alternative labels if they exists
     # This query exists to get only one label per landmark, other labels are alt labels
@@ -874,9 +874,9 @@ def manage_labels_after_landmark_rooting(graphdb_url:URIRef, repository_name:str
         GRAPH ?gf {{ ?rootLandmark rdfs:label ?rlLabel ; skos:altLabel ?rlAltLabel . }}
     }} WHERE {{
         BIND({facts_named_graph_uri.n3()} AS ?gf)
-        BIND({inter_sources_name_graph_uri.n3()} AS ?gi)
-
-        GRAPH ?gi {{ ?rootLandmark addr:hasTrace ?landmark . }}
+    
+        GRAPH ?gf {{ ?rootLandmark a addr:Landmark . }}
+        ?rootLandmark addr:hasTrace ?landmark .
         OPTIONAL {{ ?rootLandmark rdfs:label ?rootLandmarkLabel . }}
         OPTIONAL {{ ?rootLandmark skos:altLabel ?rootLandmarkAltLabel . }}
         OPTIONAL {{ ?landmark rdfs:label ?landmarkLabel . }}

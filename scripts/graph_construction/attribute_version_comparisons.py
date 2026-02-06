@@ -7,7 +7,7 @@ from scripts.graph_construction import graphrdf as gr
 
 np = NameSpaces()
 
-def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_named_graph_name:str, comp_tmp_file:str, comparison_settings:dict={}):
+def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_named_graph_uri:URIRef, comp_tmp_file:str, comparison_settings:dict={}):
     # Get versions which have to be compared
     results = get_attribute_versions_to_compare(graphdb_url, repository_name)
     bindings = results.get("results").get("bindings")
@@ -18,7 +18,7 @@ def compare_attribute_versions(graphdb_url:URIRef, repository_name:str, comp_nam
     g.serialize(destination=comp_tmp_file)
     
     # Import the TTL file in GraphDB
-    gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, comp_tmp_file, named_graph_name=comp_named_graph_name)
+    gd.import_ttl_file_in_graphdb(graphdb_url, repository_name, comp_tmp_file, named_graph_uri=comp_named_graph_uri)
 
 def get_attribute_versions_to_compare(graphdb_url:URIRef, repository_name:str):
     """

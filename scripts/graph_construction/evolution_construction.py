@@ -130,6 +130,7 @@ def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_
     for query in queries:
         gd.update_query(query, graphdb_url, repository_name)
 
+
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
     rt.transfer_elements_to_roots(graphdb_url, repository_name, facts_named_graph_uri)
 

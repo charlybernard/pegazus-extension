@@ -37,10 +37,11 @@ def generate_random_dates_for_versions(versions):
     Args:
         versions: DataFrame with 'startTime' and 'endTime' columns.
     """
-    for idx, row in versions.iterrows():
-        start_time_col_name = 'startTime'
-        end_time_col_name = 'endTime'
 
+    start_time_col_name = 'startTime'
+    end_time_col_name = 'endTime'
+
+    for idx, row in versions.iterrows():
         # Parse start and end times
         start = parser.parse(row[start_time_col_name])
         end = parser.parse(row[end_time_col_name])
@@ -89,10 +90,12 @@ def generate_random_dates_for_changes(changes):
     Args:
         changes: DataFrame with 'time', 'timeAfter', 'timeBefore' columns.
     """
+
+    time_col_name = 'time'
+    time_after_col_name = 'timeAfter'
+    time_before_col_name = 'timeBefore'
+    
     for idx, row in changes.iterrows():
-        time_col_name = 'time'
-        time_after_col_name = 'timeAfter'
-        time_before_col_name = 'timeBefore'
 
         # Parse times, handle missing values
         try:

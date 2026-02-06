@@ -641,6 +641,8 @@ def get_streetnumber_and_thoroughfare_labels_from_geojson_streetnumber_state(str
 
 def create_state_description_for_geojson_streetnumber_state(streetnumber:dict, sn_name_attr:str, th_name_attr:str, sn_and_th_name_attr:str, thoroughfares:dict, srs_iri:str, lang:str=None):
     sn_label, th_label = get_streetnumber_and_thoroughfare_labels_from_geojson_streetnumber_state(streetnumber, sn_name_attr, th_name_attr, sn_and_th_name_attr)
+    sn_label = str(sn_label) if sn_label is not None else None # Ensure string type
+    th_label = str(th_label) if th_label is not None else None # Ensure string type
 
     geometries = [streetnumber["geometry"]]
     geometry_value = gp.get_wkt_union_of_geojson_geometries(geometries, srs_iri)

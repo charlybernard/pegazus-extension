@@ -480,8 +480,8 @@ time:intervalStarts
         rdfs:label "finit par"@fr, "has end"@en .
 
 
-###  http://rdf.geohistoricaldata.org/def/address#hasFuzzyBeggining
-:hasFuzzyBeggining rdf:type owl:ObjectProperty ;
+###  http://rdf.geohistoricaldata.org/def/address#hasFuzzyBeginning
+:hasFuzzyBeginning rdf:type owl:ObjectProperty ;
                    rdfs:domain :FuzzyTimeInstant ;
                    rdfs:range :CrispTimeInstant ;
                    rdfs:comment "Définit le début de validité pour un instant flou"@fr, "Defines the start of validity for a fuzzy instant"@en ;

@@ -17,7 +17,7 @@ def get_repository_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URI
     Returns:
         URIRef: The complete URI of the repository.
     """
-    return graphdb_url + "/repositories/" + repository_name
+    return URIRef(f"{graphdb_url}/repositories/{repository_name}")
 
 def get_repository_namespaces_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
     """
@@ -30,7 +30,7 @@ def get_repository_namespaces_uri_from_name(graphdb_url:URIRef, repository_name:
     Returns:
         URIRef: The URI for the repository's namespaces.
     """
-    return graphdb_url + "/repositories/" + repository_name + "/namespaces"
+    return URIRef(f"{graphdb_url}/repositories/{repository_name}/namespaces")
 
 def get_named_graph_uri_from_name(graphdb_url:URIRef, repository_name:str, named_graph_name:str) -> URIRef:
     """
@@ -44,7 +44,7 @@ def get_named_graph_uri_from_name(graphdb_url:URIRef, repository_name:str, named
     Returns:
         URIRef: The URI of the named graph.
     """
-    return graphdb_url + "/repositories/" + repository_name + "/rdf-graphs/" + named_graph_name
+    return URIRef(f"{graphdb_url}/repositories/{repository_name}/rdf-graphs/{named_graph_name}")
 
 def get_repository_uri_statements_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
     """
@@ -57,7 +57,7 @@ def get_repository_uri_statements_from_name(graphdb_url:URIRef, repository_name:
     Returns:
         URIRef: The URI for the repository's statements.
     """
-    return graphdb_url + "/repositories/" + repository_name + "/statements"
+    return URIRef(f"{graphdb_url}/repositories/{repository_name}/statements")
 
 def get_rest_repository_uri_from_name(graphdb_url:URIRef, repository_name:str) -> URIRef:
     """
@@ -70,7 +70,7 @@ def get_rest_repository_uri_from_name(graphdb_url:URIRef, repository_name:str) -
     Returns:
         URIRef: The REST URI for the repository.
     """
-    return graphdb_url + "/rest/repositories/" + repository_name
+    return URIRef(f"{graphdb_url}/rest/repositories/{repository_name}")
 
 def get_rest_respositories_uri(graphdb_url:URIRef) -> URIRef:
     """
@@ -82,7 +82,7 @@ def get_rest_respositories_uri(graphdb_url:URIRef) -> URIRef:
     Returns:
         URIRef: The URI for all repositories.
     """
-    return graphdb_url + "/rest/repositories"
+    return URIRef(f"{graphdb_url}/rest/repositories")
 
 ## Create repository
 

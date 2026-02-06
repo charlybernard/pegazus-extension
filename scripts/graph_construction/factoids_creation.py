@@ -29,8 +29,8 @@ def create_factoids_repository(graphdb_url:URIRef, repository_name:str, tmp_fold
     # Export the graph and import it into the repository
     msp.transfert_rdflib_graph_to_factoids_repository(graphdb_url, repository_name, factoids_named_graph_name, g, kg_file, tmp_folder, ont_file, ontology_named_graph_name)
 
-    # Adapting data with the ontology, merging duplicates, etc.
-    clean_imported_repository(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name)
+    # # Adapting data with the ontology, merging duplicates, etc.
+    # clean_imported_repository(graphdb_url, repository_name, factoids_named_graph_name, permanent_named_graph_name)
 
 ################################################################################################################
 

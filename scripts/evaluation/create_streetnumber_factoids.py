@@ -13,7 +13,9 @@ def create_streetnumber_fragmentary_descriptions(
     facts_named_graph_name:str,
     data_folder:str,
     data_sources_folder:str,
-    geometry_settings:dict
+    geometry_settings:dict,
+    version_sample_ratio=0.6,
+    change_sample_ratio=0.6
 ):
 
     epsg_code = geometry_settings.get("epsg_code", "EPSG:2154")
@@ -38,10 +40,13 @@ def create_streetnumber_fragmentary_descriptions(
     version_valid_times = pd.read_csv(sn_attr_version_valid_times_file)
     version_values = pd.read_csv(sn_attr_version_values_file)
     changes_valid_times = pd.read_csv(sn_attr_change_valid_times_file)
-
-    # Take a sample of 60% of the data
-    versions_sample = version_valid_times.sample(frac=0.6)
-    changes_sample = changes_valid_times.sample(frac=0.6)
+    version_values = version_values.astype(object) # Ensure that version values are treated as objects (e.g., strings)
+    changes_valid_times = changes_valid_times.astype(object) # Ensure that change values are treated as objects (e.g., strings)
+ 
+    #####################################################################################
+    # Take a sample of a pourcentage of the data for versions and changes according to the given ratios
+    versions_sample = version_valid_times.sample(frac=version_sample_ratio)
+    changes_sample = changes_valid_times.sample(frac=change_sample_ratio)
 
     # For each street number, take a random sample of 1 label
     random_labels_for_versions = labels.groupby("sn").sample(n=1, random_state=42)
@@ -58,7 +63,7 @@ def create_streetnumber_fragmentary_descriptions(
 
     # Generate new changes coherent with generated ones 
     ea.generate_random_dates_for_changes(changes_sample)
-
+ 
     # Add a new column "versionValue" to the version_valid_times dataframe
     versions_sample["versionValue"] = versions_sample["attrVersion"].map(version_values_dict)
 
