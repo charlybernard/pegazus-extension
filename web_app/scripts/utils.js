@@ -30,3 +30,12 @@ function getValueAccordingBool(boolValue){
       return null;
   }
 }
+
+//////////////////////////////////////// Text normalization /////////////////////////////////////////////////////////////////////
+
+function removeDiacritics(str){
+  return (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}

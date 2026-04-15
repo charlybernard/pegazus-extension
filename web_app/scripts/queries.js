@@ -18,6 +18,15 @@ const prefixes = {
     dcterms: "http://purl.org/dc/terms/"
 };
 
+function runSparqlQuery(endpoint, query){
+  return $.ajax({
+    url: endpoint,
+    Accept: "application/sparql-results+json",
+    contentType:"application/sparql-results+json",
+    dataType: "json",
+    data: { query }
+  }).then(res => res.results.bindings);
+}
 
 function getPrefixesForQuery(prefixes){
     var prefixesForQuery = "";
@@ -50,31 +59,77 @@ function getQueryForGraphs(lang = "fr"){
     return query ;
   }
   
+// function getQueryForLandmarks(namedGraphURI, lang = "fr"){
+//     var query = getPrefixesForQuery(prefixes) + `
+//     SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
+//     WHERE {
+//         ?lm rdfs:label ?lmLabel .
+//         FILTER(LANG(?lmLabel) IN ("${lang}", ""))
+//         {
+//             SELECT DISTINCT ?lm ?lmType WHERE {
+//                 BIND(<` + namedGraphURI + `> AS ?g)
+//                 GRAPH ?g { ?lm a addr:Landmark . }
+//                 ?lm addr:isLandmarkType ?lmType .
+//             }
+//         }
+//         OPTIONAL {
+//             ?lmType skos:prefLabel ?lmTypeLabel .
+//             FILTER(LANG(?lmTypeLabel) IN ("${lang}", ""))
+//         }
+//         OPTIONAL {
+//             ?lr a ?lrClass ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+//             ?lrClass rdfs:subClassOf* addr:LandmarkRelation .
+//             FILTER(LANG(?relatumLabel) IN ("${lang}", ""))
+//         }
+//     }
+//         ORDER BY ?lmTypeLabel ?relatumLabel ?lmLabel
+// ` ;
+
+//     return query;
+// }
+
+
+function getQueryForAttributeTypes(namedGraphURI, lang = "fr"){
+    var query = getPrefixesForQuery(prefixes) + `
+    SELECT DISTINCT ?attrType ?attrTypeLabel
+    WHERE {
+        ?attrType a addr:AttributeType ; skos:prefLabel ?attrTypeLabel .
+        FILTER(LANG(?attrTypeLabel) = "${lang}")
+    }
+    `;
+
+    return query;
+}
+
+function getQueryForLandmarkTypes(namedGraphURI, lang = "fr"){
+    var query = getPrefixesForQuery(prefixes) + `
+    SELECT DISTINCT ?lmType ?lmTypeLabel
+    WHERE {
+        ?lmType a addr:LandmarkType ; skos:prefLabel ?lmTypeLabel .
+        FILTER(LANG(?lmTypeLabel) = "${lang}")
+    }
+    `;
+
+    return query;
+}
+
 function getQueryForLandmarks(namedGraphURI, lang = "fr"){
     var query = getPrefixesForQuery(prefixes) + `
-    SELECT ?lm ?lmLabel ?lmType ?lmTypeLabel ?relatumLabel
+    SELECT DISTINCT ?lm ?lmLabel ?lmType ?relatumLabel
     WHERE {
-        ?lm rdfs:label ?lmLabel .
+        GRAPH <${namedGraphURI}> {
+            ?lm a addr:Landmark ; addr:isLandmarkType ?lmType ; rdfs:label ?lmLabel .
+        }
         FILTER(LANG(?lmLabel) IN ("${lang}", ""))
-        {
-            SELECT DISTINCT ?lm ?lmType WHERE {
-                BIND(<` + namedGraphURI + `> AS ?g)
-                GRAPH ?g { ?lm a addr:Landmark . }
-                ?lm addr:isLandmarkType ?lmType .
-            }
-        }
+
         OPTIONAL {
-            ?lmType skos:prefLabel ?lmTypeLabel .
-            FILTER(LANG(?lmTypeLabel) IN ("${lang}", ""))
-        }
-        OPTIONAL {
-            ?lr a ?lrClass ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum [rdfs:label ?relatumLabel] .
+            ?lr a ?lrClass ; addr:isLandmarkRelationType lrtype:Belongs ; addr:locatum ?lm ; addr:relatum ?relatum .
             ?lrClass rdfs:subClassOf* addr:LandmarkRelation .
+            ?relatum rdfs:label ?relatumLabel .
             FILTER(LANG(?relatumLabel) IN ("${lang}", ""))
         }
     }
-        ORDER BY ?lmTypeLabel ?relatumLabel ?lmLabel
-` ;
+    `;
 
     return query;
 }
@@ -205,7 +260,6 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
         BIND(IF((BOUND(?appTimeBeforeExistsForSure) && !?appTimeBeforeExistsForSure) || (BOUND(?disTimeAfterExistsForSure) && !?disTimeAfterExistsForSure), "false"^^xsd:boolean, "true"^^xsd:boolean) AS ?existsForSure)
     }
     `
-    console.log(query);
     return query ;
   }
   

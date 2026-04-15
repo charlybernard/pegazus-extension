@@ -2,69 +2,97 @@
 
 function getValidTimeForLandmarkLabel(appTime, disTime){
   var label = "";
+  var appTimeLabel = "<b>Date de création :</b> "
+  var disTimeLabel = "<b>Date de disparition :</b> "
+  var betweenLabel = "entre" ;
+  var beforeLabel = "avant" ;
+  var afterLabel = "après" ;
+  var andLabel = "et" ;
+
   if (appTime.precise){
-    label += "<div><b>Date de création :</b> " + appTime.precise.label + "</div>" ;
+    label += `<div>${appTimeLabel}${appTime.precise.label}</div>` ;
   } else if (appTime.before && appTime.after){
-    label += "<div><b>Date de création :</b> entre " + appTime.before.label + " et " + appTime.after.label + "</div>" ;
+    label += `<div>${appTimeLabel} ${betweenLabel} ${appTime.before.label} ${andLabel} ${appTime.after.label}</div>` ;
   } else if (appTime.before){
-    label += "<div><b>Date de création :</b> avant " + appTime.before.label + "</div>" ;
+    label += `<div>${appTimeLabel} ${beforeLabel} ${appTime.before.label}</div>` ;
   } else if (appTime.after){
-    label += "<div><b>Date de création :</b> après " + appTime.after.label + "</div>" ;
+    label += `<div>${appTimeLabel} ${afterLabel} ${appTime.after.label}</div>` ;
   }
 
+  var spacing = "50px" ;
+  label += `<div style="margin-left: ${spacing} 0;">-</div>`;
+
   if (disTime.precise){
-    label += "<div><b>Date de disparition :</b> " + disTime.precise.label + "</div>" ;
+    label += `<div>${disTimeLabel}${disTime.precise.label}</div>` ;
   } else if (disTime.before && disTime.after){
-    label += "<div><b>Date de disparition :</b> entre " + disTime.before.label + " et " + disTime.after.label + "</div>" ;
+    label += `<div>${disTimeLabel} ${betweenLabel} ${disTime.before.label} ${andLabel} ${disTime.after.label}</div>` ;
   } else if (disTime.before){
-    label += "<div><b>Date de disparition :</b> avant " + disTime.before.label + "</div>" ;
+    label += `<div>${disTimeLabel} ${beforeLabel} ${disTime.before.label}</div>` ;
   } else if (disTime.after){
-    label += "<div><b>Date de disparition :</b> après " + disTime.after.label + "</div>" ;
+    label += `<div>${disTimeLabel} ${afterLabel} ${disTime.after.label}</div>` ;
   }
 
   return label
 
 }
 
-function getTimeWithFrenchabel(timeStamp, timePrecision){
-  var timeElems = extractElementsFromTimeStamp(timeStamp) ;
-  var precision = extractElementsFromTimePrecision(timePrecision) ;
-  var months = {1:"janvier", 2:"février", 3:"mars", 4:"avril", 5:"mai", 6:"juin", 7:"juillet", 8:"août", 9:"septembre", 10:"octobre", 11:"novembre", 12:"décembre"} ;
+function getTimeWithFrenchLabel(timeStamp, timePrecision) {
+  var timeElems = extractElementsFromTimeStamp(timeStamp);
+  var precision = extractElementsFromTimePrecision(timePrecision);
 
-  var frenchTimeString = "";
-  if (precision == "millenium"){
-    var millenium = String(Math.ceil(parseInt(timeElems.year)/1000)) ;
-    var superscript = "e"
-    if (millenium = "1"){superscript = "re"};
-    var frenchTimeString =  millenium + superscript + " millénaire" ;
-  } else if (precision == "century"){
-    var century = String(Math.ceil(parseInt(timeElems.year)/100)) ;
-    var superscript = "e"
-    if (century = "1"){superscript = "er"};
-    var frenchTimeString =  millenium + superscript + " siècle" ;
-  } else if (precision == "decade"){
-    var decade = String(Math.trunc(parseInt(timeElems.year)/10)*10) ;
-    var frenchTimeString =  "années " + decade ;
-  } else if (precision == "year"){
-    var year = timeElems.year ;
-    var frenchTimeString = year ;
-  } else if (precision == "month"){
-    var year = timeElems.year ;
-    var intMonth = parseInt(timeElems.month);
-    var month = months[intMonth] ;
-    var frenchTimeString =  month + " " + year ;
-  } else if (["day", "hours", "minutes", "seconds", "milliseconds"].includes(precision)){
-    var year = timeElems.year ;
-    var intMonth = parseInt(timeElems.month);
-    var month = months[intMonth] ;
-    var day = timeElems.day ;
-    if (day == "1"){day = "1er"}
-    var frenchTimeString =  day + " " + month + " " + year ;
+  var months = { 1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin", 7: "juillet", 8: "août", 9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"};
+
+  var year = parseInt(timeElems.year);
+  var month = months[parseInt(timeElems.month)];
+  let label = "";
+
+  switch (precision) {
+
+    case "millenium": {
+      var millenium = Math.ceil(year / 1000);
+      var suffix = millenium === 1 ? "re" : "e";
+      label = `${millenium}${suffix} millénaire`;
+      break;
+    }
+
+    case "century": {
+      var century = Math.ceil(year / 100);
+      var suffix = century === 1 ? "er" : "e";
+      label = `${century}${suffix} siècle`;
+      break;
+    }
+
+    case "decade": {
+      var decade = Math.trunc(year / 10) * 10;
+      label = `années ${decade}`;
+      break;
+    }
+
+    case "year":
+      label = `${year}`;
+      break;
+
+    case "month":
+      label = `${month} ${year}`;
+      break;
+
+    case "day":
+    case "hours":
+    case "minutes":
+    case "seconds":
+    case "milliseconds": {
+      let day = timeElems.day;
+      if (day === "1") day = "1er";
+      label = `${day} ${month} ${year}`;
+      break;
+    }
   }
 
-  timeElems.label = frenchTimeString ;
-  timeElems.precision = precision
-  return timeElems;
+  return {
+    ...timeElems,
+    label,
+    precision
+  };
 }
 
 function createTimelineTime(year=null, month=null, day=null, hour=null, minute=null, second=null, millisecond=null, format=null){
@@ -131,22 +159,17 @@ function getMeanOfTwoTimesFromStamps(timeStamp1, timeStamp2){
   return getMeanOfTwoTimes(time1, time2);
 }
 
-function extractElementsFromTimePrecision(timePrecision){
-  if (timePrecision == "http://www.w3.org/2006/time#unitDay"){
-    return "day";
-  }else if (timePrecision == "http://www.w3.org/2006/time#unitMonth"){
-    return "month"
-  }else if (timePrecision == "http://www.w3.org/2006/time#unitYear"){
-    return "year"
-  }else if (timePrecision == "http://www.w3.org/2006/time#unitDecade"){
-    return "decade"
-  }else if (timePrecision == "http://www.w3.org/2006/time#unitCentury"){
-    return "century"
-  }else if (timePrecision == "http://www.w3.org/2006/time#unitMillenium"){
-    return "millenium"
-  }else{
-    return null
-  }
+function extractElementsFromTimePrecision(timePrecision) {
+  var map = {
+    "http://www.w3.org/2006/time#unitDay": "day",
+    "http://www.w3.org/2006/time#unitMonth": "month",
+    "http://www.w3.org/2006/time#unitYear": "year",
+    "http://www.w3.org/2006/time#unitDecade": "decade",
+    "http://www.w3.org/2006/time#unitCentury": "century",
+    "http://www.w3.org/2006/time#unitMillenium": "millenium"
+  };
+
+  return map[timePrecision] || null;
 }
 
 function getDateObjectFromTimeStamp(timeStamp){
@@ -181,35 +204,35 @@ function getValidTimeForLandmark(timeApp={}, timeDis={}, timeBeforeApp={}, timeA
   var startTimeBefore = undefined ;
   var startTimeAfter = undefined ;
   if(timeApp.stamp && timeApp.precision){
-    var startTimePrec = getTimeWithFrenchabel(timeApp.stamp.value, timeApp.precision.value) ;
+    var startTimePrec = getTimeWithFrenchLabel(timeApp.stamp.value, timeApp.precision.value) ;
     startTime.precise = startTimePrec ;
   }else if(timeBeforeApp.stamp && timeBeforeApp.precision && timeAfterApp.stamp && timeAfterApp.precision){
-    var startTimeBefore = getTimeWithFrenchabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
-    var startTimeAfter = getTimeWithFrenchabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
+    var startTimeBefore = getTimeWithFrenchLabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
+    var startTimeAfter = getTimeWithFrenchLabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
     startTime.before = startTimeBefore ;
     startTime.after = startTimeAfter ;
   }else if (timeBeforeApp.stamp && timeBeforeApp.precision){
-    var startTimeBefore = getTimeWithFrenchabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
+    var startTimeBefore = getTimeWithFrenchLabel(timeBeforeApp.stamp.value, timeBeforeApp.precision.value) ;
     startTime.before = startTimeBefore ;
   }else if (timeAfterApp.stamp && timeAfterApp.precision){
-    var startTimeAfter = getTimeWithFrenchabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
+    var startTimeAfter = getTimeWithFrenchLabel(timeAfterApp.stamp.value, timeAfterApp.precision.value) ;
     startTime.after = startTimeAfter ;
   }
 
   var endTime = {} ;
   if(timeDis.stamp && timeDis.precision){
-    var endTimePrec = getTimeWithFrenchabel(timeDis.stamp.value, timeDis.precision.value) ;
+    var endTimePrec = getTimeWithFrenchLabel(timeDis.stamp.value, timeDis.precision.value) ;
     endTime.precise = endTimePrec ;
   }else if(timeBeforeDis.stamp && timeBeforeDis.precision && timeAfterDis.stamp && timeAfterDis.precision){
-    var endTimeBefore = getTimeWithFrenchabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
-    var endTimeAfter = getTimeWithFrenchabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
+    var endTimeBefore = getTimeWithFrenchLabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
+    var endTimeAfter = getTimeWithFrenchLabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
     endTime.before = endTimeBefore ;
     endTime.after = endTimeAfter ;
   }else if (timeBeforeDis.stamp && timeBeforeDis.precision){
-    var endTimeBefore = getTimeWithFrenchabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
+    var endTimeBefore = getTimeWithFrenchLabel(timeBeforeDis.stamp.value, timeBeforeDis.precision.value) ;
     endTime.before = endTimeBefore ;
   }else if (timeAfterDis.stamp && timeAfterDis.precision){
-    var endTimeAfter = getTimeWithFrenchabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
+    var endTimeAfter = getTimeWithFrenchLabel(timeAfterDis.stamp.value, timeAfterDis.precision.value) ;
     endTime.after = endTimeAfter ;
   }
 

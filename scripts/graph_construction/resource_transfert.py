@@ -148,9 +148,7 @@ def transfer_labels_to_roots(graphdb_url:URIRef, repository_name:str, facts_name
             BIND({facts_named_graph_uri.n3()} AS ?gf)
             VALUES ?propLabel {{ skos:hiddenLabel skos:prefLabel  }}
             GRAPH ?gf {{ ?rootElem a ?x . }}
-            ?rootElem addr:hasTrace [?propLabel ?label] .
-            ?elem ?propLabel ?label .
-            
+            ?rootElem addr:hasTrace [?propLabel ?label] .            
         }}
     """
 

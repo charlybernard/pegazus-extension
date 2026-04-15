@@ -16,12 +16,29 @@ proj4.defs([
 
 // Gestion du côté leaflet
 
-function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[], messages={}, maxZoom=18, minZoom=1){
+function initLeafletMap(
+  id,
+  lat,
+  lon,
+  zoom,
+  tileLayersSettings = [],
+  messages = {},
+  maxZoom = 18,
+  minZoom = 1,
+  enableDraw = false,
+  drawTypes = []
+){
   var mapSettings = {};
 
   // Initialisation de la carte
-  mapSettings.map = L.map(id , {center: [lat, lon], zoom: zoom, maxZoom: maxZoom, minZoom: minZoom}); ;
-  mapSettings.layerControl = L.control.layers()
+  mapSettings.map = L.map(id, {
+    center: [lat, lon],
+    zoom: zoom,
+    maxZoom: maxZoom,
+    minZoom: minZoom
+  });
+
+  mapSettings.layerControl = L.control.layers();
   mapSettings.tileLayers = {};
   mapSettings.overlayLayers = {};
   mapSettings.selectedTileLayer = null;
@@ -29,10 +46,82 @@ function initLeafletMap(id, lat, lon, zoom, tileLayersSettings=[], messages={}, 
   mapSettings.selectedFeature = null;
   mapSettings.messages = messages;
 
-  // Ajout des couches de tuiles
-  initLeafletTileLayers(tileLayersSettings, mapSettings.map, mapSettings.layerControl, mapSettings.tileLayers);
+  // Tuiles
+  initLeafletTileLayers(
+    tileLayersSettings,
+    mapSettings.map,
+    mapSettings.layerControl,
+    mapSettings.tileLayers
+  );
+
+  // Draw (optionnel)
+  if (enableDraw) {
+    initLeafletDraw(mapSettings, drawTypes);
+  }
 
   return mapSettings;
+}
+
+function initLeafletDraw(mapSettings, drawTypes = []) {
+
+  // config par défaut (tout désactivé)
+  var drawOptions = {
+    polygon: false,
+    polyline: false,
+    rectangle: false,
+    circle: false,
+    marker: false,
+    circlemarker: false
+  };
+
+  // activer uniquement ce qui est demandé
+  drawTypes.forEach(function(type) {
+    if (drawOptions.hasOwnProperty(type)) {
+      drawOptions[type] = true;
+    }
+  });
+
+  // groupe des objets dessinés
+  mapSettings.drawnItems = new L.FeatureGroup();
+  mapSettings.map.addLayer(mapSettings.drawnItems);
+
+  // contrôle Leaflet Draw
+  mapSettings.drawControl = new L.Control.Draw({
+    edit: {
+      featureGroup: mapSettings.drawnItems
+    },
+    draw: drawOptions
+  });
+
+  mapSettings.map.addControl(mapSettings.drawControl);
+  mapSettings.selectedDrawnWKT = null;
+
+  // événement création
+  mapSettings.map.on('draw:created', function (e) {
+    var layer = e.layer;
+    mapSettings.drawnItems.addLayer(layer);
+
+    var geojson = layer.toGeoJSON();
+    console.log("Draw created:", geojson);
+    var wkt = geojsonGeomToWKT(geojson.geometry);
+    mapSettings.selectedDrawnWKT = wkt;
+  });
+
+  mapSettings.map.on('draw:edited', function (e) {
+    var layers = e.layers;
+    layers.eachLayer(function (layer) {
+      var geojson = layer.toGeoJSON();
+      console.log("Draw edited:", geojson);
+      var wkt = geojsonGeomToWKT(geojson.geometry);
+      mapSettings.selectedDrawnWKT = wkt;
+      console.log("Edited WKT:", wkt);
+    });
+  });
+
+  mapSettings.map.on('draw:deleted', function (e) {
+    mapSettings.selectedDrawnWKT = null;
+    console.log("Draw deleted");
+  });
 }
 
 function initLeafletTileLayers(tileLayersSettings, map, layerControl, tileLayers){
@@ -110,6 +199,10 @@ function projectWkt(wkt, sourceCRS, targetCRS) {
 
 function wktToGeojsonGeom(wktStr){
   return Terraformer.WKT.parse(wktStr);
+}
+
+function geojsonGeomToWKT(geojson) {
+  return Terraformer.WKT.convert(geojson);
 }
 
 function getGeojsonObj(id, geomWkt, properties={}){

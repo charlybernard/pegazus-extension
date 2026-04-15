@@ -2,16 +2,13 @@ function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarU
   var [lowTimeStamp, highTimeStamp] = getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay) ;
   var queryValidLandmarksFromTime = getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp, highTimeStamp) ;
 
-  $.ajax({
-    url: graphDBRepositoryURI,
-    Accept: "application/sparql-results+json",
-    contentType:"application/sparql-results+json",
-    dataType:"json",
-    data:{"query":queryValidLandmarksFromTime}
-  }).done((promise) => {
-    var landmarksDesc = getInitLandmarksDescriptions(promise.results.bindings);
-    displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, mapSettings);
-  }) ;  
+  runSparqlQuery(graphDBRepositoryURI, queryValidLandmarksFromTime).then(bindings => {
+      var landmarksDesc = getInitLandmarksDescriptions(bindings);
+      displayLandmarksFromGivenTime(graphDBRepositoryURI,  timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, mapSettings);
+    })
+    .catch(err => {
+      console.error("SPARQL timeline config error:", err);
+    });
 }
 
 function getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay){
@@ -29,19 +26,17 @@ function getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay){
   return [lowTimeStamp, highTimeStamp] ;
 }
 
-function displayLandmarksFromGivenTime(timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, mapSettings){
+function displayLandmarksFromGivenTime(graphDBRepositoryURI, timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, mapSettings){
   var queryValidAttrVersFromTime = getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI) ;
-  
-  $.ajax({
-    url: graphDBRepositoryURI,
-    Accept: "application/sparql-results+json",
-    contentType:"application/sparql-results+json",
-    dataType:"json",
-    data:{"query":queryValidAttrVersFromTime}
-  }).done((promise) => {
-    displayLandmarksFromDescriptions(promise.results.bindings, landmarksDescriptions, mapSettings);
+
+  runSparqlQuery(graphDBRepositoryURI, queryValidAttrVersFromTime).then(bindings => {
+      displayLandmarksFromDescriptions(bindings, landmarksDescriptions, mapSettings);
     updateMapViewForSnapshotSelection(landmarksDescriptions, mapSettings, mapSettings.messages.noLandmarkToDisplay);
-});
+    })
+    .catch(err => {
+      console.error("SPARQL timeline config error:", err);
+    });
+  
 }
 
 function updateMapViewForSnapshotSelection(landmarksDescriptions, mapSettings, alertMessage){

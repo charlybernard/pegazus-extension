@@ -575,7 +575,9 @@ def create_state_description_for_geojson_landmark_state(landmark:dict, landmark_
 
     # Create the attributes of the landmark description
     name_attr_desc = di.create_landmark_attribute_version_description(lm_label, lang=lang)
-    geom_attr_desc = di.create_landmark_attribute_version_description(geometry, datatype="wkt_literal")
+    if geometry is not None:
+        geom_attr_desc = di.create_landmark_attribute_version_description(geometry, datatype="wkt_literal")
+
     attributes = {}
     if name_attr_desc is not None:
         attributes["name"] = name_attr_desc
@@ -644,8 +646,12 @@ def create_state_description_for_geojson_streetnumber_state(streetnumber:dict, s
     sn_label = str(sn_label) if sn_label is not None else None # Ensure string type
     th_label = str(th_label) if th_label is not None else None # Ensure string type
 
-    geometries = [streetnumber["geometry"]]
-    geometry_value = gp.get_wkt_union_of_geojson_geometries(geometries, srs_iri)
+    # Get the geometry of the street number (if exists) to create the geometry attribute of the street number description
+    # and to compute the geometry of the thoroughfare if it does not exist in thoroughfares dict)
+    geometry_value = None
+    if streetnumber.get("geometry") is not None:
+        geometries = [streetnumber["geometry"]]
+        geometry_value = gp.get_wkt_union_of_geojson_geometries(geometries, srs_iri)
 
     return create_state_description_for_geojson_housenumber_state(sn_label, "street_number", th_label, "thoroughfare", thoroughfares, geometry_value, lang)
 

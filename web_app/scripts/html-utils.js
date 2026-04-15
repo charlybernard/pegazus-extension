@@ -88,13 +88,29 @@ function createDiv(L, divType, attributes = {}, innerHTML = "", divClass = ""){
     }
     emptyDiv.appendChild(labelDiv);
     emptyDiv.appendChild(radioInputDiv);
-  
+
     return emptyDiv;
   }
 
   function clearDiv(div){
     div.innerHTML = "";
   }
+
+  function setDivStyle(div, style){
+    Object.entries(style).forEach(([key, value]) => {
+      div.style[key] = value;
+    });
+  }
+
+  function removeElementsByIds(divIds){
+      divIds.forEach(divId => {
+          var div = document.getElementById(divId);
+          if (div) {
+              div.remove();
+          }
+      });
+  }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
