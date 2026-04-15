@@ -48,7 +48,7 @@ function configureTimeline(uiConfig, versions, bindings, mapSettings){
     } ;
 
   var timelineHeadline = uiConfig.timeline.headlineLabel ;
-  var timelineJson = getTimelineJson(versions, timelineHeadline)
+  var timelineJson = getTimelineJson(uiConfig, versions, timelineHeadline)
   var timeline = new TL.Timeline(uiConfig.divIds.timeline, timelineJson, timelineOptions) ;
   timeline.on('change', function () { actionsOnTimelineChange(timeline, versions, mapSettings) });
 }
@@ -62,12 +62,12 @@ function actionsOnTimelineChange(timeline, versions, mapSettings){
   }
 }
 
-function getTimelineJson(versions, headline){
+function getTimelineJson(uiConfig, versions, headline){
   var timelineJson = {"title": {"text":{"headline":headline}}, "events": []} ;
 
   for (uri in versions){
     var version = versions[uri];
-    var feature = createTimelineFeature(version.attrVers, version.attrType, version.values,
+    var feature = createTimelineFeature(uiConfig, version.attrVers, version.attrType, version.values,
       {stamp:version.tStampME, precision:version.tPrecME}, {stamp:version.tStampO, precision:version.tPrecO},
       {stamp:version.tStampMEBefore, precision:version.tPrecMEBefore}, {stamp:version.tStampMEAfter, precision:version.tPrecMEAfter},
       {stamp:version.tStampOBefore, precision:version.tPrecOBefore}, {stamp:version.tStampOAfter, precision:version.tPrecOAfter}
@@ -75,7 +75,7 @@ function getTimelineJson(versions, headline){
     timelineJson.events.push(feature);
   }
 
-  return timelineJson
+  return timelineJson;
 }
 
 function displayLandmarkValidTime(endpoint, namedGraphURI, landmarkURI, landmarkValidTimeDivId){

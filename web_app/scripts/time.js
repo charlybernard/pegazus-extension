@@ -240,8 +240,9 @@ function getValidTimeForLandmark(timeApp={}, timeDis={}, timeBeforeApp={}, timeA
 }
 
 
-function createTimelineFeature(attrVersion, attrType, attrVersionValues, timeME={}, timeO={}, timeBeforeME={}, timeAfterME={}, timeBeforeO={}, timeAfterO={}){
-  var groupName = attrType.value.replace("http://rdf.geohistoricaldata.org/id/codes/address/attributeType/", "") ;
+function createTimelineFeature(uiConfig, attrVersion, attrType, attrVersionValues, timeME={}, timeO={}, timeBeforeME={}, timeAfterME={}, timeBeforeO={}, timeAfterO={}){
+  // var groupName = attrType.value.replace("http://rdf.geohistoricaldata.org/id/codes/address/attributeType/", "") ;
+  var groupName = uiConfig.types.attributes.get(attrType.value).label || attrType.value ;
   var text = createTimelineText(attrVersion, attrVersionValues);
 
   var feature = {
