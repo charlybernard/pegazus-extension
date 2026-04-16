@@ -589,6 +589,7 @@ def get_time_instant_elements(time_dict:dict):
         return [None, None, None]
     
     time_stamp = time_dict.get("stamp")
+    time_stamp = format_timestamp(time_stamp) if time_stamp is not None else None
     time_cal = time_dict.get("calendar")
     time_prec = time_dict.get("precision")
     
@@ -622,6 +623,7 @@ def get_valid_time_description(time_description:dict):
     return time_description
 
 def get_gregorian_date_from_timestamp(time_stamp:str):
+    time_stamp = format_timestamp(time_stamp)
     time_match_pattern = "^(-|\+|)\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01])$"
     if re.match(time_match_pattern, time_stamp) is not None:
         time_stamp += "T00:00:00Z"
@@ -631,3 +633,31 @@ def get_gregorian_date_from_timestamp(time_stamp:str):
         return time_elements
     
     return [None, None, None]
+
+def format_timestamp(raw_ts: str) -> str:
+    """
+    Normalizes various date formats to YYYY-MM-DDTHH:MM:SSZ.
+    Handles Y-M-D, Y-M-D H:M:S, and ISO formats with microseconds.
+    """
+    # 1. Clean the string and replace 'T' with a space to unify formats
+    # This handles "2026-04-16T17:32:21..." -> "2026-04-16 17:32:21..."
+    normalized_input = raw_ts.strip().replace('T', ' ').replace('Z', '')
+    
+    # 2. Split to separate Date and Time
+    parts = normalized_input.split(' ')
+    date_part = parts[0]
+    time_part = parts[1] if len(parts) > 1 else "00:00:00"
+
+    # 3. Process Date
+    y, m, d = [int(x) for x in date_part.split('-')]
+
+    # 4. Process Time (ignoring microseconds)
+    # We split by '.' to remove anything after the seconds
+    time_only = time_part.split('.')[0]
+    time_segments = time_only.split(':')
+    
+    h = int(time_segments[0])
+    min_ = int(time_segments[1]) if len(time_segments) > 1 else 0
+    s = int(time_segments[2]) if len(time_segments) > 2 else 0
+
+    return f"{y:04d}-{m:02d}-{d:02d}T{h:02d}:{min_:02d}:{s:02d}Z"

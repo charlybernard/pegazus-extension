@@ -172,9 +172,11 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
         {{
             SELECT DISTINCT ?attr ?vers ?changeProp ?time WHERE {{
                 VALUES (?changeProp ?propTime) {{ (addr:makesEffective addr:hasBeginning) (addr:outdates addr:hasEnd) }}
-                ?lm a addr:Landmark ; addr:hasTime [?propTime ?time] ; addr:hasAttribute ?attr .
+                GRAPH ?g {{ ?lm a addr:Landmark . }}
+                ?lm addr:hasTime [?propTime ?time] ; addr:hasAttribute ?attr .
                 ?attr addr:hasAttributeVersion ?vers .
-                FILTER NOT EXISTS {{ ?change ?changeProp ?vers }}
+                FILTER NOT EXISTS {{ ?change ?changeProp ?vers . }}
+                ?g a addr:SourceGraph ; addr:isActiveGraph "true"^^xsd:boolean .
             }}
         }}
         BIND(URI(CONCAT(STR(URI(factoids:)), "CG_", STRUUID())) AS ?change)
