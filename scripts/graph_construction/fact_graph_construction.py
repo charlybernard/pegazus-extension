@@ -123,7 +123,8 @@ def build_fact_graph_from_sources(
         graphdb_url,
         repository_name,
         facts_named_graph_uri,
-        inter_sources_named_graph_uri
+        inter_sources_named_graph_uri,
+        tmp_named_graph_uri
     )
 
     # ------------------------------------------------------------------
