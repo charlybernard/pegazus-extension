@@ -85,7 +85,8 @@ const uiConfig = {
     },
 
     tileLayers: [
-      { type:"xyz", url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", name:"OpenStreetMap" },
+      // { type:"xyz", url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png", name:"OpenStreetMap" },
+      { type:"xyz", url:"https://tile.openstreetmap.de/{z}/{x}/{y}.png ", name:"OpenStreetMap" },
       { type:"wms", url:"http://geohistoricaldata.org/geoserver/paris-rasters/wms", layer:"paris-rasters:verniquet_1789", name:"Atlas de Verniquet (1789)" },
       { type:"wms", url:"http://geohistoricaldata.org/geoserver/paris-rasters/wms", layer:"paris-rasters:jacoubet_1836", name:"Plan de Jacoubet (1836)" },
       { type:"wms", url:"http://geohistoricaldata.org/geoserver/paris-rasters/wms", layer:"paris-rasters:andriveau_1849", name:"Plan d'Andriveau (1849)" },

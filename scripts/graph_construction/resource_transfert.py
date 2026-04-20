@@ -81,8 +81,7 @@ def transfert_immutable_triples(graphdb_url, repository_name, factoids_named_gra
     """
 
     queries = [query1, query2, query3]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 def transfer_version_values_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
@@ -100,7 +99,7 @@ def transfer_version_values_to_roots(graphdb_url:URIRef, repository_name:str, fa
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def transfer_provenances_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
@@ -118,7 +117,7 @@ def transfer_provenances_to_roots(graphdb_url:URIRef, repository_name:str, facts
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     """
@@ -137,7 +136,7 @@ def transfer_crisp_time_instant_elements_to_roots(graphdb_url:URIRef, repository
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def transfer_labels_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
 
@@ -152,7 +151,7 @@ def transfer_labels_to_roots(graphdb_url:URIRef, repository_name:str, facts_name
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def transfer_elements_to_roots(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef):
     transfer_version_values_to_roots(graphdb_url, repository_name, facts_named_graph_uri)

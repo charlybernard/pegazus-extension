@@ -213,7 +213,7 @@ def compare_time_instants_of_events_from_traces(graphdb_url:URIRef, repository_n
 
     query = get_query_to_compare_time_instants(time_named_graph_uri, time_instant_select_conditions)
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def compare_time_instants_of_events(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
@@ -228,7 +228,7 @@ def compare_time_instants_of_events(graphdb_url:URIRef, repository_name:str, tim
 
     query = get_query_to_compare_time_instants(time_named_graph_uri, time_instant_select_conditions)
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def compare_time_instants_of_attributes(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
@@ -245,7 +245,7 @@ def compare_time_instants_of_attributes(graphdb_url:URIRef, repository_name:str,
     
     query = get_query_to_compare_time_instants(time_named_graph_uri, time_instant_select_conditions)
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def compare_time_intervals_of_attribute_versions(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
@@ -261,7 +261,7 @@ def compare_time_intervals_of_attribute_versions(graphdb_url:URIRef, repository_
     
     query = get_query_to_compare_time_intervals(time_named_graph_uri, time_interval_select_conditions)
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def get_earliest_and_latest_time_instants_for_events(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     """
@@ -321,7 +321,7 @@ def get_earliest_and_latest_time_instants_for_events(graphdb_url:URIRef, reposit
 
     queries = [query1, query2]
     for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+        gd.run_update_query(query, graphdb_url, repository_name)
 
 def remove_earliest_and_latest_time_instants(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     query = np.query_prefixes + f"""
@@ -337,7 +337,7 @@ def remove_earliest_and_latest_time_instants(graphdb_url:URIRef, repository_name
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def get_validity_interval_for_attribute_versions(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
     # Creation of a time interval of attribute version without any time interval
@@ -404,7 +404,7 @@ def get_validity_interval_for_attribute_versions(graphdb_url:URIRef, repository_
 
     queries = [query1, query2]
     for query in queries :
-        gd.update_query(query, graphdb_url, repository_name)
+        gd.run_update_query(query, graphdb_url, repository_name)
 
 def add_time_relations(graphdb_url:URIRef, repository_name:str, time_named_graph_name:str):
     """
@@ -447,7 +447,7 @@ def get_similar_events(graphdb_url:URIRef, repository_name:str, time_named_graph
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_uri:URIRef):
 
@@ -540,7 +540,7 @@ def get_events_before(graphdb_url:URIRef, repository_name:str, time_named_graph_
     
     queries = [query1, query2, query3, query4, query5, query6]
     for query in queries :
-        gd.update_query(query, graphdb_url, repository_name)
+        gd.run_update_query(query, graphdb_url, repository_name)
 
 def get_time_precision_from_integer(precision_int:int):
     """

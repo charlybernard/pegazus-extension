@@ -58,7 +58,7 @@ def get_elements_with_labels(graphdb_url:URIRef, repository_name:str, has_filter
         }}
         """
         
-    results = gd.select_query_to_json(query, graphdb_url, repository_name)
+    results = gd.run_select_query_to_json(query, graphdb_url, repository_name)
     return results.get("results").get("bindings")
 
 def get_pref_and_hidden_label_triples_for_element(element: URIRef, element_type: URIRef, label: Literal):
@@ -234,7 +234,7 @@ def remove_all_triples_for_resources_to_remove(graphdb_url:URIRef, repository_na
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 
 def create_factoid_repository(graphdb_url:URIRef, repository_name:str, tmp_folder:str,
@@ -404,7 +404,7 @@ def add_named_graph_to_repository(
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
     if is_active is not None:
         # Set the named graph as active or not
@@ -457,7 +457,7 @@ def add_final_named_graph_label_to_repository(
         }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 def set_all_named_graphs_active(
     graphdb_url: URIRef,
@@ -503,7 +503,7 @@ def set_all_named_graphs_active(
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 
 def set_named_graph_active(
@@ -552,7 +552,7 @@ def set_named_graph_active(
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 
 def remove_construction_named_graphs(graphdb_url, repository_name):
@@ -620,7 +620,7 @@ def remove_construction_named_graphs(graphdb_url, repository_name):
 
     for query in queries:
         # Execute the SPARQL UPDATE query on the target repository
-        gd.update_query(query, graphdb_url, repository_name)
+        gd.run_update_query(query, graphdb_url, repository_name)
 
 
 ######################################################### Test functions ######################################################
@@ -642,7 +642,7 @@ def get_landmark_labels(graphdb_url:URIRef, repository_name:str, facts_named_gra
         }}
     """
     
-    results = gd.select_query_to_json(query, graphdb_url, repository_name)
+    results = gd.run_select_query_to_json(query, graphdb_url, repository_name)
     return results.get("results").get("bindings")
 
 def add_pref_and_hidden_labels_for_landmarks(graphdb_url:URIRef, repository_name:str,

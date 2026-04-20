@@ -148,52 +148,6 @@ function changeSelectedLandmark(graphDBRepositoryURI, namedGraphURI, uiConfig, m
   displayLandmarkValidTime(graphDBRepositoryURI, namedGraphURI, landmarkURI, uiConfig.divIds.landmarkValidTime);
   initTimelineFromLandmark(graphDBRepositoryURI, namedGraphURI, uiConfig, mapSettings, landmarkURI);
 }
-  
-// function displayLandmarksToSelectForEvolution(graphDBRepositoryURI, namedGraphURI, dropDownMenu, selectValueMessage){
-//   var queryLandmarks = getQueryForLandmarks(namedGraphURI);
-//   var queryLandmarkTypes = getQueryForLandmarkTypes(namedGraphURI) ;
-
-//   $.ajax({
-//     url: graphDBRepositoryURI,
-//     Accept: "application/sparql-results+json",
-//     contentType:"application/sparql-results+json",
-//     dataType:"json",
-//     data:{"query":queryLandmarks}
-//   }).done((promise) => {
-//     insertLandmarksInDropDownMenu(dropDownMenu, selectValueMessage, promise.results.bindings)
-//   })
-// }
-  
-// function insertLandmarksInDropDownMenu(dropDownMenu, selectValueMessage, bindings){
-//   var option = createOptionDiv("", selectValueMessage) ;
-//   var uris = [];
-//   var optGroupUris = {};
-//   dropDownMenu.appendChild(option) ;
-//   bindings.forEach(binding => {
-//     var uri = binding.lm.value ;
-//     var groupUri = binding.lmType.value ;
-
-//     if (!uris.includes(uri)){
-//       var lmLabel = binding.lmLabel.value ;
-//       if (binding.relatumLabel){
-//         lmLabel = lmLabel + " " + binding.relatumLabel.value ;
-//       }
-//       var option = createOptionDiv(binding.lm.value, lmLabel) ;
-//       if (!Object.keys(optGroupUris).includes(groupUri)){
-//         var groupUri = binding.lmType.value ;
-//         var optgroup = createOptionGroupDiv(groupUri, binding.lmTypeLabel.value) ;
-//         dropDownMenu.appendChild(optgroup) ;
-//         optGroupUris[groupUri] = optgroup ;
-//       }else{
-//         var optgroup = optGroupUris[binding.lmType.value] ;
-//       }
-//       optgroup.appendChild(option) ;
-//       uris.push(uri) ;
-//     }
-
-//   });
-// }
-
 
 function buildTypesDataMap(bindings, valueVar, labelVar){
   var map = new Map();
@@ -213,7 +167,7 @@ function buildTypesDataMap(bindings, valueVar, labelVar){
 function buildLandmarkDataMap(typeBindings, landmarkBindings){
   var map = new Map();
 
-  // init types
+  // 1. Initialisation des types
   typeBindings.forEach(b => {
     var type = b.lmType.value;
     var label = b.lmTypeLabel?.value || type;
@@ -224,7 +178,7 @@ function buildLandmarkDataMap(typeBindings, landmarkBindings){
     });
   });
 
-  // remplir landmarks
+  // 2. Remplissage des landmarks
   landmarkBindings.forEach(b => {
     var type = b.lmType.value;
     var lm = b.lm.value;
@@ -236,14 +190,23 @@ function buildLandmarkDataMap(typeBindings, landmarkBindings){
     var lmMap = map.get(type).landmarks;
 
     if (!lmMap.has(lm)) {
+      // Au premier passage pour ce landmark, on initialise avec le label de base
       lmMap.set(lm, {
         label: lmLabel,
+        searchLabel: lmLabel, // Valeur par défaut (si pas de relatum)
         relatums: []
       });
     }
 
+    var currentLm = lmMap.get(lm);
+
     if (relatum) {
-      lmMap.get(lm).relatums.push(relatum);
+      // Si c'est le premier relatum qu'on rencontre pour ce landmark
+      if (currentLm.relatums.length === 0) {
+        currentLm.searchLabel = `${lmLabel}, ${relatum}`;
+      }
+      
+      currentLm.relatums.push(relatum);
     }
   });
 
@@ -275,7 +238,7 @@ function populateLandmarkDropdown(dropDown, dataMap, selectedType, placeholder){
   }
 
   var options = [...dataMap.get(selectedType).landmarks.entries()].map(([value, data]) => {
-    var label = data.label;
+    var label = data.searchLabel;
 
     // if (data.relatums.length > 0){
     //   label += " (" + data.relatums.join(", ") + ")";
@@ -294,18 +257,13 @@ function getDefaultLandmarks(dataMap, selectedType, limit){
   return [...dataMap.get(selectedType).landmarks.entries()]
     .slice(0, limit)
     .map(([value, data]) => {
-
-      let label = data.label;
-
-      if (data.relatums.length > 0){
-        label += " (" + data.relatums.join(", ") + ")";
-      }
-
+      let label = data.searchLabel;
       return { value, label };
     });
 }
 
 function searchLandmarks(dataMap, selectedType, query, limit = 20){
+  console.log(dataMap);
   if (!dataMap.has(selectedType)) return [];
 
   var lmMap = dataMap.get(selectedType).landmarks;
@@ -313,15 +271,11 @@ function searchLandmarks(dataMap, selectedType, query, limit = 20){
 
   return [...lmMap.entries()]
     .filter(([_, data]) => {
-      return removeDiacritics(data.label).toLowerCase().includes(q);
+      return removeDiacritics(data.searchLabel).toLowerCase().includes(q);
     })
     .slice(0, limit)
     .map(([value, data]) => {
-      let label = data.label;
-      if (data.relatums.length > 0){
-        label += " (" + data.relatums.join(", ") + ")";
-      }
-
+      let label = data.searchLabel;
       return { value, label };
     });
 }
@@ -335,58 +289,6 @@ function debounce(fn, delay){
   };
 }
 
-// function setupLandmarkAutocomplete(
-//   uiConfig,
-//   dataMap,
-//   lmTypeDropDown,
-//   lmInput,
-//   lmSuggestionsDropDown,
-//   limit
-// ){
-//   console.log("Setting up autocomplete with dataMap:");
-//   var handler = debounce((e) => {
-
-//     console.log("Input event triggered. Current input value: " + e.target.value);
-//     var query = e.target.value;
-//     var selectedType = lmTypeDropDown.value;
-
-//     if (!selectedType){
-//       console.log("No type selected, not searching");
-//       lmSuggestionsDropDown.innerHTML = "";
-//       return;
-//     }
-
-//     let results;
-
-//     console.log("Query: " + query);
-//     console.log(query.length);
-//     // Cas 1 : moins de 2 caractères → suggestions par défaut
-//     if (query.length < 2){
-//       results = getDefaultLandmarks(dataMap, selectedType, limit);
-
-//     } else {
-
-//       // Cas 2 : recherche normale
-//       results = searchLandmarks(dataMap, selectedType, query, limit);
-//     }
-
-//     displaySuggestions(lmSuggestionsDropDown, results);
-
-//   }, 200);
-
-//   lmInput.addEventListener("input", handler);
-
-//   // 🔥 BONUS : afficher suggestions au focus
-//   lmInput.addEventListener("focus", () => {
-//     var selectedType = lmTypeDropDown.value;
-
-//     if (!selectedType) return;
-
-//     var results = getDefaultLandmarks(dataMap, selectedType, limit);
-//     displaySuggestions(lmSuggestionsDropDown, results);
-//   });
-// }
-
 function setupLandmarkAutocomplete(
   uiConfig,
   dataMap,
@@ -396,7 +298,6 @@ function setupLandmarkAutocomplete(
 ){
   var handler = debounce((e) => {
     var query = lmInput.value;
-    console.log(query);
     var selectedType = lmTypeDropDown.value;
 
     if (!selectedType){
@@ -483,82 +384,3 @@ function displayLandmarksToSelectForEvolution(
 
   });
 }
-
-// var typeBindings = [
-//   {
-//     lmType: { value: "http://example.org/type/church" },
-//     lmTypeLabel: { value: "Église" }
-//   },
-//   {
-//     lmType: { value: "http://example.org/type/street" },
-//     lmTypeLabel: { value: "Rue" }
-//   },
-//   {
-//     lmType: { value: "http://example.org/type/building" },
-//     lmTypeLabel: { value: "Bâtiment" }
-//   }
-// ];
-
-// var landmarkBindings = [
-//   {
-//     lm: { value: "http://example.org/lm/1" },
-//     lmLabel: { value: "Église Saint-Paul" },
-//     lmType: { value: "http://example.org/type/church" },
-//     relatumLabel: { value: "Paris" }
-//   },
-//   {
-//     lm: { value: "http://example.org/lm/2" },
-//     lmLabel: { value: "Église Saint-Eustache" },
-//     lmType: { value: "http://example.org/type/church" }
-//   },
-//   {
-//     lm: { value: "http://example.org/lm/3" },
-//     lmLabel: { value: "Rue de Rivoli" },
-//     lmType: { value: "http://example.org/type/street" }
-//   },
-//   {
-//     lm: { value: "http://example.org/lm/4" },
-//     lmLabel: { value: "Rue Mouffetard" },
-//     lmType: { value: "http://example.org/type/street" },
-//     relatumLabel: { value: "Quartier Latin" }
-//   },
-//   {
-//     lm: { value: "http://example.org/lm/5" },
-//     lmLabel: { value: "Tour Eiffel" },
-//     lmType: { value: "http://example.org/type/building" }
-//   },
-//   // doublon volontaire pour tester aggregation
-//   {
-//     lm: { value: "http://example.org/lm/1" },
-//     lmLabel: { value: "Église Saint-Paul" },
-//     lmType: { value: "http://example.org/type/church" },
-//     relatumLabel: { value: "Île-de-France" }
-//   }
-// ];
-
-// function displayLandmarksToSelectForEvolution(
-//   endpoint,
-//   namedGraphURI,
-//   lmTypeDropDown,
-//   lmDropDown,
-//   selectTypeMessage,
-//   selectLmMessage
-// ){
-//   var queryTypes = getQueryForLandmarkTypes(namedGraphURI);
-//   var queryLandmarks = getQueryForLandmarks(namedGraphURI);
-
-//   var dataMap = buildLandmarkDataMap(typeBindings, landmarkBindings);
-//   populateTypeDropdown(lmTypeDropDown, dataMap, selectTypeMessage);
-//   var lmSuggestionsDropDown = document.getElementById("landmarkSuggestions");
-//   setupLandmarkAutocomplete(dataMap, lmTypeDropDown, lmDropDown, lmSuggestionsDropDown);
-
-//   lmTypeDropDown.addEventListener("change", (e) => {
-//     populateLandmarkDropdown(
-//       lmDropDown,
-//       dataMap,
-//       e.target.value,
-//       selectLmMessage
-//     );
-//   });
-
-// }

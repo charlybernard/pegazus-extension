@@ -1,7 +1,7 @@
 function getSnapshotFromTimeStamp(graphDBRepositoryURI, timeStamp, timeCalendarURI, timeDelay, namedGraphURI, mapSettings){
   var [lowTimeStamp, highTimeStamp] = getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay) ;
   var queryValidLandmarksFromTime = getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lowTimeStamp, highTimeStamp) ;
-
+  
   runSparqlQuery(graphDBRepositoryURI, queryValidLandmarksFromTime).then(bindings => {
       var landmarksDesc = getInitLandmarksDescriptions(bindings);
       displayLandmarksFromGivenTime(graphDBRepositoryURI,  timeStamp, timeCalendarURI, namedGraphURI, landmarksDesc, mapSettings);
@@ -27,8 +27,8 @@ function getLowAndHighTimeStampFromDurationDelay(timeStamp, timeDelay){
 }
 
 function displayLandmarksFromGivenTime(graphDBRepositoryURI, timeStamp, timeCalendarURI, namedGraphURI, landmarksDescriptions, mapSettings){
-  var queryValidAttrVersFromTime = getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI) ;
-
+  var searchArea = '"POLYGON ((2.354438 48.859915, 2.354003 48.859516, 2.353676 48.858983, 2.35535 48.858518, 2.356213 48.859343, 2.354438 48.859915))"^^geo:wktLiteral' ;
+  var queryValidAttrVersFromTime = getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI, searchArea) ;
   runSparqlQuery(graphDBRepositoryURI, queryValidAttrVersFromTime).then(bindings => {
       displayLandmarksFromDescriptions(bindings, landmarksDescriptions, mapSettings);
     updateMapViewForSnapshotSelection(landmarksDescriptions, mapSettings, mapSettings.messages.noLandmarkToDisplay);
@@ -117,7 +117,7 @@ function getLandmarkDescription(lm, lmName){
 
 function updateLandmarksDescriptionsWithAttributeVersions(landmarks, binding){
   // landmarks = {lm1: {lm:lm1, name:lmName1, properties:{attr1:[vers1, vers2], attr2:[vers3, vers4]}, geometries:[geom1, geom2]}, lm2: {...}} 
-  var attrTypeNamespace = "http://rdf.geohistoricaldata.org/id/codes/address/attributeType/" ;
+  var attrTypeNamespace = prefixes.atype ;
   var versValue = binding.versValue.value;
   var lm = binding.lm.value;
   var attrType = binding.attrType.value;

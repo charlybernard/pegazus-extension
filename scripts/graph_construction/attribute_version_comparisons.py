@@ -40,7 +40,7 @@ def get_attribute_versions_to_compare(graphdb_url:URIRef, repository_name:str):
         }}
     """
 
-    results = gd.select_query_to_json(query, graphdb_url, repository_name)
+    results = gd.run_select_query_to_json(query, graphdb_url, repository_name)
 
     return results
 

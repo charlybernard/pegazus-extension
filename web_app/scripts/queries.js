@@ -141,8 +141,8 @@ function getQueryValidTimeForLandmark(landmarkURI, namedGraphURI){
   ?tStampAppBefore ?tPrecAppBefore ?tStampAppAfter ?tPrecAppAfter
   ?tStampDisBefore ?tPrecDisBefore ?tStampDisAfter ?tPrecDisAfter
   WHERE {
-    BIND(<` + namedGraphURI + `> AS ?g)
-    BIND (<` + landmarkURI + `> AS ?lm)
+    BIND(<${namedGraphURI}> AS ?g)
+    BIND (<${landmarkURI}> AS ?lm)
 
     ?changeApp a ?changeAppClass ; addr:isChangeType ctype:LandmarkAppearance ; addr:appliedTo ?lm ; addr:dependsOn ?evApp .
     ?changeDis a ?changeDisClass ; addr:isChangeType ctype:LandmarkDisappearance ; addr:appliedTo ?lm ; addr:dependsOn ?evDis .
@@ -168,8 +168,8 @@ function getQueryToInitTimeline(landmarkURI, namedGraphURI){
   ?tStampME ?tPrecME ?tStampO ?tPrecO
   ?tStampMEBefore ?tPrecMEBefore ?tStampMEAfter ?tPrecMEAfter ?tStampOBefore ?tPrecOBefore ?tStampOAfter ?tPrecOAfter
   WHERE {
-      BIND(<` + namedGraphURI + `> AS ?g)
-      BIND (<` + landmarkURI + `> AS ?lm)
+      BIND(<${namedGraphURI}> AS ?g)
+      BIND (<${landmarkURI}> AS ?lm)
       ?lm a addr:Landmark ; addr:hasAttribute [addr:isAttributeType ?attrType ; addr:hasAttributeVersion ?attrVers] .
       ?cgME addr:makesEffective ?attrVers ; addr:dependsOn ?evME.
       ?cgO addr:outdates ?attrVers ; addr:dependsOn ?evO.
@@ -201,9 +201,9 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
 
     var query = getPrefixesForQuery(prefixes) + `
     SELECT DISTINCT ?lm ?lmLabel ?relatumLabel ?existsForSure WHERE {
-        BIND(<` + namedGraphURI + `> AS ?g)
-        BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
-        BIND(<` + timeCalendarURI + `> AS ?timeCalendar)
+        BIND(<${namedGraphURI}> AS ?g)
+        BIND("${timeStamp}"^^xsd:dateTimeStamp AS ?timeStamp)
+        BIND(<${timeCalendarURI}> AS ?timeCalendar)
   
         GRAPH ?g {
             ?lm a addr:Landmark ; rdfs:label ?lmLabel .
@@ -263,25 +263,31 @@ function getValidLandmarksFromTime(timeStamp, timeCalendarURI, namedGraphURI, lo
     return query ;
   }
   
-  function getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI){
+  function getValidAttributeVersionsFromTime(timeStamp, timeCalendarURI, namedGraphURI, wktGeom=null){
     var query = getPrefixesForQuery(prefixes) + `
 SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
-    BIND(<` + namedGraphURI + `> AS ?g)
-    BIND("`+ timeStamp + `"^^xsd:dateTimeStamp AS ?timeStamp)
-    BIND(<` + timeCalendarURI + `> AS ?timeCalendar)
+    BIND(<${namedGraphURI}> AS ?g)
+    BIND("${timeStamp}"^^xsd:dateTimeStamp AS ?timeStamp)
+    BIND(<${timeCalendarURI}> AS ?timeCalendar)
+    
+    # BIND ?searchArea if a wkt geometry is provided (for spatial queries in the timeline) 
+    ${wktGeom ? `BIND(${wktGeom} AS ?searchArea)` : ""}
 
     GRAPH ?g {
         ?vers a addr:AttributeVersion .
         ?attr a addr:Attribute ; addr:isAttributeType ?attrType.
         ?lm addr:hasAttribute ?attr .
-        ?vers addr:versionValue ?versLabel .
+        ?vers addr:versionValue ?versValue .
         ?meCg addr:makesEffective ?vers ; addr:appliedTo ?attr ; addr:dependsOn ?meEv .
         ?oCg addr:outdates ?vers ; addr:appliedTo ?attr ; addr:dependsOn ?oEv .
     }
 
-    OPTIONAL {
-        ?vers addr:versionValue ?versValue .
-    }
+    # --- CONDITIONAL FILTER LOGIC ---
+    # We only filter if:
+    # 1. ?searchArea is bound
+    # 2. AND the attribute type is Geometry
+    # If ?searchArea is not bound, the condition (!BOUND) is true, the filter allows everything through.
+    FILTER( !BOUND(?searchArea) || ?attrType != atype:Geometry || geof:sfIntersects(?versValue, ?searchArea) )
 
     OPTIONAL {
         ?meEv addr:hasTime ?meTime .

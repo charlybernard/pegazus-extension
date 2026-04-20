@@ -2,7 +2,7 @@ from scripts.utils import file_management as fm
 from rdflib import Graph, Namespace, Literal, BNode, URIRef
 from rdflib.namespace import RDF
 import requests
-
+import time
 
 ## Build uris from `graphdb_url` and `repository_name`
 
@@ -114,7 +114,8 @@ def create_repository(graphdb_url:URIRef, repository_name:str, repository_config
     elif ruleset_name is not None:
         add_ruleset_from_name(graphdb_url, repository_name, ruleset_name)
 
-    change_ruleset(graphdb_url, repository_name, ruleset_name)
+    if ruleset_name is not None:
+        change_ruleset(graphdb_url, repository_name, ruleset_name)
 
 def create_repository_from_config_file(graphdb_url:URIRef, local_config_file:str):
     url = get_rest_respositories_uri(graphdb_url)
@@ -242,6 +243,31 @@ def reinitialize_repository(graphdb_url:URIRef, repository_name:str, repository_
         disable_same_as (bool, optional): Whether to disable sameAs propagation (default is False).
         check_for_inconsistencies (bool, optional): Whether to check for inconsistencies (default is False).
         allow_removal (bool, optional): Whether to allow removal of the repository before recreation (default is True).
+    
+    Examples:
+        # Reinitialize a repository with default settings
+        reinitialize_repository(
+            URIRef("http://localhost:7200"),
+            "my_repo",
+            "/path/to/config.ttl"
+        )
+        
+        # Reinitialize with a custom ruleset file
+        reinitialize_repository(
+            URIRef("http://localhost:7200"),
+            "my_repo",
+            "/path/to/config.ttl",
+            ruleset_file="/path/to/rules.txt"
+        )
+        
+        # Reinitialize with built-in ruleset
+        reinitialize_repository(
+            URIRef("http://localhost:7200"),
+            "my_repo",
+            "/path/to/config.ttl",
+            ruleset_name="rdfsplus-optimized",
+            disable_same_as=True
+        )
     """
 
     # This action is done only if the repository already exists
@@ -341,7 +367,7 @@ def remove_named_graph_from_query(graphdb_url:URIRef, repository_name:str, named
     }}
     """
     
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 def remove_named_graphs_from_query(graphdb_url:URIRef, repository_name:str, named_graph_names_list:list[str]):
     """
@@ -372,7 +398,7 @@ def remove_named_graphs_from_query(graphdb_url:URIRef, repository_name:str, name
     }}
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 ## Select or extract data within graph
 
@@ -408,76 +434,116 @@ def export_data_from_repository(graphdb_url:URIRef, repository_name:str, out_ttl
     r = requests.get(url, params=params, headers=headers)
     fm.write_file(r.text, out_ttl_file)
 
-def select_query_to_txt_file(query:str, graphdb_url:URIRef, repository_name:str, res_query_file:str):
+class GraphDBMemoryError(Exception):
+    """Custom exception for GraphDB memory exhaustion."""
+    pass
+
+def execute_sparql_query(query, graphdb_url, repository_name, mode="select", accept_header=None, stop_on_memory_error=False):
     """
-    Execute a SELECT query on a repository and export the result to a text file.
+    Common framework to execute SPARQL queries (SELECT or UPDATE) on a GraphDB repository.
 
     Parameters:
-    - query (str): The SPARQL SELECT query to execute.
-    - graphdb_url (URIRef): The base URL of the GraphDB instance.
-    - repository_name (str): The name of the repository to execute the query on.
-    - res_query_file (str): The path to the text file where the query result will be saved.
+    - query (str): The SPARQL query string (SELECT, INSERT, DELETE, etc.).
+    - graphdb_url (str/URIRef): The base URL of the GraphDB instance.
+    - repository_name (str): The target repository name.
+    - mode (str): Execution mode ("select" or "update").
+    - accept_header (str, optional): The MIME type for the response format.
+    - stop_on_memory_error (bool): If True, raises a GraphDBMemoryError and stops execution 
+                                   when memory limits are reached. Defaults to False.
 
     Returns:
-    - None: The function executes the query and exports the result to the specified text file.
-    """
+    - requests.Response: The response object if the request is successful.
+    - None: If an error occurs and stop_on_memory_error is False.
 
-    url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
-    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded")
-    data = {"query":query}
-    r = requests.post(url, data=data, headers=headers)
-    fm.write_file(r.text, res_query_file)
-
-def select_query_to_json(query:str, graphdb_url:URIRef, repository_name:str):
-    """
-    Execute a SELECT query on a repository and return the result as a JSON object.
-
-    Parameters:
-    - query (str): The SPARQL SELECT query to execute.
-    - graphdb_url (URIRef): The base URL of the GraphDB instance.
-    - repository_name (str): The name of the repository to execute the query on.
-
-    Returns:
-    - dict: The result of the query as a JSON object, or None if an error occurs.
-
-    Notes:
-    - If the query fails with a 400 status code, an error message will be printed and None will be returned.
+    Raises:
+    - GraphDBMemoryError: If stop_on_memory_error is True and the server is low on memory.
     """
     
-    url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
-    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded", accept="application/json")
-    data = {"query":query}
-    r = requests.post(url, data=data, headers=headers)
-    
-    if r.status_code == 400:
-        print(r.content)
-        return None
+    if mode == "update":
+        url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip()
+        data = {"update": query}
     else:
-        return r.json()
+        url = get_repository_uri_from_name(graphdb_url, repository_name).strip()
+        data = {"query": query}
+
+    headers = get_http_headers_dictionary(
+        content_type="application/x-www-form-urlencoded", 
+        accept=accept_header
+    )
+
+    try:
+        r = requests.post(url, data=data, headers=headers)
+        
+        # Check for GraphDB specific memory limit error
+        if r.status_code == 500 and "NotEnoughMemory" in r.text:
+            error_msg = (
+                "Critical Error: Insufficient Heap Memory. Please adjust the "
+                "'graphdb.query.memory.threshold' setting (percentage of RAM between 0-100) "
+                "in your GraphDB configuration to allow more memory for this operation."
+            )
+            
+            if stop_on_memory_error:
+                raise GraphDBMemoryError(error_msg)
+            else:
+                print(error_msg)
+                return None
+
+        r.raise_for_status()
+        return r
+        
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP Error: {e}")
+        if r is not None and r.status_code == 400:
+            print(f"Error Details: {r.text}")
+        return None
+        
+    except GraphDBMemoryError as e:
+        # Re-raise the custom memory error to stop the script
+        raise e
+        
+    except Exception as e:
+        print(f"Connection or unexpected error: {e}")
+        return None
+
+def run_select_query_to_txt_file(query, graphdb_url, repository_name, res_query_file, stop_on_memory_error=False):
+    r = execute_sparql_query(query, graphdb_url, repository_name, stop_on_memory_error=stop_on_memory_error)
+    if r:
+        fm.write_file(r.text, res_query_file)
+
+
+def run_select_query_to_json(query, graphdb_url, repository_name, stop_on_memory_error=False):
+    r = execute_sparql_query(query, graphdb_url, repository_name, accept_header="application/json", stop_on_memory_error=stop_on_memory_error)
+    if r:
+        try:
+            return r.json()
+        except ValueError:
+            print("Erreur : La réponse n'est pas un JSON valide.")
+    return None
 
 ## Update graph with query or ttl file
 
-def update_query(query:str, graphdb_url:URIRef, repository_name:str):
+def run_update_query(query, graphdb_url, repository_name, stop_on_memory_error=False):
+    return execute_sparql_query(query, graphdb_url, repository_name, mode="update", stop_on_memory_error=stop_on_memory_error)
+
+
+def run_multiple_update_queries(queries_list:list[str], graphdb_url:URIRef, repository_name:str, stop_on_memory_error=False):
     """
-    Send an update query (INSERT, INSERT DATA, DELETE, DELETE DATA) to a repository to update it.
+    Send multiple update queries to a repository to update it.
 
     Parameters:
-    - query (str): The SPARQL update query (INSERT, DELETE, etc.) to execute.
+    - queries_list (list of str): A list of SPARQL update queries to execute.
     - graphdb_url (URIRef): The base URL of the GraphDB instance.
-    - repository_name (str): The name of the repository to send the update query to.
+    - repository_name (str): The name of the repository to send the update queries to.
 
     Returns:
-    - Response object: The response object returned by the requests.post call, which contains the status code and content of the request.
+    - None: This function iterates through the list of queries and calls `update_query` for each one.
 
     Notes:
-    - This function sends an update query to the specified repository to modify its data, such as inserting or deleting triples.
+    - This function allows you to execute multiple SPARQL update queries in sequence on the specified repository.
     """
-
-    url = get_repository_uri_statements_from_name(graphdb_url, repository_name).strip()
-    headers = get_http_headers_dictionary(content_type="application/x-www-form-urlencoded")
-    data = {"update":query}
-    r = requests.post(url, data=data, headers=headers)
-    return r
+    
+    for query in queries_list:
+        run_update_query(query, graphdb_url, repository_name, stop_on_memory_error=stop_on_memory_error)
 
 def import_ttl_file_in_graphdb(graphdb_url:URIRef, repository_name:str, ttl_file:str, named_graph_name:str=None, named_graph_uri:URIRef=None):
     """
@@ -643,7 +709,7 @@ def reinfer_repository(graphdb_url:URIRef, repository_name:str):
     INSERT DATA { [] sys:reinfer [] }
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 def turn_inference_off(graphdb_url:URIRef, repository_name:str):
     query = """
@@ -651,7 +717,7 @@ def turn_inference_off(graphdb_url:URIRef, repository_name:str):
     INSERT DATA { [] sys:turnInferenceOff [] }
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 
 def turn_inference_on(graphdb_url:URIRef, repository_name:str):
@@ -660,7 +726,7 @@ def turn_inference_on(graphdb_url:URIRef, repository_name:str):
     INSERT DATA { [] sys:turnInferenceOn [] }
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 def add_ruleset_from_file(graphdb_url, repository_name, ruleset_file, ruleset_name):
     query  = f"""
@@ -670,7 +736,7 @@ def add_ruleset_from_file(graphdb_url, repository_name, ruleset_file, ruleset_na
     }}
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 def add_ruleset_from_name(graphdb_url:URIRef, repository_name:str, ruleset_name:str):
     query  = f"""
@@ -680,7 +746,7 @@ def add_ruleset_from_name(graphdb_url:URIRef, repository_name:str, ruleset_name:
     }}
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 def change_ruleset(graphdb_url:URIRef, repository_name:str, ruleset_name:str):
     query = f"""
@@ -690,7 +756,7 @@ def change_ruleset(graphdb_url:URIRef, repository_name:str, ruleset_name:str):
     }}
     """
 
-    update_query(query, graphdb_url, repository_name)
+    run_update_query(query, graphdb_url, repository_name)
 
 ## Auxiliary functions
 

@@ -127,8 +127,7 @@ def initialize_missing_changes_and_events_for_landmarks(graphdb_url, repository_
     """
 
     queries = [query1, query2, query3a, query3b]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 
     gd.remove_named_graph_from_uri(tmp_named_graph_uri)
@@ -185,8 +184,7 @@ def create_changes_for_versions_with_valid_time(graphdb_url:URIRef, repository_n
     """
 
     queries = [query1, query2]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 
 def get_elementary_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
@@ -292,8 +290,7 @@ def get_elementary_changes(graphdb_url:URIRef, repository_name:str, facts_named_
     """
 
     queries = [query1, query2, query3, query4]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
     
 def get_elementary_versions(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Create versions between two successive changes (one makes effective the version while the other outdates it)
@@ -353,8 +350,7 @@ def get_elementary_versions(graphdb_url:URIRef, repository_name:str, facts_named
     """
 
     queries = [query1, query2, query3]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 def get_elementary_change_traces(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Link existing attribute changes with created one when the are related
@@ -374,7 +370,7 @@ def get_elementary_change_traces(graphdb_url:URIRef, repository_name:str, facts_
     }}
     """
 
-    gd.update_query(query, graphdb_url, repository_name)
+    gd.run_update_query(query, graphdb_url, repository_name)
 
 # def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
 
@@ -423,7 +419,7 @@ def get_elementary_change_traces(graphdb_url:URIRef, repository_name:str, facts_
 
 #     queries = [query1, query2]
 #     for query in queries:
-#         gd.update_query(query, graphdb_url, repository_name)
+#         gd.run_update_query(query, graphdb_url, repository_name)
 
 def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     # Link existing attribute versions related to changes with created one when the are related :
@@ -470,8 +466,7 @@ def get_elementary_version_traces(graphdb_url:URIRef, repository_name:str, facts
     """
 
     queries = [query1, query2]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 def get_elementary_versions_and_changes(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
     create_changes_for_versions_with_valid_time(graphdb_url, repository_name, tmp_named_graph_uri)
@@ -570,8 +565,7 @@ def remove_empty_attribute_versions(graphdb_url:URIRef, repository_name:str, tmp
     """
 
     queries = [query1, query2]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
     # Remove all triples where resources r for which it exists a triple <r addr:toRemove "true"^^xsd:boolean> is in these triples
     # In this case, remove selected versions and their related changes which are not traced
@@ -695,8 +689,7 @@ def to_be_merged_with(graphdb_url:URIRef, repository_name:str, facts_named_graph
 
     # # #############################################################################
 
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 
 def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
@@ -788,8 +781,7 @@ def merge_attribute_versions_to_be_merged(graphdb_url:URIRef, repository_name:st
         """
 
     queries = [query1, query2, query3]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 
 def merge_similar_successive_attribute_versions(graphdb_url:URIRef, repository_name:str, facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
@@ -847,7 +839,7 @@ def create_events_and_times_from_attribute_changes(graphdb_url:URIRef, repositor
     # if facts_named_graph_uri.n3() == "<http://localhost:7200/repositories/addresses_from_factoids/rdf-graphs/facts_with_fragmentary_sn_states>":
     #     queries = [query1, query2]
     #     for query in queries:
-    #         gd.update_query(query, graphdb_url, repository_name)
+    #         gd.run_update_query(query, graphdb_url, repository_name)
 
     #     print("----")
     #     print(0/0)
@@ -892,8 +884,7 @@ def create_events_and_times_from_attribute_changes(graphdb_url:URIRef, repositor
     """
 
     queries = [query1, query2, query3]
-    for query in queries:
-        gd.update_query(query, graphdb_url, repository_name)
+    gd.run_multiple_update_queries(queries, graphdb_url, repository_name)
 
 def get_attribute_version_evolution_from_elementary_elements(graphdb_url:URIRef, repository_name:str,
                                                              facts_named_graph_uri:URIRef, inter_sources_name_graph_uri:URIRef, tmp_named_graph_uri:URIRef):
