@@ -212,12 +212,14 @@ def create_graph_from_osm(osm_file:str, osm_hn_file:str, valid_time:dict, source
 
 ##################################################### Ville de Paris ##########################################################
 
-def create_graph_from_ville_paris(vpa_file:str, vpc_file:str, vpa_valid_time:dict, vpa_source:dict, vpc_source:dict, lang:str):
+def create_graph_from_ville_paris(vpa_file:str, vpc_file:str,
+                                  vpa_valid_time:dict, vpa_source:dict, vpc_source:dict, lang:str,
+                                  vpa_file_format:str="csv", vpc_file_format:str="csv"):
     vpa_pref, vpa_ns = "vdpa", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-emprises-voies-actuelles/records/")
     vpc_pref, vpc_ns = "vdpc", Namespace("https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/denominations-des-voies-caduques/records/")
 
-    state_vpa_description, event_vpa_description = cfd.create_state_and_event_description_for_ville_paris_actuelles(vpa_file, vpa_valid_time, vpa_source, lang, vpa_ns)
-    event_vpc_description = cfd.create_event_description_for_ville_paris_caduques(vpc_file, vpc_source, lang, vpc_ns)
+    state_vpa_description, event_vpa_description = cfd.create_state_and_event_description_for_ville_paris_actuelles(vpa_file, vpa_valid_time, vpa_source, lang, vpa_ns, file_format=vpa_file_format)
+    event_vpc_description = cfd.create_event_description_for_ville_paris_caduques(vpc_file, vpc_source, lang, vpc_ns, file_format=vpc_file_format)
 
     # Creation of a basic graph with rdflib
     g = sej.create_graph_from_state_descriptions(state_vpa_description)

@@ -1,5 +1,6 @@
 import json
 import re
+from google_crc32c import value
 from rdflib import Graph, Literal, URIRef, Namespace
 from scripts.graph_construction.namespaces import NameSpaces
 from scripts.utils import file_management as fm
@@ -265,32 +266,30 @@ def create_arrondissement_description_for_osm(arrdt_label:str, arrdt_id:str, arr
 
 ##################################################### Ville de Paris ##########################################################
 
-def create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid_time:dict, source:dict, lang, vp_ns:Namespace):
+def create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid_time:dict, source:dict, lang, vp_ns:Namespace, file_format:str="csv"):
     events_desc = []
     landmarks_desc = []
     relations_desc = []
     districts = {} # {"Buttes-aux-Cailles":"12345678-1234-5678-1234-685544777"}
     arrdts = {} # {"13e":"12345678-1234-5678-1234-567812345678"}
 
-    # File columns
-    id_col = "Identifiant"
-    name_col = "Dénomination complète minuscule"
-    start_time_col = "Date de l'arrété"
-    arrdt_col = "Arrondissement"
-    district_col = "Quartier"
-    geom_col = "geo_shape"
-
-    content = fm.read_csv_file_as_dict(vpa_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+    if file_format == "csv":
+        id_col, name_col, start_time_col, arrdt_col, district_col, geom_col = select_ville_paris_actuelles_columns(file_format)
+        content = fm.read_csv_file_as_dict(vpa_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+    elif file_format == "json":
+        id_col, name_col, start_time_col, arrdt_col, district_col, geom_col = select_ville_paris_actuelles_columns(file_format)
+        content = fm.read_json_file(vpa_file, encoding='utf-8-sig')
+        content = {feature.get("properties", {}).get(id_col): feature for feature in content.get("features", [])}
 
     for value in content.values():
-        th, th_districts, th_arrdts = create_landmarks_descriptions_for_ville_paris_actuelles_line(value, lang, vp_ns,
-                                                                                                   id_col, name_col, arrdt_col, district_col, geom_col,
-                                                                                                   districts, arrdts)
-        start_time_stamp = value.get(start_time_col)
-        if start_time_stamp is not None and start_time_stamp != "":
-            th_label = value.get(name_col)
-            provenance = {"uri":str(vp_ns[value.get(id_col)])}
-            ev = create_landmark_appearance_event_for_ville_paris(th_label, lang, provenance, start_time_stamp)
+        th_id, th_label, th_start_time_stamp, th_geom, th_arrdt_labels, th_district_labels = extract_thoroughfare_values_for_ville_paris_actuelles(value, id_col, name_col, start_time_col, arrdt_col, district_col, geom_col, file_format)
+        th, th_districts, th_arrdts = create_landmarks_descriptions_for_ville_paris_actuelles_line(
+            th_id, th_label, th_geom, th_arrdt_labels, th_district_labels,
+            lang, vp_ns, districts, arrdts
+        )
+        if th_start_time_stamp is not None and th_start_time_stamp != "":
+            provenance = {"uri":str(vp_ns[th_id])}
+            ev = create_landmark_appearance_event_for_ville_paris(th_label, lang, provenance, th_start_time_stamp)
             events_desc.append(ev)
     
         add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(landmarks_desc, th, th_districts, th_arrdts, districts, arrdts)
@@ -308,26 +307,55 @@ def create_state_and_event_description_for_ville_paris_actuelles(vpa_file, valid
 
     return states_description, events_description
 
-def create_event_description_for_ville_paris_caduques(vpc_file:str, source:dict, lang:str, vp_ns:Namespace):
+def create_event_description_for_ville_paris_caduques(vpc_file: str, source: dict, lang: str, vp_ns: Namespace, file_format: str = "csv"):
+    """
+    Create event descriptions for obsolete (caduques) Paris thoroughfares.
+
+    This function processes a dataset of discontinued or modified Paris streets
+    and generates appearance and disappearance events based on their validity
+    time intervals.
+
+    For each feature:
+    - An appearance event is created if a start time exists.
+    - A disappearance event is created if an end time exists.
+
+    Parameters
+    ----------
+    vpc_file : str
+        Path to the input file containing the dataset (CSV or JSON).
+    source : dict
+        Provenance information associated with the dataset.
+    lang : str
+        Language code used for generating event descriptions.
+    vp_ns : Namespace
+        Namespace used to generate URIs for entities.
+    file_format : str, optional
+        Input format of the file ("csv" or "json"), by default "csv".
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - "events": list of generated event descriptions
+        - "source": optional provenance information if provided
+    """
+
     events_desc = []
 
     # File columns
-    id_col = "Identifiant"
-    name_col = "Dénomination complète minuscule"
-    start_time_col = "Date de l'arrêté"
-    end_time_col = "Date de caducité"
-    arrdt_col = "Arrondissement"
-    district_col = "Quartier"
+    id_col, name_col, start_time_col, end_time_col, arrdt_col, district_col = select_ville_paris_caduques_columns(file_format)
 
-    content = fm.read_csv_file_as_dict(vpc_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+    if file_format == "csv":
+        content = fm.read_csv_file_as_dict(vpc_file, id_col=id_col, delimiter=";", encoding='utf-8-sig')
+    elif file_format == "json":
+        content = fm.read_json_file(vpc_file, encoding='utf-8-sig')
+        content = {feature.get("properties", {}).get(id_col): feature for feature in content.get("features", [])}
 
     # Create events descriptions
     for value in content.values():
+        th_id, lm_label, start_time_stamp, end_time_stamp, th_arrdt_labels, th_district_labels = extract_thoroughfare_values_for_ville_paris_caduques(value, id_col, name_col, start_time_col, end_time_col, arrdt_col, district_col, file_format="csv")
         # :warning: if start_time_stamp and end_time_stamp do not exist, no event will not be created
-        lm_label = value.get(name_col)
-        provenance = {"uri":str(vp_ns[value.get(id_col)])}
-        start_time_stamp = value.get(start_time_col)
-        end_time_stamp = value.get(end_time_col)
+        provenance = {"uri":str(vp_ns[th_id])}
         if start_time_stamp is not None and start_time_stamp != "":
             ev_desc_app = create_landmark_appearance_event_for_ville_paris(lm_label, lang, provenance, start_time_stamp)
             events_desc.append(ev_desc_app)
@@ -341,7 +369,37 @@ def create_event_description_for_ville_paris_caduques(vpc_file:str, source:dict,
 
     return description
 
-def add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(landmarks_desc, th, th_districts, th_arrdts, districts, arrdts):
+def add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(
+    landmarks_desc, th, th_districts, th_arrdts, districts, arrdts
+):
+    """
+    Append landmark, district, and arrondissement descriptions into a global list
+    and update mapping dictionaries.
+
+    This function aggregates semantic descriptions of a thoroughfare and its
+    related administrative entities (districts and arrondissements). It also
+    updates the provided dictionaries with the corresponding identifiers.
+
+    Parameters
+    ----------
+    landmarks_desc : list
+        List of accumulated landmark descriptions to be extended.
+    th : list
+        Thoroughfare description in the form [description, id].
+    th_districts : list of lists
+        District descriptions in the form [desc, uuid, label].
+    th_arrdts : list of lists
+        Arrondissement descriptions in the form [desc, uuid, label].
+    districts : dict
+        Dictionary mapping district labels to UUIDs (updated in-place).
+    arrdts : dict
+        Dictionary mapping arrondissement labels to UUIDs (updated in-place).
+
+    Returns
+    -------
+    None
+        The function modifies input lists and dictionaries in-place.
+    """
     landmarks_desc.append(th[0])
 
     for district in th_districts:
@@ -353,14 +411,209 @@ def add_descriptions_in_landmarks_desc_for_ville_paris_actuelles_line(landmarks_
             arrdts[arrdt[2]] = arrdt[1]
             landmarks_desc.append(arrdt[0])
 
-def create_landmarks_descriptions_for_ville_paris_actuelles_line(value, lang, vp_ns,
-                                                                id_col, name_col, arrdt_col, district_col, geom_col,
-                                                                districts, arrdts):
-    th_id = value.get(id_col)
-    th_label = value.get(name_col)
-    th_geom = value.get(geom_col)
-    th_arrdt_labels = sp.split_cell_content(value.get(arrdt_col), sep=",")
-    th_district_labels = sp.split_cell_content(value.get(district_col), sep=",")
+
+def extract_thoroughfare_values_for_ville_paris_actuelles(value, id_col, name_col, start_time_col, arrdt_col, district_col, geom_col, file_format="csv"):
+    """
+    Extract the values of a thoroughfare from a Ville de Paris 'actuelles' dataset
+    (CSV or JSON/GeoJSON format).
+
+    For JSON, attributes are stored in the "properties" field, while geometry is
+    stored at the root of the feature.
+
+    Parameters
+    ----------
+    value : dict
+        A record (CSV row or GeoJSON feature).
+    id_col : str
+        Column name for the identifier.
+    name_col : str
+        Column name for the label.
+    start_time_col : str
+        Column name for the start time of the thoroughfare.
+    arrdt_col : str
+        Column name for arrondissement(s).
+    district_col : str
+        Column name for district(s).
+    geom_col : str
+        Column name for geometry.
+    file_format : str
+        Input format ("csv" or "json").
+
+    Returns
+    -------
+    tuple
+        (th_id, th_label, th_start_time_stamp, th_geom, th_arrdt_labels, th_district_labels)
+    """
+
+    th_id, th_label, th_start_time_stamp, th_geom, th_arrdt_labels, th_district_labels = None, None, None, None, [], []
+
+    if file_format == "csv":
+        attrs = value
+        th_id = attrs.get(id_col)
+        th_label = attrs.get(name_col)
+        th_start_time_stamp = attrs.get(start_time_col)
+        th_geom = value.get(geom_col)
+        if isinstance(th_geom, str):
+            th_geom = json.loads(th_geom)
+        th_arrdt_labels = sp.split_cell_content(attrs.get(arrdt_col), sep=",")
+        th_district_labels = sp.split_cell_content(attrs.get(district_col), sep=",")
+
+    elif file_format == "json":
+        attrs = value.get("properties", {})
+        th_id = attrs.get(id_col)
+        th_label = attrs.get(name_col)
+        th_start_time_stamp = attrs.get(start_time_col)
+        th_geom = value.get(geom_col)
+        th_arrdt_labels = attrs.get(arrdt_col, [])
+        th_district_labels = attrs.get(district_col, [])
+    
+    return th_id, th_label, th_start_time_stamp, th_geom, th_arrdt_labels, th_district_labels
+
+def extract_thoroughfare_values_for_ville_paris_caduques(value, id_col, name_col, start_time_col, end_time_col, arrdt_col, district_col, file_format="csv"):
+    """
+    Extract the values of a thoroughfare from a Ville de Paris 'caduques' dataset
+    (CSV or JSON/GeoJSON format).
+
+    For JSON, attributes are stored in the "properties" field, while geometry is
+    stored at the root of the feature.
+
+    Parameters
+    ----------
+    value : dict
+        A record (CSV row or GeoJSON feature).
+    id_col : str
+        Column name for the identifier.
+    name_col : str
+        Column name for the label.
+    start_time_col : str
+        Column name for the start time of the thoroughfare.
+    end_time_col : str
+        Column name for the end time of the thoroughfare.
+    arrdt_col : str
+        Column name for arrondissement(s).
+    district_col : str
+        Column name for district(s).
+    file_format : str
+        Input format ("csv" or "json").
+
+    Returns
+    -------
+    tuple
+        (th_id, th_label, th_start_time_stamp, th_end_time_stamp, th_arrdt_labels, th_district_labels)
+    """
+
+    th_id, th_label, th_start_time_stamp, th_end_time_stamp, th_arrdt_labels, th_district_labels = None, None, None, None, [], []
+    
+    # Select correct attribute container
+    if file_format == "csv":
+        attrs = value
+        th_id = attrs.get(id_col)
+        th_label = attrs.get(name_col)
+        th_start_time_stamp = attrs.get(start_time_col)
+        th_end_time_stamp = attrs.get(end_time_col)
+        th_arrdt_labels = sp.split_cell_content(attrs.get(arrdt_col), sep=",")
+        th_district_labels = sp.split_cell_content(attrs.get(district_col), sep=",")
+
+    elif file_format == "json":
+        attrs = value.get("properties", {})
+        th_id = attrs.get(id_col)
+        th_label = attrs.get(name_col)
+        th_start_time_stamp = attrs.get(start_time_col)
+        th_end_time_stamp = attrs.get(end_time_col)
+        th_arrdt_labels = attrs.get(arrdt_col, [])
+        th_district_labels = attrs.get(district_col, [])
+    
+    return th_id, th_label, th_start_time_stamp, th_end_time_stamp, th_arrdt_labels, th_district_labels
+
+def select_ville_paris_actuelles_columns(file_format:str):
+    """
+    Select the columns to extract from the file according to its format (csv or json)
+    args:        file_format: the format of the file (csv or json)
+    returns: a tuple containing the columns to extract (id_col, name_col, start_time_col, arrdt_col, district_col, geom_col)
+    """
+    id_col, name_col, start_time_col, arrdt_col, district_col, geom_col = None, None, None, None, None, None
+
+    if file_format == "csv":
+        id_col = "Identifiant"
+        name_col = "Dénomination complète minuscule"
+        start_time_col = "Date de l'arrété"
+        arrdt_col = "Arrondissement"
+        district_col = "Quartier"
+        geom_col = "geo_shape"
+    elif file_format == "json":
+        id_col = "id"
+        name_col = "typo_min"
+        start_time_col = "date_arret"
+        arrdt_col = "arrdt"
+        district_col = "quartier"
+        geom_col = "geometry"
+
+    return id_col, name_col, start_time_col, arrdt_col, district_col, geom_col
+
+def select_ville_paris_caduques_columns(file_format:str):
+    id_col, name_col, start_time_col, end_time_col, arrdt_col, district_col = None, None, None, None, None, None
+
+    if file_format == "csv":
+        id_col = "Identifiant"
+        name_col = "Dénomination complète minuscule"
+        start_time_col = "Date de l'arrêté"
+        end_time_col = "Date de caducité"
+        arrdt_col = "Arrondissement"
+        district_col = "Quartier"
+    elif file_format == "json":
+        id_col = "id"
+        name_col = "typo_min"
+        start_time_col = "date_arret"
+        end_time_col = "date_voie_ancienne"
+        arrdt_col = "arrdt"
+        district_col = "quartier"
+
+    return id_col, name_col, start_time_col, end_time_col, arrdt_col, district_col
+
+def create_landmarks_descriptions_for_ville_paris_actuelles_line(
+    th_id, th_label, th_geom, th_arrdt_labels, th_district_labels,
+    lang, vp_ns, districts, arrdts
+):
+    """
+    Create semantic descriptions for a Paris thoroughfare and its related administrative entities.
+
+    This function builds a description of a given thoroughfare (street) in Paris,
+    along with associated districts and arrondissements. If a district or
+    arrondissement does not already exist in the provided dictionaries, a new
+    description is created.
+
+    Parameters
+    ----------
+    th_id : str
+        Unique identifier of the thoroughfare.
+    th_label : str
+        Name (label) of the thoroughfare.
+    th_geom : any
+        Geometry of the thoroughfare (e.g., GeoJSON or WKT).
+    th_arrdt_labels : list of str
+        List of arrondissement labels associated with the thoroughfare.
+    th_district_labels : list of str
+        List of district labels associated with the thoroughfare.
+    lang : str
+        Language code used for labels and descriptions.
+    vp_ns : str
+        Namespace used for generating URIs.
+    districts : dict
+        Dictionary mapping district labels to their existing UUIDs.
+    arrdts : dict
+        Dictionary mapping arrondissement labels to their existing UUIDs.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - [th_desc, th_id] : list
+            The description of the thoroughfare and its identifier.
+        - th_districts : list of lists
+            Each element is [district_desc, district_uuid, district_label].
+        - th_arrdts : list of lists
+            Each element is [arrdt_desc, arrdt_uuid, arrdt_label].
+    """
 
     th_desc = create_thoroughfare_description_for_ville_paris(th_label, th_id, th_geom, lang, vp_ns)
 
@@ -375,7 +628,9 @@ def create_landmarks_descriptions_for_ville_paris_actuelles_line(value, lang, vp
     for lab in th_arrdt_labels:
         arrdt_uuid, arrdt_desc = arrdts.get(lab), None
         if arrdt_uuid is None:
-            arrdt_uuid, arrdt_desc = create_arrondissement_description_for_ville_paris(lab, lang, vp_ns)
+            arrdt_uuid, arrdt_desc = create_arrondissement_description_for_ville_paris(
+                lab, lang, vp_ns
+            )
         th_arrdts.append([arrdt_desc, arrdt_uuid, lab])
 
     return [th_desc, th_id], th_districts, th_arrdts
@@ -394,7 +649,7 @@ def create_thoroughfare_description_for_ville_paris(th_label:str, th_id:str, th_
     th_type = "thoroughfare"
     th_attrs = {"name":di.create_landmark_attribute_version_description(th_label, lang=lang)}
     if th_geom is not None:
-        th_wkt_geom = gp.from_geojson_to_wkt(json.loads(th_geom))
+        th_wkt_geom = gp.from_geojson_to_wkt(th_geom)
         th_attrs["geometry"] = di.create_landmark_attribute_version_description(th_wkt_geom, datatype="wkt_literal")
     th_provenance = {"uri":str(vp_ns[th_id])}
     th_desc = di.create_landmark_version_description(th_id, th_label, th_type, lang, th_attrs, th_provenance)

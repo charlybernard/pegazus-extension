@@ -7,6 +7,15 @@ def remove_spaces(value:str):
     return value.replace(" ", "")
 
 def split_cell_content(cell_content:str, sep:str=",", remove_spaces:bool=True):
+    """
+    Split the content of a cell into a list of elements, using the specified separator. Optionally remove spaces around the elements.
+    args:
+        cell_content: the content of the cell to split
+        sep: the separator to use for splitting the cell content (default: ",")
+        remove_spaces: whether to remove spaces around the elements (default: True)
+    returns:
+        A list of elements obtained by splitting the cell content.
+    """
     if cell_content == "" or cell_content is None:
         return []
     
@@ -16,6 +25,15 @@ def split_cell_content(cell_content:str, sep:str=",", remove_spaces:bool=True):
     return elems
 
 def remove_abbreviations_from_dict(name:str, abbreviations_dict:dict, entire_match:bool=False):
+    """
+    Remove abbreviations from a name using a dictionary of abbreviations and their replacements. The function can be configured to replace only entire matches or also partial matches.
+    args:
+        name: the name from which to remove abbreviations
+        abbreviations_dict: a dictionary where keys are abbreviations (or regex patterns) to replace and values are the corresponding replacements
+        entire_match: whether to replace only entire matches (default: False). If True, the function will only replace abbreviations that match the entire name. If False, it will replace all occurrences of the abbreviations in the name, even if they are part of a larger word.
+    returns:
+        The name with abbreviations replaced according to the provided dictionary.
+    """
     normalized_name = name
     for abbre, val in abbreviations_dict.items():
         if entire_match:

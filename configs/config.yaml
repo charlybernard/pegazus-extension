@@ -1,0 +1,31 @@
+# Technical configuration for notebooks and internal processes.
+# This file contains constants that users rarely need to modify.
+
+paths:
+  # Folder created during the process
+  tmp_folder: "../tmp_files"
+  # Filenames for internal/generated files
+  local_config_file: "config_repo.ttl"
+  pref_hidden_labels_file: "pref_hidden_labels.ttl"
+  comparisons_file: "comparisons.ttl"
+
+named_graphs:
+  # Internal identifiers for GraphDB named graphs
+  ontology: "ontology"
+  facts: "facts"
+  inter_sources: "inter_sources"
+  comparisons: "comparisons"
+  labels: "labels"
+  temporary: "temporary"
+  metadata: "metadata"
+
+labels:
+  # Metadata for the UI or logs
+  facts_label: "Faits construits à partir des sources"
+  lang: "fr"
+
+comparison_settings:
+  # Geometric comparison parameters
+  geom_similarity_coef: 0.85
+  geom_buffer_radius: 10
+  geom_crs_uri: "http://www.opengis.net/def/crs/EPSG/0/2154"

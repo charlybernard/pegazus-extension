@@ -1,6 +1,6 @@
 {
 "type": "FeatureCollection",
-"name": "cadastre_shd",
+"name": "cadastre_paris_1807_adresses",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2154" } },
 "features": [
 { "type": "Feature", "properties": { "fid": 1, "PREFIXE 1": "RUE", "PREFIXE 2": null, "NOM_RUE": "COQ-HÉRON", "NUMERO TXT": "2", "NOM_SAISI": "RUE COQ-HÉRON", "NOM_NOTE": "Rue du Coq-Héron", "EXP_GEO": 1, "INTERP": 0, "NUMEROTATI": 1, "NUM_QUART": 10 }, "geometry": { "type": "Point", "coordinates": [ 651724.83746487996541, 6862878.440143327228725 ] } },

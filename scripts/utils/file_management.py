@@ -11,8 +11,8 @@ def read_file(filename:str, split_lines=False):
     file.close()
     return file_content
 
-def read_json_file(filename:str):
-    file = open(filename)
+def read_json_file(filename:str, encoding:str='utf-8'):
+    file = open(filename, 'r', encoding=encoding)
     data = json.load(file)
     file.close()
     return data
@@ -21,6 +21,10 @@ def write_file(content:str,filename:str):
     file = open(filename, "w")
     file.write(content)
     file.close()
+    
+def write_json_file(data, filename: str, encoding: str = 'utf-8', indent: int = 4):
+    with open(filename, 'w', encoding=encoding) as file:
+        json.dump(data, file, ensure_ascii=False, indent=indent)
 
 def create_folder_if_not_exists(folder:str):
     if not os.path.exists(folder):
