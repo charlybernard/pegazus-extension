@@ -637,27 +637,33 @@ def get_gregorian_date_from_timestamp(time_stamp:str):
 def format_timestamp(raw_ts: str) -> str:
     """
     Normalizes various date formats to YYYY-MM-DDTHH:MM:SSZ.
-    Handles Y-M-D, Y-M-D H:M:S, and ISO formats with microseconds.
+    Handles '-' and '/' separators, ISO formats (T), and microseconds.
     """
-    # 1. Clean the string and replace 'T' with a space to unify formats
-    # This handles "2026-04-16T17:32:21..." -> "2026-04-16 17:32:21..."
-    normalized_input = raw_ts.strip().replace('T', ' ').replace('Z', '')
+    # 1. Standardize the string:
+    # - Replace 'T' with a space to separate Date from Time
+    # - Remove 'Z' (UTC indicator)
+    # - Replace '/' with '-' to unify date separators (e.g., 2026/04/22 -> 2026-04-22)
+    normalized_input = raw_ts.strip().replace('T', ' ').replace('Z', '').replace('/', '-')
     
-    # 2. Split to separate Date and Time
+    # 2. Split into Date and Time components
+    # Example: "2026-04-22 15:30:00" -> ["2026-04-22", "15:30:00"]
     parts = normalized_input.split(' ')
     date_part = parts[0]
     time_part = parts[1] if len(parts) > 1 else "00:00:00"
 
     # 3. Process Date
+    # Since we replaced '/' with '-', splitting by '-' works for all cases
     y, m, d = [int(x) for x in date_part.split('-')]
 
-    # 4. Process Time (ignoring microseconds)
-    # We split by '.' to remove anything after the seconds
+    # 4. Process Time
+    # - Truncate microseconds (e.g., "15:30:00.123" -> "15:30:00")
     time_only = time_part.split('.')[0]
     time_segments = time_only.split(':')
     
+    # - Parse hours, minutes, and seconds with default values if missing
     h = int(time_segments[0])
     min_ = int(time_segments[1]) if len(time_segments) > 1 else 0
     s = int(time_segments[2]) if len(time_segments) > 2 else 0
 
+    # 5. Return formatted string using f-string padding (e.g., 4:2 -> 04:02)
     return f"{y:04d}-{m:02d}-{d:02d}T{h:02d}:{min_:02d}:{s:02d}Z"

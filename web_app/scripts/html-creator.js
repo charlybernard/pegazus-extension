@@ -381,6 +381,7 @@ function setActionsForSnapshot(endpoint, namedGraphURI, uiConfig){
     // Après avoir sélectionné une date, afficher le snapshot correspondant
     document.getElementById(uiConfig.divIds.dateValidationButton).addEventListener("click", function() {
         displaySnapshotFromSelectedTime(endpoint, uiConfig.divIds.dateInput, uiConfig.calendar.uri, uiConfig.timeline.timeDelay, namedGraphURI, mapSettings);
+        mapSettings.drawnItems.clearLayers() ; // Supprimer les éventuelles zones de recherche dessinées sur la carte
     });
 }
 

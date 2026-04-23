@@ -19,7 +19,8 @@ def build_fact_graph_from_sources(
     comp_named_graph_name: str,
     comp_tmp_file: str,
     comparison_settings: dict,
-    lang: str = None
+    lang: str = None,
+    start_step: int = 0
 ):
     """
     Build a consolidated fact graph and reconstruct the temporal evolution of 
@@ -77,7 +78,7 @@ def build_fact_graph_from_sources(
     """
 
     nb_steps = 7
-    step_counter = 0
+    step = 0
 
     # ------------------------------------------------------------------
     # Construct URIs for all named graphs
@@ -92,49 +93,53 @@ def build_fact_graph_from_sources(
     # ------------------------------------------------------------------
     # Add the facts named graph to the repository and associate meta info
     # ------------------------------------------------------------------
-    print(f"Step {step_counter}/{nb_steps}: Adding facts named graph '{facts_named_graph_name}' to repository '{repository_name}' with meta information...")
-    msp.add_final_named_graph_to_repository(
-        graphdb_url,
-        repository_name,
-        meta_named_graph_name,
-        facts_named_graph_name,
-        facts_named_graph_name_label,
-        lang=lang
-    )
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Adding facts named graph '{facts_named_graph_name}' to repository '{repository_name}' with meta information...")
+        msp.add_final_named_graph_to_repository(
+            graphdb_url,
+            repository_name,
+            meta_named_graph_name,
+            facts_named_graph_name,
+            facts_named_graph_name_label,
+            lang=lang
+        )
 
     # ------------------------------------------------------------------
     # 1. Enrich factoids with preferred and hidden labels
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Adding preferred and hidden labels to factoids from labels named graph...")
-    msp.add_pref_and_hidden_labels_for_elements(
-        graphdb_url,
-        repository_name,
-        labels_named_graph_uri,
-        pref_hidden_labels_ttl_file
-    )
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Adding preferred and hidden labels to factoids from labels named graph...")
+        msp.add_pref_and_hidden_labels_for_elements(
+            graphdb_url,
+            repository_name,
+            labels_named_graph_uri,
+            pref_hidden_labels_ttl_file
+        )
 
     # ------------------------------------------------------------------
     # 2. Link factoids with facts across source graphs
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Linking factoids with facts across source graphs...")
-    rr.link_factoids_with_facts(
-        graphdb_url,
-        repository_name,
-        facts_named_graph_uri,
-        inter_sources_named_graph_uri,
-        tmp_named_graph_uri
-    )
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Linking factoids with facts across source graphs...")
+        rr.link_factoids_with_facts(
+            graphdb_url,
+            repository_name,
+            facts_named_graph_uri,
+            inter_sources_named_graph_uri,
+            tmp_named_graph_uri
+        )
 
     # ------------------------------------------------------------------
     # 3. Compare attribute versions from different sources
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Comparing attribute versions from different sources...")
-    avc.compare_attribute_versions(
-        graphdb_url,
-        repository_name,
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Comparing attribute versions from different sources...")
+        avc.compare_attribute_versions(
+            graphdb_url,
+            repository_name,
         comp_named_graph_uri,
         comp_tmp_file,
         comparison_settings
@@ -145,12 +150,13 @@ def build_fact_graph_from_sources(
     # ------------------------------------------------------------------
     # Appearance is assumed to occur before the earliest reference date.
     # Disappearance is assumed to occur after the latest reference date.
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Initializing missing appearance and disappearance events for landmarks...")
-    ec.initialize_missing_changes_and_events_for_landmarks(
-        graphdb_url,
-        repository_name,
-        facts_named_graph_uri,
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Initializing missing appearance and disappearance events for landmarks...")
+        ec.initialize_missing_changes_and_events_for_landmarks(
+            graphdb_url,
+            repository_name,
+            facts_named_graph_uri,
         inter_sources_named_graph_uri,
         tmp_named_graph_uri
     )
@@ -158,9 +164,10 @@ def build_fact_graph_from_sources(
     # ------------------------------------------------------------------
     # 5. Split overlapping versions into elementary versions and changes
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Splitting overlapping versions into elementary versions and changes...")
-    gd.remove_named_graph_from_uri(tmp_named_graph_uri)  # Clean temp graph before use
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Splitting overlapping versions into elementary versions and changes...")
+        gd.remove_named_graph_from_uri(tmp_named_graph_uri)  # Clean temp graph before use
 
     ec.get_elementary_versions_and_changes(
         graphdb_url,
@@ -172,22 +179,24 @@ def build_fact_graph_from_sources(
     # ------------------------------------------------------------------
     # 6. Reconstruct coherent attribute version evolutions
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Reconstructing coherent attribute version evolutions...")
-    ec.get_attribute_version_evolution_from_elementary_elements(
-        graphdb_url,
-        repository_name,
-        facts_named_graph_uri,
-        inter_sources_named_graph_uri,
-        tmp_named_graph_uri
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Reconstructing coherent attribute version evolutions...")
+        ec.get_attribute_version_evolution_from_elementary_elements(
+            graphdb_url,
+            repository_name,
+            facts_named_graph_uri,
+            inter_sources_named_graph_uri,
+            tmp_named_graph_uri
     )
 
     # ------------------------------------------------------------------
     # 7. Cleanup temporary named graph
     # ------------------------------------------------------------------
-    step_counter += 1
-    print(f"Step {step_counter}/{nb_steps}: Cleaning up temporary named graph...")
-    gd.remove_named_graph_from_uri(tmp_named_graph_uri)
+    step += 1
+    if step >= start_step:
+        print(f"Step {step}/{nb_steps}: Cleaning up temporary named graph...")
+        gd.remove_named_graph_from_uri(tmp_named_graph_uri)
 
 
 def build_fact_graph_excluding_named_graph_sources(

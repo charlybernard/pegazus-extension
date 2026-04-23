@@ -102,16 +102,15 @@ function initLeafletDraw(mapSettings, drawTypes = []) {
     mapSettings.drawnItems.addLayer(layer);
 
     var geojson = layer.toGeoJSON();
-    console.log("Draw created:", geojson);
     var wkt = geojsonGeomToWKT(geojson.geometry);
     mapSettings.selectedDrawnWKT = wkt;
+    console.log("Created WKT:", wkt);
   });
 
   mapSettings.map.on('draw:edited', function (e) {
     var layers = e.layers;
     layers.eachLayer(function (layer) {
       var geojson = layer.toGeoJSON();
-      console.log("Draw edited:", geojson);
       var wkt = geojsonGeomToWKT(geojson.geometry);
       mapSettings.selectedDrawnWKT = wkt;
       console.log("Edited WKT:", wkt);
@@ -272,6 +271,13 @@ function getGeoJsonGeom(element){
 
   var geoJsonGeom = projectWkt(geomWkt, 'EPSG:' + crsCode, 'EPSG:4326');
   return geoJsonGeom;
+}
+
+function geomWktToGeomWktLiteral(geomWkt){
+  if (geomWkt == null){ return null; }
+
+  var geomWktLiteral = `"${geomWkt}"^^geo:wktLiteral` ;
+  return geomWktLiteral ;
 }
 
 //////////////////////////////////////// Functions around layer group management ////////////////////////////////////////////////////

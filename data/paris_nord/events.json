@@ -1,0 +1,117 @@
+{
+  "source": {
+    "uri": "https://fr.wikipedia.org/",
+    "label": "Wikipedia",
+    "lang": "fr",
+    "comment": "Encyclopédie libre, universelle et collaborative",
+    "publisher": {
+      "uri": "https://fr.wikipedia.org/wiki/Wikipedia:À_propos",
+      "label": "Contributeurs de Wikipedia"
+    }
+  },
+  "events": [
+    {
+      "time": {
+        "stamp": "1904-04-05",
+        "calendar": "gregorian",
+        "precision": "day"
+      },
+      "label": "La rue est ouverte en janvier 1904 sur les terrains de l'ancien hôpital Trousseau et prend sa dénomination par arrêté du 5 avril 1904.",
+      "lang": "fr",
+      "landmarks": [
+        {
+          "id": 1,
+          "label": "rue Antoine Vollon",
+          "type": "thoroughfare",
+          "changes": [
+            {
+              "on": "landmark",
+              "type": "appearance"
+            },
+            {
+              "on": "attribute",
+              "attribute": "geometry"
+            },
+            {
+              "on": "attribute",
+              "attribute": "name",
+              "makes_effective": [
+                {
+                  "value": "rue Antoine Vollon",
+                  "lang": "fr"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "uri": "https://fr.wikipedia.org/wiki/Rue_Antoine-Vollon"
+      }
+    },
+    {
+      "time": {
+        "stamp": "1879-08-16",
+        "calendar": "gregorian",
+        "precision": "year"
+      },
+      "label": "La voie est renommée par l'arrêté du 16 août 1879",
+      "lang": "fr",
+      "landmarks": [
+        {
+          "id": 1,
+          "label": "boulevard Diderot",
+          "type": "thoroughfare",
+          "changes": [
+            {
+              "on": "landmark",
+              "type": "appearance"
+            },
+            {
+              "on": "attribute",
+              "attribute": "geometry"
+            },
+            {
+              "on": "attribute",
+              "attribute": "name",
+              "makes_effective": [
+                {
+                  "value": "boulevard Diderot",
+                  "lang": "fr"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "label": "boulevard Mazas",
+          "type": "thoroughfare",
+          "changes": [
+            {
+              "on": "landmark",
+              "type": "appearance"
+            },
+            {
+              "on": "attribute",
+              "attribute": "geometry"
+            },
+            {
+              "on": "attribute",
+              "attribute": "name",
+              "outdates": [
+                {
+                  "value": "boulevard Mazas",
+                  "lang": "fr"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "uri": "https://fr.wikipedia.org/wiki/Boulevard_Diderot"
+      }
+    }
+  ]
+}

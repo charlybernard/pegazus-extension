@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "cadastre_paris_1807_adresses",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 6046, "PREFIXE 1": "BOULEVARD", "PREFIXE 2": "DES", "NOM_RUE": "BARRIÈRES", "NUMERO TXT": null, "NOM_SAISI": "BOULEVARD DES BARRIÈRES", "NOM_NOTE": "Boulevard des Barrieres", "EXP_GEO": 1.0, "INTERP": 1.0, "NUMEROTATI": 0.0, "NUM_QUART": 1.0 }, "geometry": { "type": "Point", "coordinates": [ 2.31373052071182, 48.88095555381863 ] } },
+{ "type": "Feature", "properties": { "fid": 30254, "PREFIXE 1": "BOULEVARD EXTÉRIEUR", "PREFIXE 2": "DE LA", "NOM_RUE": "BARRIÈRE SAINT-DENIS À LA BARRIÈRE SAINT-MARTIN", "NUMERO TXT": null, "NOM_SAISI": "BOULEVARD EXTÉRIEUR DE LA BARRIÈRE SAINT-DENIS À LA BARRIÈRE SAINT-MARTIN", "NOM_NOTE": "Boulevard extérieur de la Barrière Poissonnière à celle S.t Denis", "EXP_GEO": 1.0, "INTERP": 1.0, "NUMEROTATI": 0.0, "NUM_QUART": 9.0 }, "geometry": { "type": "Point", "coordinates": [ 2.354237513894985, 48.884065592891126 ] } }
+]
+}

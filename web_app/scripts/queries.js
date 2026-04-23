@@ -273,6 +273,9 @@ SELECT DISTINCT ?vers ?versValue ?existsForSure ?attrType ?lm WHERE {
     # BIND ?searchArea if a wkt geometry is provided (for spatial queries in the timeline) 
     ${wktGeom ? `BIND(${wktGeom} AS ?searchArea)` : ""}
 
+    ### BIND To remove later !!!!!!!!!!!!!!!!!!
+    BIND(atype:Geometry AS ?attrType)
+
     GRAPH ?g {
         ?vers a addr:AttributeVersion .
         ?attr a addr:Attribute ; addr:isAttributeType ?attrType.

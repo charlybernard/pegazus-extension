@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "atlas_vasserot_1810_adresses",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "geo_point_2d": { "lon": 2.2902126961899998, "lat": 48.853214473599998 }, "id": "26835", "geo_fid": 26835, "geo_creati": 1530006285123, "geo_modifi": 1530006285123, "id_alpage": 26835, "id_num_sca": "ADO75CA_ANO682", "quartier": "Invalides", "nom_entier": "Chemin de Ronde", "id_parc": "PA6724", "num_voies": "3", "geox": 596603, "geoy": 128085, "oid": 1159888, "arrondissement": "Paris 15e Arrondissement" }, "geometry": { "type": "MultiPoint", "coordinates": [ [ 2.290212696189635, 48.853214473604318 ] ] } }
+]
+}

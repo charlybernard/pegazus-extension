@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "cadastre_paris_1807_adresses",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fid": 14184, "PREFIXE 1": "CHEMIN DE RONDE", "PREFIXE 2": "DE LA", "NOM_RUE": "BARRIÈRE DE BERCY", "NUMERO TXT": null, "NOM_SAISI": "CHEMIN DE RONDE DE LA BARRIÈRE DE BERCY", "NOM_NOTE": "Chemin de Ronde de la Barriere de Bercy", "EXP_GEO": 1.0, "INTERP": 1.0, "NUMEROTATI": 0.0, "NUM_QUART": 30.0 }, "geometry": { "type": "Point", "coordinates": [ 2.377366240036494, 48.839613512140296 ] } },
+{ "type": "Feature", "properties": { "fid": 14187, "PREFIXE 1": "CHEMIN DE RONDE", "PREFIXE 2": "DE LA", "NOM_RUE": "BARRIÈRE DE PICPUS", "NUMERO TXT": null, "NOM_SAISI": "CHEMIN DE RONDE DE LA BARRIÈRE DE PICPUS", "NOM_NOTE": "Chemin de Ronde de la Barriere de Picpus", "EXP_GEO": 1.0, "INTERP": 1.0, "NUMEROTATI": 0.0, "NUM_QUART": 30.0 }, "geometry": { "type": "Point", "coordinates": [ 2.398143756625742, 48.839715179120745 ] } }
+]
+}
